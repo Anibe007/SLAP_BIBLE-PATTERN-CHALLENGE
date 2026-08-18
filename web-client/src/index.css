@@ -804,8 +804,8 @@ input:focus, textarea:focus, select:focus {
     grid-template-columns: 1fr 1fr;
     gap: 16px;
   }
-  .nav-menu {
-    display: none;
+  .nav-menu, .desktop-only-nav {
+    display: none !important;
   }
 }
 

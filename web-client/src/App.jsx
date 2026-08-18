@@ -140,8 +140,8 @@ function MainLayout() {
         </nav>
 
         {/* Right Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Theme Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Theme Toggle (Night/Day Mode) */}
           <button
             onClick={toggleTheme}
             style={{
@@ -155,46 +155,49 @@ function MainLayout() {
             }}
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
-          {isAuthenticated ? (
-            <>
-              <NavLink
-                to="/dashboard"
-                style={{
-                  textDecoration: 'none',
-                  color: 'var(--accent-gold)',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <User size={16} /> Dashboard
-              </NavLink>
-              <button
-                onClick={logout}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '6px'
-                }}
-                title="Sign Out"
-              >
-                <LogOut size={18} />
-              </button>
-            </>
-          ) : (
-            <NavLink to="/auth" className="nav-link nav-cta" style={{ padding: '8px 20px' }}>Sign Up</NavLink>
-          )}
+          {/* Desktop-only Auth Links (Hidden on Mobile) */}
+          <div className="desktop-only-nav" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {isAuthenticated ? (
+              <>
+                <NavLink
+                  to="/dashboard"
+                  style={{
+                    textDecoration: 'none',
+                    color: 'var(--accent-gold)',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <User size={16} /> Dashboard
+                </NavLink>
+                <button
+                  onClick={logout}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '6px'
+                  }}
+                  title="Sign Out"
+                >
+                  <LogOut size={18} />
+                </button>
+              </>
+            ) : (
+              <NavLink to="/auth" className="nav-link nav-cta" style={{ padding: '8px 20px' }}>Sign Up</NavLink>
+            )}
+          </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Hamburger Toggle Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             style={{
