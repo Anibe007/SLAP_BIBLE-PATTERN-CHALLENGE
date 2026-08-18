@@ -889,3 +889,11 @@ input:focus, textarea:focus, select:focus {
   h2 { font-size: 1.6rem !important; }
   h3 { font-size: 1.3rem !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════ */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
