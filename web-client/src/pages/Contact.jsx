@@ -44,9 +44,9 @@ export default function Contact() {
           </div>
           <div>
             <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>CALL US</span>
-            <h3 style={{ margin: '4px 0 6px', fontSize: '18px' }}>Ministry Line</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>+1 (800) 555-SLAP</p>
-            <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>Mon–Fri, 9:00 AM – 5:00 PM EST</p>
+            <h3 style={{ margin: '4px 0 6px', fontSize: '18px' }}>Ministry Enquiries</h3>
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)', fontWeight: '700' }}>08155180000</p>
+            <p style={{ margin: '2px 0 0', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '700' }}>08100900094</p>
           </div>
         </div>
 

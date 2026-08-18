@@ -3,10 +3,13 @@ import { dbService } from '../services/db';
 import { Sparkles, Download, Share2, RefreshCw, Palette, User, BookOpen } from 'lucide-react';
 
 const BACKGROUND_STYLES = [
-  { id: 'royal-gold', name: 'Royal Gold', colors: ['#b8860b', '#d4a017'] },
-  { id: 'warm-amber', name: 'Warm Amber', colors: ['#5c4a32', '#8c6d46'] },
-  { id: 'deep-bronze', name: 'Deep Bronze', colors: ['#2e2518', '#1a1409'] },
-  { id: 'rose-gold', name: 'Rose Gold', colors: ['#b8433d', '#d4a017'] }
+  { id: 'golden-sunrise', name: 'Golden Sunrise', type: 'image', url: '/bg-sunrise.png', colors: ['#b8860b', '#d4a017'], overlay: 'rgba(26, 20, 9, 0.65)' },
+  { id: 'altar-scripture', name: 'Altar & Scripture', type: 'image', url: '/bg-prayer.png', colors: ['#5c4a32', '#8c6d46'], overlay: 'rgba(26, 20, 9, 0.68)' },
+  { id: 'sanctuary-pillars', name: 'Sanctuary Pillars', type: 'image', url: '/bg-sanctuary.png', colors: ['#2e2518', '#1a1409'], overlay: 'rgba(26, 20, 9, 0.72)' },
+  { id: 'royal-gold', name: 'Royal Gold Gradient', type: 'gradient', colors: ['#b8860b', '#d4a017'] },
+  { id: 'warm-amber', name: 'Warm Amber Gradient', type: 'gradient', colors: ['#5c4a32', '#8c6d46'] },
+  { id: 'deep-bronze', name: 'Deep Bronze Gradient', type: 'gradient', colors: ['#2e2518', '#1a1409'] },
+  { id: 'rose-gold', name: 'Rose Gold Gradient', type: 'gradient', colors: ['#b8433d', '#d4a017'] }
 ];
 
 export default function Declare() {
@@ -61,105 +64,143 @@ export default function Declare() {
     canvas.width = 800;
     canvas.height = 1000;
 
-    // Draw background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, selectedBg.colors[0]);
-    gradient.addColorStop(1, selectedBg.colors[1]);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const renderForeground = () => {
+      // Draw background glass card container for maximum text legibility
+      ctx.fillStyle = 'rgba(26, 20, 9, 0.55)';
+      ctx.strokeStyle = 'rgba(212, 160, 23, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(60, 140, 680, 570, 20);
+      ctx.fill();
+      ctx.stroke();
 
-    // Draw styling overlay (subtle circle designs for premium feel)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-    ctx.beginPath();
-    ctx.arc(0, 0, 400, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(canvas.width, canvas.height, 500, 0, Math.PI * 2);
-    ctx.fill();
+      // Enable subtle text drop shadow for maximum crispness
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 2;
 
-    // Draw Card Header
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 36px Outfit, Inter, sans-serif';
-    ctx.fillText('I SPEAK & I DECLARE', canvas.width / 2, 90);
+      // Draw Card Header
+      ctx.fillStyle = '#f5e2b3';
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 36px Cinzel, Georgia, serif';
+      ctx.fillText('iSPEAK & iDECLARE', canvas.width / 2, 90);
 
-    // Draw subtle divider line
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(150, 130);
-    ctx.lineTo(650, 130);
-    ctx.stroke();
+      // Draw subtle header divider line
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = 'rgba(212, 160, 23, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(150, 115);
+      ctx.lineTo(650, 115);
+      ctx.stroke();
 
-    // Draw quote marks
-    ctx.font = '80px Georgia, serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.fillText('“', 100, 260);
+      // Reset text shadow for declaration content
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      ctx.shadowBlur = 10;
 
-    // Draw declaration text (wrapped)
-    ctx.font = 'italic 32px Outfit, Inter, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    const cleanText = text.trim() || "Proclaim your faith today...";
-    
-    // Process text if name is entered
-    let processedText = cleanText;
-    if (name.trim()) {
-      const pName = name.trim();
-      processedText = cleanText
-        .replace(/my life/gi, `${pName}'s life`)
-        .replace(/\bmy\b/gi, `${pName}'s`)
-        .replace(/\bI am\b/gi, `${pName} is`)
-        .replace(/\bI have\b/gi, `${pName} has`);
-    }
+      // Draw quote marks
+      ctx.font = '80px Cormorant Garamond, Georgia, serif';
+      ctx.fillStyle = 'rgba(245, 226, 179, 0.4)';
+      ctx.fillText('“', 105, 230);
 
-    wrapText(ctx, processedText, canvas.width / 2, 280, 580, 42);
-
-    ctx.font = '80px Georgia, serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.fillText('”', 700, 620);
-
-    // Draw Scripture Reference
-    ctx.font = 'bold 26px Outfit, Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.fillText(ref || 'Scripture Reference', canvas.width / 2, 650);
-
-    // Draw Author Name
-    if (name.trim()) {
-      ctx.font = 'bold 24px Outfit, Inter, sans-serif';
-      ctx.fillStyle = 'var(--accent-gold)';
-      ctx.fillText(`Declarant: ${name.trim()}`, canvas.width / 2, 700);
-    }
-
-    // Draw QR Code block at the bottom
-    const qrSize = 120;
-    const qrX = canvas.width / 2 - qrSize / 2;
-    const qrY = 760;
-
-    // Draw white QR container background
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.roundRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 12);
-    ctx.fill();
-
-    // Load QR Image
-    const shareUrl = window.location.origin + '/auth';
-    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
-    
-    const qrImg = new Image();
-    qrImg.crossOrigin = 'anonymous';
-    qrImg.src = qrSrc;
-    qrImg.onload = () => {
-      // Draw image once loaded. We avoid infinite loop by using a state latch
-      if (!qrLoaded) {
-        setQrLoaded(true);
+      // Draw declaration text (wrapped)
+      ctx.font = 'italic bold 34px Cormorant Garamond, Georgia, serif';
+      ctx.fillStyle = '#ffffff';
+      const cleanText = text.trim() || "Proclaim your faith today...";
+      
+      // Process text if name is entered
+      let processedText = cleanText;
+      if (name.trim()) {
+        const pName = name.trim();
+        processedText = cleanText
+          .replace(/my life/gi, `${pName}'s life`)
+          .replace(/\bmy\b/gi, `${pName}'s`)
+          .replace(/\bI am\b/gi, `${pName} is`)
+          .replace(/\bI have\b/gi, `${pName} has`);
       }
-      ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+      wrapText(ctx, processedText, canvas.width / 2, 260, 540, 48);
+
+      ctx.font = '80px Cormorant Garamond, Georgia, serif';
+      ctx.fillStyle = 'rgba(245, 226, 179, 0.4)';
+      ctx.fillText('”', 695, 610);
+
+      // Draw Scripture Reference
+      ctx.font = 'bold 26px Plus Jakarta Sans, sans-serif';
+      ctx.fillStyle = '#f5e2b3';
+      ctx.fillText(ref || 'Scripture Reference', canvas.width / 2, 640);
+
+      // Draw Author Name
+      if (name.trim()) {
+        ctx.font = 'bold 22px Plus Jakarta Sans, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`Declarant: ${name.trim()}`, canvas.width / 2, 680);
+      }
+
+      // Reset shadow for bottom elements
+      ctx.shadowColor = 'transparent';
+
+      // Draw QR Code block at the bottom
+      const qrSize = 120;
+      const qrX = canvas.width / 2 - qrSize / 2;
+      const qrY = 750;
+
+      // Draw white QR container background
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 12);
+      ctx.fill();
+
+      // Draw QR code image
+      const qrCanvas = document.getElementById('decl-qr-code');
+      if (qrCanvas) {
+        try {
+          ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+        } catch (e) {
+          console.log("QR code drawing fallback");
+        }
+      }
+
+      // Draw footer badge text
+      ctx.font = '700 13px Plus Jakarta Sans, sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillText('SLAP BIBLE PATTERN CHALLENGE', canvas.width / 2, 930);
+      ctx.font = '500 11px Plus Jakarta Sans, sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillText('Scan to join the daily scripture declaration movement', canvas.width / 2, 950);
     };
 
-    // Draw QR Code text prompt
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.font = 'bold 16px Outfit, Inter, sans-serif';
-    ctx.fillText('Scan to join SLAP Bible Challenge', canvas.width / 2, 940);
+    if (selectedBg.type === 'image' && selectedBg.url) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = selectedBg.url;
+      img.onload = () => {
+        // Draw background image
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Draw dark tint overlay for readability
+        ctx.fillStyle = selectedBg.overlay || 'rgba(26, 20, 9, 0.65)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        renderForeground();
+      };
+      img.onerror = () => {
+        // Fallback gradient if image fails
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, selectedBg.colors[0]);
+        gradient.addColorStop(1, selectedBg.colors[1]);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        renderForeground();
+      };
+    } else {
+      // Draw background gradient
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, selectedBg.colors[0]);
+      gradient.addColorStop(1, selectedBg.colors[1]);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      renderForeground();
+    }
   };
 
   // Text Wrapping Logic for HTML5 Canvas

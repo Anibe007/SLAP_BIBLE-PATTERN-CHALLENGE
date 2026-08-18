@@ -128,23 +128,20 @@ export default function Home() {
           </div>
 
           {/* Card 3: SLAP Journal */}
-          <div className="program-card light" style={{ background: 'var(--bg-secondary)' }}>
-            <img src="/slap-journal.png" alt="SLAP Journal" style={{ opacity: 0.25 }} />
-            <div className="program-card-overlay" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.95) 100%)' }} />
+          <div className="program-card dark">
+            <img src="/slap-journal.png" alt="SLAP Journal" />
+            <div className="program-card-overlay" />
             <div className="program-card-content">
-              <h3 style={{ color: '#1a1409', fontStyle: 'italic' }}>SLAP Journal</h3>
-              <div className="card-subtitle" style={{ color: 'var(--accent-gold)' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', letterSpacing: '1px' }}>SLAP JOURNAL</h3>
+              <div className="card-subtitle" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 4 PILLARS OF DAILY DEVOTION
               </div>
-              <p style={{ color: '#6b5d4d' }}>
+              <p>
                 A practical and challenging journal for members who want to grow in
                 character, discipline, leadership, and biblical maturity.
               </p>
-              <p style={{ color: '#6b5d4d', fontSize: '13px', fontStyle: 'italic', margin: 0 }}>
-                Unlocked for all registered &amp; Premium members.
-              </p>
-              <Link to={isAuthenticated ? '/dashboard' : '/auth'} className="card-link" style={{ color: 'var(--accent-gold)', marginTop: '10px', display: 'inline-flex' }}>
-                ACCESS PREMIUM JOURNAL <ArrowRight size={14} />
+              <Link to={isAuthenticated ? '/dashboard' : '/auth'} className="card-link">
+                LEARN MORE ABOUT JOURNAL <ArrowRight size={14} />
               </Link>
             </div>
           </div>

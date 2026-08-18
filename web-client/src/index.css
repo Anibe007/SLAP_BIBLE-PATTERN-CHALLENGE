@@ -750,12 +750,15 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE BREAKPOINTS (Ultra-Wide to Small Mobile)
    ═══════════════════════════════════════════════════════════ */
+
+/* ─── Tablets & Small Laptops (max-width: 1024px) ─── */
 @media (max-width: 1024px) {
   .hero-content {
     grid-template-columns: 1fr;
-    padding: 0 24px;
+    padding: 60px 24px;
+    gap: 40px;
   }
   .hero-product-card {
     margin-left: 0;
@@ -763,6 +766,8 @@ input:focus, textarea:focus, select:focus {
   }
   .program-cards {
     grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 40px 20px;
   }
   .feature-strip-inner {
     grid-template-columns: 1fr 1fr;
@@ -775,33 +780,60 @@ input:focus, textarea:focus, select:focus {
   }
   .footer-inner {
     grid-template-columns: 1fr 1fr;
+    gap: 32px;
   }
   .grid-3 {
     grid-template-columns: 1fr;
   }
 }
 
+/* ─── Mobile Landscapes & Tablets (max-width: 900px) ─── */
 @media (max-width: 900px) {
+  .main-content {
+    padding-top: 88px;
+  }
+  .header {
+    height: 64px;
+    padding: 0 16px;
+  }
   .grid-2 {
     grid-template-columns: 1fr;
+    gap: 24px;
   }
   .grid-4 {
     grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
   .nav-menu {
     display: none;
   }
-  .header {
-    padding: 0 20px;
-  }
 }
 
+/* ─── Standard Mobile Devices (max-width: 640px) ─── */
 @media (max-width: 640px) {
+  .main-content {
+    padding-top: 80px;
+  }
   .hero-section {
-    min-height: 70vh;
+    min-height: auto;
+    padding: 20px 0 40px;
   }
   .hero-text h1 {
-    font-size: 2.4rem;
+    font-size: 2.2rem;
+    line-height: 1.15;
+  }
+  .hero-text p {
+    font-size: 15px;
+  }
+  .hero-cta-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  .hero-cta-group a,
+  .hero-cta-group button {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
   }
   .feature-strip-inner {
     grid-template-columns: 1fr;
@@ -809,6 +841,7 @@ input:focus, textarea:focus, select:focus {
   .feature-strip-item {
     border-right: none;
     border-bottom: 1px solid var(--border-color);
+    padding: 20px 16px;
   }
   .feature-strip-item:last-child {
     border-bottom: none;
@@ -818,5 +851,41 @@ input:focus, textarea:focus, select:focus {
   }
   .footer-inner {
     grid-template-columns: 1fr;
+    gap: 24px;
   }
+  .footer-bottom {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  .glass-card {
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+  button, .btn-primary, .btn-secondary, .btn-outline-gold {
+    padding: 12px 18px;
+    font-size: 13px;
+  }
+  /* Responsive Canvas Scaling */
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+
+/* ─── Compact Mobile Phones (max-width: 420px) ─── */
+@media (max-width: 420px) {
+  .logo-text {
+    font-size: 17px;
+    letter-spacing: 0.8px;
+  }
+  .logo-image {
+    height: 38px;
+  }
+  .hero-text h1 {
+    font-size: 1.85rem;
+  }
+  h1 { font-size: 2rem !important; }
+  h2 { font-size: 1.6rem !important; }
+  h3 { font-size: 1.3rem !important; }
 }
