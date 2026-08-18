@@ -41,18 +41,23 @@ const BIBLE_BOOKS = [
   { name: 'Revelation', chapters: 22, testament: 'NT' }
 ];
 
-/* ─── Translation mapping for bible-api.com ─── */
+/* ─── Translation mapping for bolls.life API ─── */
 const API_TRANSLATIONS = {
-  'KJV': { id: 'kjv', label: 'KJV (King James Version)' },
-  'ASV': { id: 'asv', label: 'ASV (American Standard Version)' },
-  'WEB': { id: 'web', label: 'WEB (World English Bible)' },
-  'BBE': { id: 'bbe', label: 'BBE (Bible in Basic English)' },
-  'DARBY': { id: 'darby', label: 'DARBY (Darby Translation)' },
-  'YLT': { id: 'ylt', label: 'YLT (Young\'s Literal Translation)' },
-  'CLEMENTINE': { id: 'clementine', label: 'CLEMENTINE (Clementine Latin Vulgate)' },
-  'ALMEIDA': { id: 'almeida', label: 'ALMEIDA (João Ferreira de Almeida)' },
-  'RCCV': { id: 'rccv', label: 'RCCV (Romanian Cornilescu)' },
+  'KJV':  { id: 'KJV',    label: 'KJV (King James Version)' },
+  'NKJV': { id: 'NKJV',   label: 'NKJV (New King James Version)' },
+  'AMPC': { id: 'AMP',    label: 'AMPC (Amplified Bible Classic)' },
+  'NIV':  { id: 'NIV2011', label: 'NIV (New International Version)' },
+  'NLT':  { id: 'NLT',    label: 'NLT (New Living Translation)' },
+  'TLB':  { id: 'NLT',    label: 'TLB (The Living Bible)' },
+  'TPT':  { id: 'NLT',    label: 'TPT (The Passion Translation)' },
+  'NCV':  { id: 'ERV',    label: 'NCV (New Century Version)' },
+  'MSG':  { id: 'MSG',    label: 'MSG (The Message)' },
+  'ESV':  { id: 'ESV',    label: 'ESV (English Standard Version)' },
 };
+
+/* ─── Book Name to numeric ID mapping (bolls.life uses 1-66) ─── */
+const BOOK_ID_MAP = {};
+BIBLE_BOOKS.forEach((b, idx) => { BOOK_ID_MAP[b.name] = idx + 1; });
 
 export default function Dashboard() {
   const [reports, setReports] = useState([]);
@@ -77,7 +82,15 @@ export default function Dashboard() {
   const [bibleText, setBibleText] = useState(null);
   const [bibleLoading, setBibleLoading] = useState(false);
   const [bibleError, setBibleError] = useState('');
-  const [activeTab, setActiveTab] = useState('read'); // 'read' or 'report'
+  const [activeTab, setActiveTab] = useState('read'); // 'read', 'report', or 'concordance'
+
+  /* ─── Concordance / Search State ─── */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTranslation, setSearchTranslation] = useState('KJV');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -94,28 +107,59 @@ export default function Dashboard() {
     fetchDashboardData();
   }, []);
 
-  /* ─── Bible Reader: Fetch scripture text ─── */
+  /* ─── Bible Reader: Fetch scripture text from bolls.life ─── */
   const fetchBibleText = useCallback(async (bk, ch, trans) => {
     setBibleLoading(true);
     setBibleError('');
     setBibleText(null);
 
-    const apiTrans = API_TRANSLATIONS[trans]?.id || 'kjv';
-    // bible-api.com format: book+chapter?translation=xxx
-    const query = `${bk} ${ch}`;
-    const url = `https://bible-api.com/${encodeURIComponent(query)}?translation=${apiTrans}`;
+    const apiTrans = API_TRANSLATIONS[trans]?.id || 'KJV';
+    const bookId = BOOK_ID_MAP[bk] || 43; // default to John
+    const url = `https://bolls.life/get-text/${apiTrans}/${bookId}/${ch}/`;
 
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error('Scripture not found for this translation.');
       const data = await res.json();
-      setBibleText(data);
+      // bolls.life returns array of { verse, text, pk }
+      setBibleText({ verses: data, reference: `${bk} ${ch}` });
     } catch (err) {
       setBibleError(err.message || 'Failed to load scripture. Please try another translation.');
     } finally {
       setBibleLoading(false);
     }
   }, []);
+
+  /* ─── Concordance: Search scripture text ─── */
+  const handleConcordanceSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    
+    setSearchLoading(true);
+    setSearchError('');
+    setSearchResults([]);
+    setHasSearched(true);
+
+    const apiTrans = API_TRANSLATIONS[searchTranslation]?.id || 'KJV';
+    const url = `https://bolls.life/search/${apiTrans}/${encodeURIComponent(searchQuery.trim())}/`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Search failed. Please try again.');
+      const data = await res.json();
+      setSearchResults(data.slice(0, 100)); // limit to 100 results
+    } catch (err) {
+      setSearchError(err.message || 'Search failed.');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  /* ─── Helper: Get book name from numeric ID ─── */
+  const getBookNameById = (id) => {
+    const book = BIBLE_BOOKS[id - 1];
+    return book ? book.name : `Book ${id}`;
+  };
 
   // Load Bible text on mount and when reader settings change
   useEffect(() => {
@@ -292,58 +336,40 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ═══════════ Tab Switcher: Read / Report ═══════════ */}
-      <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid var(--border-color)' }}>
-        <button
-          onClick={() => setActiveTab('read')}
-          style={{
-            flex: 1,
-            padding: '14px 20px',
-            background: activeTab === 'read' ? 'var(--accent-gold)' : 'transparent',
-            color: activeTab === 'read' ? '#fff' : 'var(--text-secondary)',
-            border: 'none',
-            borderBottom: activeTab === 'read' ? '3px solid var(--accent-gold)' : '3px solid transparent',
-            cursor: 'pointer',
-            fontSize: '15px',
-            fontWeight: '700',
-            fontFamily: 'var(--font-display)',
-            letterSpacing: '1px',
-            textTransform: 'uppercase',
-            borderRadius: '8px 8px 0 0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          <BookOpen size={18} /> Read Scripture
-        </button>
-        <button
-          onClick={() => setActiveTab('report')}
-          style={{
-            flex: 1,
-            padding: '14px 20px',
-            background: activeTab === 'report' ? 'var(--accent-gold)' : 'transparent',
-            color: activeTab === 'report' ? '#fff' : 'var(--text-secondary)',
-            border: 'none',
-            borderBottom: activeTab === 'report' ? '3px solid var(--accent-gold)' : '3px solid transparent',
-            cursor: 'pointer',
-            fontSize: '15px',
-            fontWeight: '700',
-            fontFamily: 'var(--font-display)',
-            letterSpacing: '1px',
-            textTransform: 'uppercase',
-            borderRadius: '8px 8px 0 0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          <Plus size={18} /> Write Report
-        </button>
+      {/* ═══════════ Tab Switcher: Read / Report / Concordance ═══════════ */}
+      <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid var(--border-color)', flexWrap: 'wrap' }}>
+        {[{ key: 'read', icon: <BookOpen size={16} />, label: 'Read Scripture' },
+          { key: 'concordance', icon: <Search size={16} />, label: 'Concordance' },
+          { key: 'report', icon: <Plus size={16} />, label: 'Write Report' }
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              flex: 1,
+              padding: '14px 16px',
+              background: activeTab === tab.key ? 'var(--accent-gold)' : 'transparent',
+              color: activeTab === tab.key ? '#fff' : 'var(--text-secondary)',
+              border: 'none',
+              borderBottom: activeTab === tab.key ? '3px solid var(--accent-gold)' : '3px solid transparent',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '700',
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              borderRadius: '8px 8px 0 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.3s ease',
+              minWidth: '120px'
+            }}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* ═══════════ TAB: Bible Reader ═══════════ */}
@@ -496,11 +522,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            {bibleText && !bibleText.verses && bibleText.text && (
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', lineHeight: '1.9', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
-                {bibleText.text}
-              </div>
-            )}
+
           </div>
 
           {/* Bottom Navigation + CTA */}
@@ -589,18 +611,6 @@ export default function Dashboard() {
                     {Object.entries(API_TRANSLATIONS).map(([key, val]) => (
                       <option key={key} value={key}>{val.label}</option>
                     ))}
-                    <option value="NIV">NIV (New International Version)</option>
-                    <option value="ESV">ESV (English Standard Version)</option>
-                    <option value="NKJV">NKJV (New King James Version)</option>
-                    <option value="NLT">NLT (New Living Translation)</option>
-                    <option value="AMP">AMP (Amplified Bible)</option>
-                    <option value="AMPC">AMPC (Amplified Bible Classic)</option>
-                    <option value="TLB">TLB (The Living Bible)</option>
-                    <option value="NCV">NCV (New Century Version)</option>
-                    <option value="CSB">CSB (Christian Standard Bible)</option>
-                    <option value="NASB">NASB (New American Standard)</option>
-                    <option value="TPT">TPT (The Passion Translation)</option>
-                    <option value="MSG">MSG (The Message)</option>
                   </select>
                 </div>
               </div>
@@ -706,6 +716,117 @@ export default function Dashboard() {
             )}
           </section>
         </div>
+      )}
+
+      {/* ═══════════ TAB: Concordance / Bible Search ═══════════ */}
+      {activeTab === 'concordance' && (
+        <section className="glass-card">
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+            <Search size={22} /> Bible Concordance
+          </h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+            Search for any word or phrase across the entire Bible. Find every verse where a word appears.
+          </p>
+
+          <form onSubmit={handleConcordanceSearch} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
+            <div className="form-group" style={{ margin: 0, flex: '3', minWidth: '200px' }}>
+              <label style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', color: 'var(--text-secondary)' }}>Search Word or Phrase</label>
+              <input
+                type="text"
+                placeholder='e.g. "faith", "love", "Holy Spirit", "grace"'
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{ fontSize: '15px' }}
+                required
+              />
+            </div>
+            <div className="form-group" style={{ margin: 0, flex: '1.5', minWidth: '180px' }}>
+              <label style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', color: 'var(--text-secondary)' }}>Translation</label>
+              <select value={searchTranslation} onChange={e => setSearchTranslation(e.target.value)}>
+                {Object.entries(API_TRANSLATIONS).map(([key, val]) => (
+                  <option key={key} value={key}>{val.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <button type="submit" className="btn-primary" style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={searchLoading}>
+                <Search size={16} /> {searchLoading ? 'Searching...' : 'Search Bible'}
+              </button>
+            </div>
+          </form>
+
+          {/* Search Results */}
+          {searchLoading && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px 0', gap: '12px', color: 'var(--text-secondary)' }}>
+              <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
+              <span>Searching scripture for "{searchQuery}"...</span>
+            </div>
+          )}
+
+          {searchError && (
+            <div style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', padding: '16px 20px', borderRadius: '10px', color: '#f43f5e', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '14px' }}>
+              <AlertCircle size={18} /> {searchError}
+            </div>
+          )}
+
+          {hasSearched && !searchLoading && searchResults.length === 0 && !searchError && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
+              <p style={{ fontSize: '16px' }}>No results found for "{searchQuery}".</p>
+              <p style={{ fontSize: '13px' }}>Try a different word or translation.</p>
+            </div>
+          )}
+
+          {searchResults.length > 0 && (
+            <div>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', fontWeight: '600' }}>
+                Found {searchResults.length}{searchResults.length >= 100 ? '+' : ''} results for "{searchQuery}" in {API_TRANSLATIONS[searchTranslation]?.label}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
+                {searchResults.map((result, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '16px',
+                      background: 'var(--bg-secondary)',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                    onClick={() => {
+                      setReaderBook(getBookNameById(result.bookid));
+                      setReaderChapter(result.chapter);
+                      setReaderTranslation(searchTranslation);
+                      setActiveTab('read');
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        color: 'var(--accent-gold)',
+                        letterSpacing: '0.5px'
+                      }}>
+                        {getBookNameById(result.bookid)} {result.chapter}:{result.verse}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Click to read →</span>
+                    </div>
+                    <p style={{
+                      margin: 0,
+                      fontFamily: 'var(--font-serif)',
+                      fontSize: '15px',
+                      lineHeight: '1.7',
+                      color: 'var(--text-primary)'
+                    }}
+                      dangerouslySetInnerHTML={{ __html: result.text }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
       )}
     </div>
   );
