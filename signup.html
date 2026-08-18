@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLAP Bible Challenge</title>
+
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+
+<!-- NAV -->
+<header class="header">
+<h2>SLAP BIBLE</h2>
+<button id="menuBtn">☰</button>
+</header>
+
+<!-- PLAN SELECT -->
+<section class="card">
+<h3>Choose Your Pace</h3>
+
+<select id="plan">
+<option value="1">1 Chapter Daily</option>
+<option value="2">2 Chapters Daily</option>
+<option value="5">5 Chapters Daily</option>
+<option value="10">10 Chapters Daily</option>
+</select>
+
+<select id="book">
+<option>Genesis</option>
+<option>John</option>
+<option>Acts</option>
+<option>Psalms</option>
+</select>
+
+<button onclick="startPlan()">Start Plan</button>
+</section>
+
+<!-- DASHBOARD -->
+<section class="card hidden" id="dashboard">
+
+<h3 id="progress">Day 1</h3>
+
+<div class="bible-text">
+<p><b>John 3:16</b> – For God so loved the world...</p>
+</div>
+
+<h3>SLAP Session</h3>
+
+<textarea placeholder="Striking Verse"></textarea>
+<textarea placeholder="Lessons Learnt"></textarea>
+<textarea placeholder="Action Plan"></textarea>
+<textarea placeholder="Prayer"></textarea>
+
+<button onclick="completeSLAP()">Complete</button>
+
+</section>
+
+<!-- CARD GENERATOR -->
+<section class="card hidden" id="cardSection">
+
+<h3>I Speak & Declare</h3>
+
+<input type="file" id="imageUpload">
+
+<div class="card-preview" id="cardPreview">
+<p id="verseText">Isaiah 54:17</p>
+</div>
+
+<button onclick="downloadCard()">Download Card</button>
+
+</section>
+
+<!-- SLAP TUBE -->
+<section class="tube hidden" id="tube">
+
+<div class="video" id="videoContainer">
+<iframe id="videoFrame"
+src="https://www.youtube.com/embed/VIDEO_ID"
+allowfullscreen></iframe>
+
+<div class="overlay">
+<p>John 3:16</p>
+<button onclick="amen()">🙏 Amen <span id="amenCount">0</span></button>
+</div>
+
+</div>
+
+</section>
+
+<!-- ADMIN DASHBOARD -->
+<section class="card hidden" id="admin">
+
+<h3>Analytics</h3>
+
+<p>Total Users: <span id="users">1200</span></p>
+<p>SLAPs Today: <span id="slaps">320</span></p>
+<p>Videos: <span id="videos">45</span></p>
+
+</section>
+
+<script src="script.js"></script>
+
+</body>
+</html>

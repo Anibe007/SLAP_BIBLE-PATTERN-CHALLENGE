@@ -1,0 +1,89 @@
+/* SLAP Bible Challenge — Animations & Utility Classes */
+
+/* ─── Loading Spinner ─── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+/* ─── Fade-in Entrance ─── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* ─── Slide Down (hero banners) ─── */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-down {
+  animation: slideDown 0.5s ease forwards;
+}
+
+/* ─── Slide Up ─── */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-up {
+  animation: slideUp 0.6s ease forwards;
+}
+
+/* ─── Pulse Glow (badge) ─── */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(184, 134, 11, 0.2); }
+  50%       { box-shadow: 0 0 24px rgba(184, 134, 11, 0.5); }
+}
+.pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* ─── Float Animation ─── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+.float {
+  animation: float 3.5s ease-in-out infinite;
+}
+
+/* ─── Scale-in ─── */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.scale-in {
+  animation: scaleIn 0.4s ease forwards;
+}
+
+/* ─── Shimmer Effect ─── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, transparent 33%, rgba(184,134,11,0.08) 50%, transparent 66%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* ─── Mobile hamburger button (hidden on wide screens) ─── */
+.md-menu-btn {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .md-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

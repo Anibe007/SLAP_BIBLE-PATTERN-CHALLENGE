@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLAP Bible Challenge</title>
+
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<header class="header">
+  <h2>SLAP BIBLE</h2>
+
+  <div id="menuBtn" class="menu-btn">
+    <span id="menuIcon">☰</span>
+  </div>
+
+  <nav id="mobileMenu" class="mobile-menu">
+    <a href="#" onclick="showSection('home')">Home</a>
+    <a href="#" onclick="showSection('dashboard')">Dashboard</a>
+    <a href="#" onclick="showSection('tube')">SLAP Tube</a>
+  </nav>
+</header>
+
+<!-- HOME -->
+<section id="home" class="show">
+  <div class="card">
+    <h1>SLAP Bible Pattern</h1>
+    <p>Build consistency with God daily.</p>
+
+    <button onclick="startPlan()">Start Plan</button>
+  </div>
+</section>
+
+<!-- DASHBOARD -->
+<section id="dashboard" class="hidden">
+  <div class="card">
+    <h2>Today's Reading</h2>
+    <p><b>John 3</b></p>
+
+    <textarea placeholder="Striking Verse"></textarea>
+    <textarea placeholder="Lessons Learnt"></textarea>
+    <textarea placeholder="Action Plan"></textarea>
+    <textarea placeholder="Prayer"></textarea>
+
+    <button onclick="completeSLAP()">Complete SLAP</button>
+  </div>
+</section>
+
+<!-- DECLARE -->
+<section id="declareSection" class="hidden">
+  <div class="card">
+    <h2>I Speak & Declare</h2>
+
+    <p id="declareVerse">
+      For God so loved the world - John 3:16
+    </p>
+
+    <input id="userName" placeholder="Enter your name">
+
+    <canvas id="cardCanvas" width="400" height="500"></canvas>
+
+    <button onclick="generateCard()">Generate Card</button>
+    <button onclick="downloadCard()">Download Image</button>
+    <button onclick="showSection('tube')">Go to SLAP Tube</button>
+  </div>
+</section>
+
+<!-- SLAP TUBE -->
+<section id="tube" class="hidden">
+  <div class="video-container">
+    <iframe id="videoPlayer"
+      src="https://www.youtube.com/embed/ysz5S6PUM-U?autoplay=1&mute=1"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <div class="video-controls">
+    <button onclick="prevVideo()">⬆</button>
+    <button onclick="nextVideo()">⬇</button>
+  </div>
+</section>
+
+<script src="script.js"></script>
+</body>
+</html>
