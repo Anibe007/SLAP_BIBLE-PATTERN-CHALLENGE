@@ -302,12 +302,27 @@ const INITIAL_DEMO_STREAKS = {
   'user-part-4': { current_streak: 1, longest_streak: 3, last_activity_date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0] }
 };
 
-// Initialize LocalStorage DB
-if (!localStorage.getItem('slap_users') || JSON.parse(localStorage.getItem('slap_users') || '[]').length === 0) {
-  localStorage.setItem('slap_users', JSON.stringify(INITIAL_DEMO_USERS));
+// ── DB Version Reset ─────────────────────────────────────────────────────────
+// Bump this version whenever the seed data changes so stale localStorage is wiped.
+const SLAP_DB_VERSION = 'slap_db_v3';
+if (localStorage.getItem('slap_db_version') !== SLAP_DB_VERSION) {
+  // Clear all participant-seeded data so counters start from real registrations
+  localStorage.removeItem('slap_users');
+  localStorage.removeItem('slap_reports');
+  localStorage.removeItem('slap_streaks');
+  localStorage.removeItem('slap_declarations');
+  localStorage.setItem('slap_db_version', SLAP_DB_VERSION);
 }
-if (!localStorage.getItem('slap_reports') || JSON.parse(localStorage.getItem('slap_reports') || '[]').length === 0) {
-  localStorage.setItem('slap_reports', JSON.stringify(INITIAL_DEMO_REPORTS));
+
+// Initialize LocalStorage DB — only admin user seeded; participants start at 0
+const ADMIN_ONLY_SEED = [INITIAL_DEMO_USERS[0]]; // only David Anibe (admin)
+const ADMIN_ONLY_STREAKS = { 'user-admin-1': INITIAL_DEMO_STREAKS['user-admin-1'] };
+
+if (!localStorage.getItem('slap_users') || JSON.parse(localStorage.getItem('slap_users') || '[]').length === 0) {
+  localStorage.setItem('slap_users', JSON.stringify(ADMIN_ONLY_SEED));
+}
+if (!localStorage.getItem('slap_reports')) {
+  localStorage.setItem('slap_reports', JSON.stringify([]));
 }
 if (!localStorage.getItem('slap_declarations')) {
   localStorage.setItem('slap_declarations', JSON.stringify([]));
@@ -316,7 +331,7 @@ if (!localStorage.getItem('slap_videos')) {
   localStorage.setItem('slap_videos', JSON.stringify(DEFAULT_VIDEOS));
 }
 if (!localStorage.getItem('slap_streaks') || Object.keys(JSON.parse(localStorage.getItem('slap_streaks') || '{}')).length === 0) {
-  localStorage.setItem('slap_streaks', JSON.stringify(INITIAL_DEMO_STREAKS));
+  localStorage.setItem('slap_streaks', JSON.stringify(ADMIN_ONLY_STREAKS));
 }
 
 // Core Database Service
@@ -450,12 +465,15 @@ export const dbService = {
 
     const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
     const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+
+    // Exclude admin accounts — only count real participant registrations
+    const participants = users.filter(u => !u.is_admin && u.role !== 'admin' && u.email !== 'admin@slapbible.org');
     const distinctCountries = new Set(
-      users.map(u => u.user_metadata?.country || u.country).filter(Boolean)
+      participants.map(u => u.user_metadata?.country || u.country).filter(Boolean)
     );
 
     return {
-      activeBelievers: users.length,
+      activeBelievers: participants.length,
       nationsReached: distinctCountries.size,
       totalReports: reports.length
     };
