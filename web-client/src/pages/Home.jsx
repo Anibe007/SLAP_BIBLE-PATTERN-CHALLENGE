@@ -369,9 +369,34 @@ export default function Home() {
       <section className="section-white">
         <div className="section-container text-center">
           <AnimateOnScroll animation="fadeUp">
+            {/* Live badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(34,197,94,0.12)',
+                border: '1px solid rgba(34,197,94,0.35)',
+                color: '#16a34a',
+                fontSize: '11px',
+                fontWeight: '800',
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+                padding: '4px 12px',
+                borderRadius: '999px',
+              }}>
+                <span style={{
+                  width: '7px', height: '7px', borderRadius: '50%',
+                  background: '#22c55e',
+                  display: 'inline-block',
+                  animation: 'wa-pulse 1.8s ease-in-out infinite'
+                }} />
+                Live Data
+              </span>
+            </div>
             <h2 style={{ fontSize: '32px', marginBottom: '8px' }}>Trusted by Believers Worldwide</h2>
             <p style={{ marginBottom: '48px', maxWidth: '500px', margin: '0 auto 48px' }}>
-              A growing global community building daily habits in God's Word.
+              Numbers update in real time as participants register and submit their SLAP reports.
             </p>
           </AnimateOnScroll>
           <div className="grid-4">
