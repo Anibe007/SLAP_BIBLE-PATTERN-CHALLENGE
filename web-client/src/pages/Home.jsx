@@ -19,7 +19,27 @@ export default function Home() {
         console.error("Error loading stats:", err);
       }
     };
+
+    // Initial load
     loadStats();
+
+    // Re-fetch when another tab updates localStorage (cross-tab)
+    const handleStorage = (e) => {
+      if (e.key === 'slap_users' || e.key === 'slap_reports') {
+        loadStats();
+      }
+    };
+
+    // Re-fetch on same-tab registration/report events
+    const handleStatsUpdated = () => loadStats();
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('slap_stats_updated', handleStatsUpdated);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('slap_stats_updated', handleStatsUpdated);
+    };
   }, []);
 
   return (

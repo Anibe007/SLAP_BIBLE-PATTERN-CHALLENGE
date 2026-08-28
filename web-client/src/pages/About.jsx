@@ -1,10 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Award, Flame, Users, Calendar, BookOpen, ShieldCheck, Heart, Target, Quote } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CountUp from '../components/CountUp';
+import { dbService } from '../services/db';
 
 export default function About() {
+  const [stats, setStats] = useState({ activeBelievers: 0, nationsReached: 0, totalReports: 0 });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const data = await dbService.getGlobalStats();
+        setStats(data);
+      } catch (err) {
+        console.error('Error loading stats:', err);
+      }
+    };
+    loadStats();
+    const handleStatsUpdated = () => loadStats();
+    const handleStorage = (e) => { if (e.key === 'slap_users' || e.key === 'slap_reports') loadStats(); };
+    window.addEventListener('slap_stats_updated', handleStatsUpdated);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('slap_stats_updated', handleStatsUpdated);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
   return (
     <div className="page-wrapper-lg">
 
@@ -56,29 +79,51 @@ export default function About() {
       <section className="grid-2" style={{ alignItems: 'center', gap: '48px' }}>
         <AnimateOnScroll animation="fadeLeft">
           <div style={{ position: 'relative' }}>
-            <div className="glass-card" style={{ padding: '32px', textAlign: 'center' }}>
+            <div className="glass-card" style={{ padding: '28px', textAlign: 'center' }}>
+              {/* Portrait Photo */}
               <div style={{
                 width: '100%',
-                aspectRatio: '1/1',
                 borderRadius: '16px',
+                overflow: 'hidden',
+                border: '3px solid var(--accent-gold)',
+                boxShadow: '0 20px 60px rgba(184,134,11,0.25)',
+                aspectRatio: '3/4',
                 background: 'var(--accent-cream)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '24px',
-                border: '1px solid var(--border-color)',
-                margin: '0 auto'
               }}>
-                <img src="/logo-slap.png" alt="SLAP Bible Pattern Emblem" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                <img
+                  src="/david-anibe.jpg"
+                  alt="David Anibe Daniel – Pioneer & Visionary Leader"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }}
+                />
               </div>
 
-              <div style={{ marginTop: '24px' }}>
-                <h3 style={{ fontSize: '24px', margin: '0 0 4px', fontFamily: 'var(--font-display)' }}>David Anibe Daniel</h3>
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--accent-gold)', fontWeight: '700', letterSpacing: '1px', textTransform: 'uppercase' }}>
+              {/* Name Badge */}
+              <div style={{
+                marginTop: '20px',
+                padding: '16px',
+                background: 'var(--accent-gold-light)',
+                borderRadius: '12px',
+                border: '1px solid rgba(184,134,11,0.2)'
+              }}>
+                <h3 style={{ fontSize: '22px', margin: '0 0 4px', fontFamily: 'var(--font-display)' }}>David Anibe Daniel</h3>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--accent-gold)', fontWeight: '800', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
                   Pioneer &amp; Visionary Leader
                 </p>
               </div>
             </div>
+
+            {/* Decorative accent dot */}
+            <div style={{
+              position: 'absolute',
+              top: '-16px',
+              right: '-16px',
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: 'var(--accent-gold)',
+              opacity: 0.15,
+              zIndex: 0
+            }} />
           </div>
         </AnimateOnScroll>
 
@@ -174,9 +219,9 @@ export default function About() {
         <div className="grid-4">
           {[
             { icon: <Award size={36} style={{ color: 'var(--accent-gold)' }} />, number: 4, suffix: ' Pillars', label: 'Structured Blueprint' },
-            { icon: <Flame size={36} style={{ color: 'var(--accent-brown)' }} />, number: 10000, suffix: '+', label: 'Active Believers' },
-            { icon: <Users size={36} style={{ color: 'var(--accent-olive)' }} />, number: 150, suffix: '+', label: 'Nations Reached' },
-            { icon: <Calendar size={36} style={{ color: 'var(--accent-rose)' }} />, number: 365, suffix: ' Days', label: 'Daily Consistency' },
+            { icon: <Flame size={36} style={{ color: 'var(--accent-brown)' }} />, number: stats.activeBelievers, suffix: '', label: 'Believers Registered' },
+            { icon: <Users size={36} style={{ color: 'var(--accent-olive)' }} />, number: stats.nationsReached, suffix: '', label: 'Nations Represented' },
+            { icon: <Calendar size={36} style={{ color: 'var(--accent-rose)' }} />, number: stats.totalReports, suffix: '', label: 'SLAP Reports' },
           ].map((s, i) => (
             <AnimateOnScroll key={i} animation="fadeUp" delay={i * 120}>
               <div className="glass-card" style={{ padding: '36px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>

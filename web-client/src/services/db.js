@@ -355,6 +355,8 @@ export const dbService = {
       users.push(newUser);
       localStorage.setItem('slap_users', JSON.stringify(users));
       localStorage.setItem('slap_current_user', JSON.stringify(newUser));
+      // Notify Home page to refresh live stats
+      window.dispatchEvent(new Event('slap_stats_updated'));
       return newUser;
     }
   },
@@ -590,6 +592,8 @@ export const dbService = {
       };
       reports.push(newReport);
       localStorage.setItem('slap_reports', JSON.stringify(reports));
+      // Notify Home page to refresh live stats
+      window.dispatchEvent(new Event('slap_stats_updated'));
 
       // Update Streak
       const streaks = JSON.parse(localStorage.getItem('slap_streaks'));
