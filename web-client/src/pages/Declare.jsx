@@ -1139,7 +1139,7 @@ export default function Declare() {
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '6px' }}>
               {activeCategoryDeclarations.map(d => (
                 <button
                   key={d.id}
@@ -1153,13 +1153,16 @@ export default function Declare() {
                     borderRadius: '8px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px',
+                    gap: '6px',
+                    width: '100%',
+                    boxSizing: 'border-box',
                     borderColor: text === d.text ? 'var(--accent-gold)' : 'var(--border-color)',
-                    background: text === d.text ? 'rgba(212, 160, 23, 0.12)' : 'var(--bg-secondary)'
+                    background: text === d.text ? 'rgba(212, 160, 23, 0.12)' : 'var(--bg-secondary)',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  <span style={{ fontStyle: 'italic', color: 'var(--text-primary)' }}>"{d.text}"</span>
-                  <span style={{ fontSize: '12px', color: 'var(--accent-gold)', fontWeight: '700' }}>{d.ref}</span>
+                  <span style={{ fontStyle: 'italic', color: 'var(--text-primary)', wordBreak: 'break-word' }}>"{d.text}"</span>
+                  <span style={{ fontSize: '12px', color: 'var(--accent-gold)', fontWeight: '700' }}>📖 {d.ref}</span>
                 </button>
               ))}
             </div>
@@ -1199,13 +1202,25 @@ export default function Declare() {
             </div>
 
             <div className="form-group" style={{ margin: 0 }}>
-              <label style={{ fontSize: '13px' }}>Proclamation Text</label>
+              <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                Proclamation Text
+              </label>
               <textarea
-                rows="3"
+                rows="5"
                 value={text}
                 onChange={e => setText(e.target.value)}
                 placeholder="Type or customize your personal faith proclamation..."
-                style={{ fontSize: '14px', lineHeight: '1.5' }}
+                style={{
+                  width: '100%',
+                  minHeight: '130px',
+                  maxHeight: '260px',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  resize: 'vertical',
+                  boxSizing: 'border-box'
+                }}
               />
             </div>
 
