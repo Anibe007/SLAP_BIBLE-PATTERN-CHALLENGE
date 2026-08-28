@@ -13,6 +13,12 @@ export const DECLARATION_CATEGORIES = [
 const DEFAULT_DECLARATIONS = [
   // FAITH
   {
+    id: 'decl-f-0',
+    category: 'faith',
+    text: "The blessings of God are on my life and empower me to prosper. The favor of God produces divine opportunities to make it happen. Because the Holy Spirit that is in me guides my steps, I am always at the right place at the right time.",
+    ref: "Deuteronomy 28:8, Psalm 5:12"
+  },
+  {
     id: 'decl-f-1',
     category: 'faith',
     text: "I walk by faith and not by sight. The Word of God is a lamp to my feet and a light to my path. My heart is steadfast, trusting completely in the Lord.",
@@ -736,20 +742,42 @@ export const dbService = {
 
     const users = await this.getAllUsers();
     const reports = await this.getAllReports();
-    const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
 
     const todayStr = new Date().toISOString().split('T')[0];
     const todayReports = reports.filter(r => (r.submission_date || r.created_at?.split('T')[0]) === todayStr);
-
     const nations = new Set(users.map(u => u.country || u.user_metadata?.country).filter(Boolean));
-    const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
-    const topStreaks = Object.values(streaks).sort((a, b) => (b.current_streak || 0) - (a.current_streak || 0)).slice(0, 5);
+
+    let totalDeclarations = 0;
+    let topStreaks = [];
+
+    if (isSupabaseConfigured) {
+      // Count declarations from Supabase
+      const { count } = await supabase
+        .from('declarations')
+        .select('*', { count: 'exact', head: true });
+      totalDeclarations = count || 0;
+
+      // Top streaks from Supabase
+      const { data: streakRows } = await supabase
+        .from('user_streaks')
+        .select('user_id, current_streak, longest_streak, last_activity_date')
+        .order('current_streak', { ascending: false })
+        .limit(5);
+      topStreaks = streakRows || [];
+    } else {
+      const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
+      totalDeclarations = declarations.length;
+      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+      topStreaks = Object.values(streaks)
+        .sort((a, b) => (b.current_streak || 0) - (a.current_streak || 0))
+        .slice(0, 5);
+    }
 
     return {
       totalParticipants: users.length,
       todaySubmissions: todayReports.length,
       totalSubmissions: reports.length,
-      totalDeclarations: declarations.length,
+      totalDeclarations,
       nationsReached: nations.size,
       topStreaks
     };
@@ -759,57 +787,73 @@ export const dbService = {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
 
-    let users = [];
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-      if (error) console.error("Error fetching users from Supabase:", error);
-      users = data || [];
+      // Fetch profiles, report counts, and streaks all from Supabase
+      const [profilesRes, reportsRes, streaksRes] = await Promise.all([
+        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+        supabase.from('slap_reports').select('user_id'),
+        supabase.from('user_streaks').select('user_id, current_streak, longest_streak, last_activity_date')
+      ]);
+
+      if (profilesRes.error) console.error("Error fetching users from Supabase:", profilesRes.error);
+
+      const users = profilesRes.data || [];
+      const reports = reportsRes.data || [];
+      const streaksArr = streaksRes.data || [];
+      const streaksMap = Object.fromEntries(streaksArr.map(s => [s.user_id, s]));
+
+      return users.map(u => {
+        const userReports = reports.filter(r => r.user_id === u.id);
+        const userStreak = streaksMap[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
+        return {
+          ...u,
+          totalSubmissions: userReports.length,
+          current_streak: userStreak.current_streak || 0,
+          longest_streak: userStreak.longest_streak || 0,
+          last_activity_date: userStreak.last_activity_date,
+          isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
+        };
+      });
     } else {
-      users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+
+      return users.map(u => {
+        const userReports = reports.filter(r => r.user_id === u.id);
+        const userStreak = streaks[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
+        return {
+          ...u,
+          totalSubmissions: userReports.length,
+          current_streak: userStreak.current_streak || 0,
+          longest_streak: userStreak.longest_streak || 0,
+          last_activity_date: userStreak.last_activity_date,
+          isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
+        };
+      });
     }
-
-    const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-    const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
-
-    // Enrich users with submission count and streak info
-    return users.map(u => {
-      const userReports = reports.filter(r => r.user_id === u.id);
-      const userStreak = streaks[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
-      return {
-        ...u,
-        totalSubmissions: userReports.length,
-        current_streak: userStreak.current_streak || 0,
-        longest_streak: userStreak.longest_streak || 0,
-        last_activity_date: userStreak.last_activity_date,
-        isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
-      };
-    });
   },
 
   async getAllReports() {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
 
-    let reports = [];
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
         .from('slap_reports')
         .select('*, profiles(full_name, email, country)')
         .order('created_at', { ascending: false });
-      if (!error && data) {
-        reports = data.map(r => ({
-          ...r,
-          userName: r.profiles?.full_name || 'Participant',
-          userEmail: r.profiles?.email || '',
-          userCountry: r.profiles?.country || ''
-        }));
-      }
-    }
-    
-    if (reports.length === 0) {
+      if (error) throw error;
+      return (data || []).map(r => ({
+        ...r,
+        userName: r.profiles?.full_name || 'Participant',
+        userEmail: r.profiles?.email || '',
+        userCountry: r.profiles?.country || ''
+      }));
+    } else {
       const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
       const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      reports = localReports.map(r => {
+      return localReports.map(r => {
         const u = users.find(user => user.id === r.user_id);
         return {
           ...r,
@@ -817,88 +861,143 @@ export const dbService = {
           userEmail: u?.email || '',
           userCountry: u?.country || u?.user_metadata?.country || ''
         };
-      }).sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     }
-
-    return reports;
   },
 
   async grantAdminPermission(userId) {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Super-admin permission required to grant access");
 
-    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-    const userIndex = users.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-      users[userIndex].is_admin = true;
-      users[userIndex].role = 'admin';
-      localStorage.setItem('slap_users', JSON.stringify(users));
-
-      // Update current user if self
-      const currentUser = await this.getCurrentUser();
-      if (currentUser && currentUser.id === userId) {
-        currentUser.is_admin = true;
-        currentUser.role = 'admin';
-        localStorage.setItem('slap_current_user', JSON.stringify(currentUser));
-      }
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: true, role: 'admin' })
+        .eq('id', userId);
+      if (error) throw error;
       return true;
+    } else {
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const userIndex = users.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        users[userIndex].is_admin = true;
+        users[userIndex].role = 'admin';
+        localStorage.setItem('slap_users', JSON.stringify(users));
+
+        // Update current user if self
+        const currentUser = await this.getCurrentUser();
+        if (currentUser && currentUser.id === userId) {
+          currentUser.is_admin = true;
+          currentUser.role = 'admin';
+          localStorage.setItem('slap_current_user', JSON.stringify(currentUser));
+        }
+        return true;
+      }
+      return false;
     }
-    return false;
   },
 
   async revokeAdminPermission(userId) {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Super-admin permission required to revoke access");
 
-    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-    const userIndex = users.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-      users[userIndex].is_admin = false;
-      users[userIndex].role = 'user';
-      localStorage.setItem('slap_users', JSON.stringify(users));
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: false, role: 'user' })
+        .eq('id', userId);
+      if (error) throw error;
       return true;
+    } else {
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const userIndex = users.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        users[userIndex].is_admin = false;
+        users[userIndex].role = 'user';
+        localStorage.setItem('slap_users', JSON.stringify(users));
+        return true;
+      }
+      return false;
     }
-    return false;
   },
 
   async verifyAdminKey(secretKey) {
     // Secret admin key set to 'SLAP_ADMIN_2026' or 'admin123'
     const VALID_ADMIN_KEYS = ['SLAP_ADMIN_2026', 'admin123', 'admin'];
-    if (VALID_ADMIN_KEYS.includes(secretKey.trim())) {
-      const user = await this.getCurrentUser();
-      if (user) {
-        user.is_admin = true;
-        user.role = 'admin';
-        localStorage.setItem('slap_current_user', JSON.stringify(user));
-        
-        // Also update in users list
-        const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-        const idx = users.findIndex(u => u.id === user.id);
-        if (idx !== -1) {
-          users[idx].is_admin = true;
-          users[idx].role = 'admin';
-          localStorage.setItem('slap_users', JSON.stringify(users));
-        }
-        return true;
-      }
-      return true;
+    if (!VALID_ADMIN_KEYS.includes(secretKey.trim())) {
+      throw new Error("Invalid admin authorization passkey");
     }
-    throw new Error("Invalid admin authorization passkey");
+
+    const user = await this.getCurrentUser();
+    if (!user) throw new Error("No authenticated user");
+
+    if (isSupabaseConfigured) {
+      // Persist admin role to Supabase profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: true, role: 'admin' })
+        .eq('id', user.id);
+      if (error) throw error;
+      // Also update Supabase auth user_metadata
+      await supabase.auth.updateUser({
+        data: { is_admin: true, role: 'admin' }
+      });
+    } else {
+      user.is_admin = true;
+      user.role = 'admin';
+      localStorage.setItem('slap_current_user', JSON.stringify(user));
+
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const idx = users.findIndex(u => u.id === user.id);
+      if (idx !== -1) {
+        users[idx].is_admin = true;
+        users[idx].role = 'admin';
+        localStorage.setItem('slap_users', JSON.stringify(users));
+      }
+    }
+    return true;
   },
 
   async isCurrentUserAdmin() {
     const user = await this.getCurrentUser();
     if (!user) return false;
-    return !!(user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org');
+
+    // Quick check from cached user object first
+    const cachedIsAdmin = !!(user.is_admin || user.role === 'admin'
+      || user.user_metadata?.is_admin || user.user_metadata?.role === 'admin'
+      || user.email === 'admin@slapbible.org');
+    if (cachedIsAdmin) return true;
+
+    // If Supabase is configured, verify from the profiles table (source of truth)
+    if (isSupabaseConfigured && user.id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin, role')
+        .eq('id', user.id)
+        .single();
+      if (profile) {
+        return !!(profile.is_admin || profile.role === 'admin');
+      }
+    }
+
+    return false;
   },
 
   async deleteReportByAdmin(reportId) {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized");
 
-    const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-    const filtered = reports.filter(r => r.id !== reportId);
-    localStorage.setItem('slap_reports', JSON.stringify(filtered));
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('slap_reports')
+        .delete()
+        .eq('id', reportId);
+      if (error) throw error;
+    } else {
+      const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+      const filtered = reports.filter(r => r.id !== reportId);
+      localStorage.setItem('slap_reports', JSON.stringify(filtered));
+    }
     return true;
   },
 
