@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/db';
-import { Play, Plus, Video, X, Loader2, Sparkles, Folder } from 'lucide-react';
+import { Play, Plus, Video, X, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import AnimateOnScroll from '../components/AnimateOnScroll';
 
 export default function VideoLibrary() {
   const { user } = useAuth();
@@ -91,77 +92,57 @@ export default function VideoLibrary() {
     : videos.filter(v => v.category === categoryFilter);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '60px' }}>
+    <div className="page-wrapper">
       
       {/* Page Header */}
-      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 style={{ fontSize: '38px', margin: 0 }}>Daily Video Library</h1>
-          <p style={{ margin: '4px 0 0' }}>Stream daily inspirational teachings, Bible study sessions, and sermons.</p>
-        </div>
-        
-        {/* Only authenticated users can upload for security/role simulation */}
-        {user && (
-          <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShowAddModal(true)}>
-            <Plus size={16} /> Add Daily Video
-          </button>
-        )}
-      </section>
+      <AnimateOnScroll animation="fadeUp">
+        <section className="flex-between flex-wrap gap-md">
+          <div>
+            <span className="text-label">DISCIPLESHIP ARCHIVE</span>
+            <h1 style={{ fontSize: '38px', margin: '4px 0 0' }}>Daily Video Library</h1>
+            <p style={{ margin: '4px 0 0' }}>Stream daily inspirational teachings, Bible study sessions, and sermons.</p>
+          </div>
+          
+          {user && (
+            <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShowAddModal(true)}>
+              <Plus size={16} /> Add Daily Video
+            </button>
+          )}
+        </section>
+      </AnimateOnScroll>
 
       {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40vh', gap: '8px' }}>
+        <div className="flex-center" style={{ height: '40vh', gap: '8px' }}>
           <Loader2 className="animate-spin" /> Loading Video Library...
         </div>
       ) : (
         <>
           {/* Active Streaming Player Block */}
           {activeVideo && (
-            <section className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{
-                position: 'relative',
-                width: '100%',
-                aspectRatio: '16/9',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                backgroundColor: 'black',
-                border: '1px solid var(--border-color)'
-              }}>
-                <iframe
-                  title={activeVideo.title}
-                  src={activeVideo.video_url}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    border: 'none'
-                  }}
-                  allowFullScreen
-                />
-              </div>
-              <div>
-                <span className="streak-badge" style={{ marginBottom: '8px' }}>{activeVideo.category}</span>
-                <h2 style={{ fontSize: '24px', margin: '4px 0 8px' }}>{activeVideo.title}</h2>
-                <p style={{ margin: 0, fontSize: '15px' }}>{activeVideo.description}</p>
-              </div>
-            </section>
+            <AnimateOnScroll animation="fadeUp">
+              <section className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="video-player-wrapper">
+                  <iframe
+                    title={activeVideo.title}
+                    src={activeVideo.video_url}
+                    allowFullScreen
+                  />
+                </div>
+                <div>
+                  <span className="streak-badge" style={{ marginBottom: '8px' }}>{activeVideo.category}</span>
+                  <h2 style={{ fontSize: '24px', margin: '4px 0 8px' }}>{activeVideo.title}</h2>
+                  <p style={{ margin: 0, fontSize: '15px' }}>{activeVideo.description}</p>
+                </div>
+              </section>
+            </AnimateOnScroll>
           )}
 
           {/* Category Filter Pills */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+          <div className="category-pills">
             {categories.map(c => (
               <button
                 key={c}
-                className="btn-secondary"
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  backgroundColor: categoryFilter === c ? 'var(--accent-rose)' : 'var(--bg-tertiary)',
-                  color: categoryFilter === c ? 'white' : 'var(--text-primary)',
-                  borderColor: categoryFilter === c ? 'var(--accent-rose)' : 'var(--border-color)',
-                  fontSize: '13px'
-                }}
+                className={`category-pill ${categoryFilter === c ? 'active' : ''}`}
                 onClick={() => setCategoryFilter(c)}
               >
                 {c}
@@ -175,62 +156,43 @@ export default function VideoLibrary() {
             {filteredVideos.length === 0 ? (
               <p style={{ padding: '40px 0', textAlign: 'center' }}>No videos found in this category.</p>
             ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '24px',
-                marginTop: '16px'
-              }}>
-                {filteredVideos.map(v => (
-                  <div
-                    key={v.id}
-                    className="glass-card"
-                    style={{
-                      padding: '12px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px',
-                      cursor: 'pointer',
-                      border: activeVideo?.id === v.id ? '2px solid var(--accent-rose)' : '1px solid var(--border-color)'
-                    }}
-                    onClick={() => {
-                      setActiveVideo(v);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                  >
-                    <div style={{
-                      width: '100%',
-                      aspectRatio: '16/10',
-                      borderRadius: '8px',
-                      backgroundImage: `url(${v.thumbnail_url})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      position: 'relative',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid var(--border-color)'
-                    }}>
-                      <div style={{
-                        width: '44px',
-                        height: '44px',
-                        borderRadius: '50%',
-                        backgroundColor: 'rgba(15,23,42,0.8)',
+              <div className="grid-auto" style={{ marginTop: '16px' }}>
+                {filteredVideos.map((v, i) => (
+                  <AnimateOnScroll key={v.id} animation="fadeUp" delay={i * 80}>
+                    <div
+                      className="glass-card"
+                      style={{
+                        padding: '12px',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        backdropFilter: 'blur(4px)'
-                      }}>
-                        <Play size={20} fill="white" />
+                        flexDirection: 'column',
+                        gap: '12px',
+                        cursor: 'pointer',
+                        border: activeVideo?.id === v.id ? '2px solid var(--accent-rose)' : '1px solid var(--border-color)'
+                      }}
+                      onClick={() => {
+                        setActiveVideo(v);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <div
+                        className="video-thumbnail"
+                        style={{ backgroundImage: `url(${v.thumbnail_url})` }}
+                      >
+                        <div className="video-play-icon">
+                          <Play size={20} fill="white" />
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--accent-rose)', textTransform: 'uppercase' }}>
+                          {v.category}
+                        </span>
+                        <h4 style={{ margin: '4px 0', fontSize: '15px', color: 'var(--text-primary)' }}>{v.title}</h4>
+                        <p style={{ margin: 0, fontSize: '13px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {v.description}
+                        </p>
                       </div>
                     </div>
-                    <div>
-                      <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--accent-rose)', textTransform: 'uppercase' }}>{v.category}</span>
-                      <h4 style={{ margin: '4px 0', fontSize: '15px', color: 'var(--text-primary)' }}>{v.title}</h4>
-                      <p style={{ margin: 0, fontSize: '13px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{v.description}</p>
-                    </div>
-                  </div>
+                  </AnimateOnScroll>
                 ))}
               </div>
             )}
@@ -238,38 +200,21 @@ export default function VideoLibrary() {
         </>
       )}
 
-      {/* Upload Video Drawer Modal */}
+      {/* Upload Video Modal */}
       {showAddModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div className="glass-card" style={{
-            width: '100%',
-            maxWidth: '480px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}><Video size={20} /> Publish Video URL</h2>
+        <div className="modal-overlay">
+          <div className="glass-card modal-content" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="flex-between">
+              <h2 style={{ margin: 0, fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Video size={20} /> Publish Video URL
+              </h2>
               <button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)' }} onClick={() => setShowAddModal(false)}>
                 <X size={20} />
               </button>
             </div>
 
             {formError && (
-              <div style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', padding: '10px', borderRadius: '8px', color: 'var(--accent-rose)', fontSize: '13px' }}>
+              <div className="alert alert-error">
                 {formError}
               </div>
             )}
@@ -297,7 +242,7 @@ export default function VideoLibrary() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2">
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>Category</label>
                   <select value={category} onChange={e => setCategory(e.target.value)}>
@@ -307,7 +252,7 @@ export default function VideoLibrary() {
                   </select>
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label>Thumbnail Image URL (Optional)</label>
+                  <label>Thumbnail URL (Optional)</label>
                   <input
                     type="url"
                     placeholder="https://image-link.jpg"

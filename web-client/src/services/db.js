@@ -1,26 +1,134 @@
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
-// --- SEED DATA FOR DEMO MODE ---
+// --- CATEGORIZED SEED DECLARATIONS ---
+export const DECLARATION_CATEGORIES = [
+  { id: 'faith', name: 'Faith', icon: '✦', color: '#b8860b' },
+  { id: 'hope', name: 'Hope', icon: '☼', color: '#d97706' },
+  { id: 'health', name: 'Health', icon: '♥', color: '#e11d48' },
+  { id: 'finance', name: 'Finance', icon: '♦', color: '#10b981' },
+  { id: 'healing', name: 'Healing', icon: '✚', color: '#06b6d4' },
+  { id: 'miracles', name: 'Miracles', icon: '★', color: '#8b5cf6' }
+];
+
 const DEFAULT_DECLARATIONS = [
+  // FAITH
   {
-    id: 'decl-1',
-    text: "The blessings of God are on my life and empower me to prosper. The favor of God produces divine opportunities to make it happen. Because the Holy Spirit that is in me guides my steps, I am always at the right place at the right time.",
-    ref: "Deuteronomy 28:8, Psalm 5:12"
+    id: 'decl-f-1',
+    category: 'faith',
+    text: "I walk by faith and not by sight. The Word of God is a lamp to my feet and a light to my path. My heart is steadfast, trusting completely in the Lord.",
+    ref: "2 Corinthians 5:7, Psalm 119:105"
   },
   {
-    id: 'decl-2',
-    text: "The steps of my life are ordered by the Lord. I am always at the right place at the right time.",
-    ref: "Psalm 37:23, Romans 8:14"
+    id: 'decl-f-2',
+    category: 'faith',
+    text: "My faith is the victory that overcomes the world. No mountain is too great, and no obstacle can stand before the power of God operating in me.",
+    ref: "1 John 5:4, Mark 11:23"
   },
   {
-    id: 'decl-3',
-    text: "I walk in faith, hope, and love. I am guided by light and understanding.",
-    ref: "1 Corinthians 13:13, Psalm 119:105"
+    id: 'decl-f-3',
+    category: 'faith',
+    text: "I am rooted, built up, and established in faith. God is able to do exceedingly, abundantly above all that I ask or think according to His power in me.",
+    ref: "Colossians 2:7, Ephesians 3:20"
+  },
+
+  // HOPE
+  {
+    id: 'decl-h-1',
+    category: 'hope',
+    text: "The Lord is my hope and my shield. I will not be shaken, for His promises are yes and amen in Christ Jesus.",
+    ref: "Psalm 33:20, 2 Corinthians 1:20"
   },
   {
-    id: 'decl-4',
-    text: "I am strong in the Lord and in the power of His might. No weapon formed against me shall prosper, and every tongue that rises against me in judgment is condemned.",
-    ref: "Ephesians 6:10, Isaiah 54:17"
+    id: 'decl-h-2',
+    category: 'hope',
+    text: "Those who wait on the Lord shall renew their strength. They shall mount up with wings like eagles; they shall run and not be weary, they shall walk and not faint.",
+    ref: "Isaiah 40:31"
+  },
+  {
+    id: 'decl-h-3',
+    category: 'hope',
+    text: "The God of hope fills me with all joy and peace as I trust in Him, so that I overflow with hope by the power of the Holy Spirit.",
+    ref: "Romans 15:13"
+  },
+
+  // HEALTH
+  {
+    id: 'decl-hl-1',
+    category: 'health',
+    text: "My body is the temple of the Holy Spirit. Divine life, strength, and energy vitalize every cell, organ, and tissue in my body today.",
+    ref: "1 Corinthians 6:19, Romans 8:11"
+  },
+  {
+    id: 'decl-hl-2',
+    category: 'health',
+    text: "The Lord strengthens me on my bed of illness and sustains me in full health. With long life He satisfies me and shows me His salvation.",
+    ref: "Psalm 41:3, Psalm 91:16"
+  },
+  {
+    id: 'decl-hl-3',
+    category: 'health',
+    text: "I prosper in all things and remain in vibrant health, just as my soul prospers in the truth of God's Word.",
+    ref: "3 John 1:2"
+  },
+
+  // FINANCE
+  {
+    id: 'decl-fin-1',
+    category: 'finance',
+    text: "The blessings of God are on my life and empower me to prosper. My God supplies all my needs according to His riches in glory by Christ Jesus.",
+    ref: "Deuteronomy 28:8, Philippians 4:19"
+  },
+  {
+    id: 'decl-fin-2',
+    category: 'finance',
+    text: "God gives me the power to get wealth to establish His covenant. I am a cheerful giver, and all grace abounds toward me with all sufficiency in all things.",
+    ref: "Deuteronomy 8:18, 2 Corinthians 9:8"
+  },
+  {
+    id: 'decl-fin-3',
+    category: 'finance',
+    text: "The Lord opens the heavens to bless the work of my hands. I lend and do not borrow, and I walk in divine wisdom for financial multiplication.",
+    ref: "Deuteronomy 28:12, Proverbs 3:9-10"
+  },
+
+  // HEALING
+  {
+    id: 'decl-hea-1',
+    category: 'healing',
+    text: "By His stripes I was healed and made whole. He sent His word and healed me, delivering me from all destructions.",
+    ref: "1 Peter 2:24, Psalm 107:20"
+  },
+  {
+    id: 'decl-hea-2',
+    category: 'healing',
+    text: "The Lord forgives all my iniquities and heals all my diseases. He redeems my life from the pit and crowns me with love and compassion.",
+    ref: "Psalm 103:2-4"
+  },
+  {
+    id: 'decl-hea-3',
+    category: 'healing',
+    text: "No weapon of infirmity formed against me shall prosper. The law of the Spirit of life in Christ Jesus has set me free from the law of sin and death.",
+    ref: "Isaiah 54:17, Romans 8:2"
+  },
+
+  // MIRACLES
+  {
+    id: 'decl-mir-1',
+    category: 'miracles',
+    text: "I am a living testimony of God's supernatural power. With God, nothing is impossible, and miracles follow me everywhere I go.",
+    ref: "Luke 1:37, Mark 16:17"
+  },
+  {
+    id: 'decl-mir-2',
+    category: 'miracles',
+    text: "The same Spirit that raised Jesus from the dead dwells in me. I walk in supernatural favor, breakthroughs, and divine acceleration.",
+    ref: "Romans 8:11, Amos 9:13"
+  },
+  {
+    id: 'decl-mir-3',
+    category: 'miracles',
+    text: "Behold, I and the children whom the Lord has given me are for signs and for wonders in Israel from the Lord of hosts.",
+    ref: "Isaiah 8:18"
   }
 ];
 
@@ -82,12 +190,124 @@ function calculateUpdatedStreak(lastActivityDateStr, currentStreak, longestStrea
   }
 }
 
-// Initialize LocalStorage DB if empty
-if (!localStorage.getItem('slap_users')) {
-  localStorage.setItem('slap_users', JSON.stringify([]));
+// Sample Seed Participants for rich Admin demo
+const INITIAL_DEMO_USERS = [
+  {
+    id: 'user-admin-1',
+    email: 'admin@slapbible.org',
+    password: 'password123',
+    fullName: 'David Anibe Daniel',
+    user_metadata: { full_name: 'David Anibe Daniel', country: 'Nigeria', role: 'admin', is_admin: true, title: 'Lead Admin' },
+    country: 'Nigeria',
+    role: 'admin',
+    is_admin: true,
+    created_at: new Date(Date.now() - 86400000 * 30).toISOString()
+  },
+  {
+    id: 'user-part-1',
+    email: 'grace.mensah@gmail.com',
+    password: 'password123',
+    fullName: 'Grace Mensah',
+    user_metadata: { full_name: 'Grace Mensah', country: 'Ghana' },
+    country: 'Ghana',
+    role: 'user',
+    is_admin: false,
+    created_at: new Date(Date.now() - 86400000 * 18).toISOString()
+  },
+  {
+    id: 'user-part-2',
+    email: 'emmanuel.okafor@yahoo.com',
+    password: 'password123',
+    fullName: 'Emmanuel Okafor',
+    user_metadata: { full_name: 'Emmanuel Okafor', country: 'Nigeria' },
+    country: 'Nigeria',
+    role: 'user',
+    is_admin: false,
+    created_at: new Date(Date.now() - 86400000 * 14).toISOString()
+  },
+  {
+    id: 'user-part-3',
+    email: 'sarah.jenkins@outlook.com',
+    password: 'password123',
+    fullName: 'Sarah Jenkins',
+    user_metadata: { full_name: 'Sarah Jenkins', country: 'United Kingdom' },
+    country: 'United Kingdom',
+    role: 'user',
+    is_admin: false,
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString()
+  },
+  {
+    id: 'user-part-4',
+    email: 'chidi.nwosu@gmail.com',
+    password: 'password123',
+    fullName: 'Chidi Nwosu',
+    user_metadata: { full_name: 'Chidi Nwosu', country: 'United States' },
+    country: 'United States',
+    role: 'user',
+    is_admin: false,
+    created_at: new Date(Date.now() - 86400000 * 7).toISOString()
+  }
+];
+
+const INITIAL_DEMO_REPORTS = [
+  {
+    id: 'rep-demo-1',
+    user_id: 'user-part-1',
+    book: 'Romans',
+    chapter: '8',
+    verses: 'Romans 8:1-11',
+    translation: 'KJV',
+    strikingVerses: 'There is therefore now no condemnation to them which are in Christ Jesus, who walk not after the flesh, but after the Spirit. (Romans 8:1)',
+    lessonsLearnt: 'I am completely freed from guilt and condemnation. Walking in the Spirit gives me eternal victory and joy.',
+    actionPlans: 'Spend 15 minutes before work in intentional spiritual meditation and silence unnecessary negative thoughts.',
+    prayers: 'Father, thank You for the law of the Spirit of life in Christ Jesus that has set me free. Guide my steps today. Amen.',
+    submission_date: new Date().toISOString().split('T')[0],
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
+  },
+  {
+    id: 'rep-demo-2',
+    user_id: 'user-part-2',
+    book: 'Philippians',
+    chapter: '4',
+    verses: 'Philippians 4:4-13',
+    translation: 'NIV',
+    strikingVerses: 'I can do all this through him who gives me strength. (Philippians 4:13)',
+    lessonsLearnt: 'Christ is my boundless source of supernatural capacity. Anxiety melts away through prayer with thanksgiving.',
+    actionPlans: 'Write down 3 things I am thankful for whenever feeling overwhelmed at the office today.',
+    prayers: 'Lord Jesus, I surrender all worry to You. You are my peace and my strength. Amen.',
+    submission_date: new Date().toISOString().split('T')[0],
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString()
+  },
+  {
+    id: 'rep-demo-3',
+    user_id: 'user-part-3',
+    book: 'Psalms',
+    chapter: '23',
+    verses: 'Psalms 23:1-6',
+    translation: 'KJV',
+    strikingVerses: 'The Lord is my shepherd; I shall not want. He maketh me to lie down in green pastures... (Psalm 23:1-2)',
+    lessonsLearnt: 'God actively cares for my emotional and physical restoration. Goodness and mercy are guaranteed followers of my life.',
+    actionPlans: 'Take a break at lunch to declare Psalm 23 over my family and ministry goals.',
+    prayers: 'Good Shepherd, thank You for leading me by still waters and restoring my soul today. In Jesus name.',
+    submission_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+    created_at: new Date(Date.now() - 86400000).toISOString()
+  }
+];
+
+const INITIAL_DEMO_STREAKS = {
+  'user-admin-1': { current_streak: 21, longest_streak: 21, last_activity_date: new Date().toISOString().split('T')[0] },
+  'user-part-1': { current_streak: 7, longest_streak: 12, last_activity_date: new Date().toISOString().split('T')[0] },
+  'user-part-2': { current_streak: 4, longest_streak: 9, last_activity_date: new Date().toISOString().split('T')[0] },
+  'user-part-3': { current_streak: 3, longest_streak: 5, last_activity_date: new Date(Date.now() - 86400000).toISOString().split('T')[0] },
+  'user-part-4': { current_streak: 1, longest_streak: 3, last_activity_date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0] }
+};
+
+// Initialize LocalStorage DB
+if (!localStorage.getItem('slap_users') || JSON.parse(localStorage.getItem('slap_users') || '[]').length === 0) {
+  localStorage.setItem('slap_users', JSON.stringify(INITIAL_DEMO_USERS));
 }
-if (!localStorage.getItem('slap_reports')) {
-  localStorage.setItem('slap_reports', JSON.stringify([]));
+if (!localStorage.getItem('slap_reports') || JSON.parse(localStorage.getItem('slap_reports') || '[]').length === 0) {
+  localStorage.setItem('slap_reports', JSON.stringify(INITIAL_DEMO_REPORTS));
 }
 if (!localStorage.getItem('slap_declarations')) {
   localStorage.setItem('slap_declarations', JSON.stringify([]));
@@ -95,32 +315,32 @@ if (!localStorage.getItem('slap_declarations')) {
 if (!localStorage.getItem('slap_videos')) {
   localStorage.setItem('slap_videos', JSON.stringify(DEFAULT_VIDEOS));
 }
-if (!localStorage.getItem('slap_streaks')) {
-  localStorage.setItem('slap_streaks', JSON.stringify({}));
+if (!localStorage.getItem('slap_streaks') || Object.keys(JSON.parse(localStorage.getItem('slap_streaks') || '{}')).length === 0) {
+  localStorage.setItem('slap_streaks', JSON.stringify(INITIAL_DEMO_STREAKS));
 }
 
 // Core Database Service
 export const dbService = {
   // --- AUTH SERVICE ---
-  async signUp(email, password, fullName) {
+  async signUp(email, password, fullName, country = '') {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } }
+        options: { data: { full_name: fullName, country } }
       });
       if (error) throw error;
       
       // Sync with user profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .upsert({ id: data.user.id, email, full_name: fullName });
+        .upsert({ id: data.user.id, email, full_name: fullName, country });
       if (profileError) console.error("Error creating profile:", profileError);
 
       return data.user;
     } else {
       // LocalStorage Auth Mock
-      const users = JSON.parse(localStorage.getItem('slap_users'));
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
       if (users.find(u => u.email === email)) {
         throw new Error("User already exists with this email address");
       }
@@ -128,7 +348,8 @@ export const dbService = {
         id: 'user-' + Math.random().toString(36).substr(2, 9),
         email,
         password, // stored plain for demo mock purposes
-        user_metadata: { full_name: fullName },
+        user_metadata: { full_name: fullName, country },
+        country,
         created_at: new Date().toISOString()
       };
       users.push(newUser);
@@ -136,6 +357,106 @@ export const dbService = {
       localStorage.setItem('slap_current_user', JSON.stringify(newUser));
       return newUser;
     }
+  },
+
+  // --- DEDICATED ADMIN AUTH SERVICES ---
+  async signUpAdmin(email, password, fullName, country = '', adminPasskey = '') {
+    const VALID_ADMIN_KEYS = ['SLAP_ADMIN_2026', 'admin123', 'admin'];
+    if (!adminPasskey || !VALID_ADMIN_KEYS.includes(adminPasskey.trim())) {
+      throw new Error("Invalid Admin Authorization Passkey. Only authorized administrators with a valid key can create an admin account.");
+    }
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName, country, role: 'admin', is_admin: true } }
+      });
+      if (error) throw error;
+      
+      await supabase
+        .from('profiles')
+        .upsert({ id: data.user.id, email, full_name: fullName, country, role: 'admin', is_admin: true });
+
+      return data.user;
+    } else {
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      if (users.find(u => u.email === email)) {
+        throw new Error("User already exists with this email address");
+      }
+      const newAdmin = {
+        id: 'admin-' + Math.random().toString(36).substr(2, 9),
+        email,
+        password,
+        fullName,
+        user_metadata: { full_name: fullName, country, role: 'admin', is_admin: true },
+        country,
+        role: 'admin',
+        is_admin: true,
+        created_at: new Date().toISOString()
+      };
+      users.push(newAdmin);
+      localStorage.setItem('slap_users', JSON.stringify(users));
+      localStorage.setItem('slap_current_user', JSON.stringify(newAdmin));
+      return newAdmin;
+    }
+  },
+
+  async signInAdmin(email, password) {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      const profile = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+      const isAdminUser = !!(profile.data?.is_admin || profile.data?.role === 'admin' || data.user.email === 'admin@slapbible.org');
+      if (!isAdminUser) {
+        throw new Error("Access Denied: This account is not authorized as an administrator. Please use the Participant Login.");
+      }
+      return data.user;
+    } else {
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const user = users.find(u => u.email === email && u.password === password);
+      if (!user) {
+        throw new Error("Invalid administrator credentials");
+      }
+      const isAdminUser = !!(user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org');
+      if (!isAdminUser) {
+        throw new Error("Access Denied: This account does not have administrator privileges. Please sign in via the Participant Portal.");
+      }
+      localStorage.setItem('slap_current_user', JSON.stringify(user));
+      return user;
+    }
+  },
+
+  async getGlobalStats() {
+    if (isSupabaseConfigured) {
+      try {
+        const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        const { data: countries } = await supabase.from('profiles').select('country');
+        const { count: reportCount } = await supabase.from('slap_reports').select('*', { count: 'exact', head: true });
+        
+        const distinctCountries = new Set(countries?.map(c => c.country).filter(Boolean));
+
+        return {
+          activeBelievers: userCount || 0,
+          nationsReached: distinctCountries.size || 0,
+          totalReports: reportCount || 0
+        };
+      } catch (e) {
+        console.warn("Could not fetch global stats from Supabase:", e);
+      }
+    }
+
+    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    const distinctCountries = new Set(
+      users.map(u => u.user_metadata?.country || u.country).filter(Boolean)
+    );
+
+    return {
+      activeBelievers: users.length,
+      nationsReached: distinctCountries.size,
+      totalReports: reports.length
+    };
   },
 
   async signIn(email, password) {
@@ -386,6 +707,179 @@ export const dbService = {
     }
   },
 
+  // --- ADMIN SERVICES & PERMISSION CONTROL ---
+  async getAdminMetrics() {
+    const isCurAdmin = await this.isCurrentUserAdmin();
+    if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
+
+    const users = await this.getAllUsers();
+    const reports = await this.getAllReports();
+    const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayReports = reports.filter(r => (r.submission_date || r.created_at?.split('T')[0]) === todayStr);
+
+    const nations = new Set(users.map(u => u.country || u.user_metadata?.country).filter(Boolean));
+    const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+    const topStreaks = Object.values(streaks).sort((a, b) => (b.current_streak || 0) - (a.current_streak || 0)).slice(0, 5);
+
+    return {
+      totalParticipants: users.length,
+      todaySubmissions: todayReports.length,
+      totalSubmissions: reports.length,
+      totalDeclarations: declarations.length,
+      nationsReached: nations.size,
+      topStreaks
+    };
+  },
+
+  async getAllUsers() {
+    const isCurAdmin = await this.isCurrentUserAdmin();
+    if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
+
+    let users = [];
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      if (error) console.error("Error fetching users from Supabase:", error);
+      users = data || [];
+    } else {
+      users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    }
+
+    const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+
+    // Enrich users with submission count and streak info
+    return users.map(u => {
+      const userReports = reports.filter(r => r.user_id === u.id);
+      const userStreak = streaks[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
+      return {
+        ...u,
+        totalSubmissions: userReports.length,
+        current_streak: userStreak.current_streak || 0,
+        longest_streak: userStreak.longest_streak || 0,
+        last_activity_date: userStreak.last_activity_date,
+        isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
+      };
+    });
+  },
+
+  async getAllReports() {
+    const isCurAdmin = await this.isCurrentUserAdmin();
+    if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
+
+    let reports = [];
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('slap_reports')
+        .select('*, profiles(full_name, email, country)')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        reports = data.map(r => ({
+          ...r,
+          userName: r.profiles?.full_name || 'Participant',
+          userEmail: r.profiles?.email || '',
+          userCountry: r.profiles?.country || ''
+        }));
+      }
+    }
+    
+    if (reports.length === 0) {
+      const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      reports = localReports.map(r => {
+        const u = users.find(user => user.id === r.user_id);
+        return {
+          ...r,
+          userName: u?.user_metadata?.full_name || u?.fullName || 'Participant',
+          userEmail: u?.email || '',
+          userCountry: u?.country || u?.user_metadata?.country || ''
+        };
+      }).sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }
+
+    return reports;
+  },
+
+  async grantAdminPermission(userId) {
+    const isCurAdmin = await this.isCurrentUserAdmin();
+    if (!isCurAdmin) throw new Error("Unauthorized: Super-admin permission required to grant access");
+
+    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+      users[userIndex].is_admin = true;
+      users[userIndex].role = 'admin';
+      localStorage.setItem('slap_users', JSON.stringify(users));
+
+      // Update current user if self
+      const currentUser = await this.getCurrentUser();
+      if (currentUser && currentUser.id === userId) {
+        currentUser.is_admin = true;
+        currentUser.role = 'admin';
+        localStorage.setItem('slap_current_user', JSON.stringify(currentUser));
+      }
+      return true;
+    }
+    return false;
+  },
+
+  async revokeAdminPermission(userId) {
+    const isCurAdmin = await this.isCurrentUserAdmin();
+    if (!isCurAdmin) throw new Error("Unauthorized: Super-admin permission required to revoke access");
+
+    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+      users[userIndex].is_admin = false;
+      users[userIndex].role = 'user';
+      localStorage.setItem('slap_users', JSON.stringify(users));
+      return true;
+    }
+    return false;
+  },
+
+  async verifyAdminKey(secretKey) {
+    // Secret admin key set to 'SLAP_ADMIN_2026' or 'admin123'
+    const VALID_ADMIN_KEYS = ['SLAP_ADMIN_2026', 'admin123', 'admin'];
+    if (VALID_ADMIN_KEYS.includes(secretKey.trim())) {
+      const user = await this.getCurrentUser();
+      if (user) {
+        user.is_admin = true;
+        user.role = 'admin';
+        localStorage.setItem('slap_current_user', JSON.stringify(user));
+        
+        // Also update in users list
+        const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+        const idx = users.findIndex(u => u.id === user.id);
+        if (idx !== -1) {
+          users[idx].is_admin = true;
+          users[idx].role = 'admin';
+          localStorage.setItem('slap_users', JSON.stringify(users));
+        }
+        return true;
+      }
+      return true;
+    }
+    throw new Error("Invalid admin authorization passkey");
+  },
+
+  async isCurrentUserAdmin() {
+    const user = await this.getCurrentUser();
+    if (!user) return false;
+    return !!(user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org');
+  },
+
+  async deleteReportByAdmin(reportId) {
+    const isCurAdmin = await this.isCurrentUserAdmin();
+    if (!isCurAdmin) throw new Error("Unauthorized");
+
+    const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    const filtered = reports.filter(r => r.id !== reportId);
+    localStorage.setItem('slap_reports', JSON.stringify(filtered));
+    return true;
+  },
+
   // --- VIDEO LIBRARY SERVICE ---
   async getVideos() {
     if (isSupabaseConfigured) {
@@ -396,7 +890,7 @@ export const dbService = {
       if (error) throw error;
       return data;
     } else {
-      const videos = JSON.parse(localStorage.getItem('slap_videos'));
+      const videos = JSON.parse(localStorage.getItem('slap_videos') || '[]');
       return videos.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
     }
   },
@@ -421,7 +915,7 @@ export const dbService = {
       if (error) throw error;
       return data;
     } else {
-      const videos = JSON.parse(localStorage.getItem('slap_videos'));
+      const videos = JSON.parse(localStorage.getItem('slap_videos') || '[]');
       const newVideo = {
         id: 'vid-' + Math.random().toString(36).substr(2, 9),
         title: video.title,
@@ -438,3 +932,4 @@ export const dbService = {
     }
   }
 };
+

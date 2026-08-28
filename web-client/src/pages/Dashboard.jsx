@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { dbService } from '../services/db';
-import { Flame, CheckCircle, Calendar, Plus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight } from 'lucide-react';
+import { Flame, CheckCircle, Calendar, Plus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import AnimateOnScroll from '../components/AnimateOnScroll';
+import { useAuth } from '../context/AuthContext';
 
 /* ─── Bible Books Data with chapter counts ─── */
 const BIBLE_BOOKS = [
@@ -59,7 +61,28 @@ const API_TRANSLATIONS = {
 const BOOK_ID_MAP = {};
 BIBLE_BOOKS.forEach((b, idx) => { BOOK_ID_MAP[b.name] = idx + 1; });
 
+/* ─── Helper to clean and format scripture text ─── */
+export function cleanScriptureText(rawText) {
+  if (!rawText) return '';
+  return rawText
+    .replace(/<S>[^<]*<\/S>/gi, '')
+    .replace(/<s\d+>[^<]*<\/s\d+>/gi, '')
+    .replace(/<sup[^>]*>.*?<\/sup>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&para;/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([,.:;?!])/g, '$1')
+    .trim();
+}
+
 export default function Dashboard() {
+  const { user } = useAuth();
   const [reports, setReports] = useState([]);
   const [streak, setStreak] = useState({ current_streak: 0, longest_streak: 0, last_activity_date: null });
   const [book, setBook] = useState('John');
@@ -74,6 +97,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [expandedReport, setExpandedReport] = useState(null);
+  const [selectedReportModal, setSelectedReportModal] = useState(null);
 
   /* ─── Bible Reader State ─── */
   const [readerBook, setReaderBook] = useState('John');
@@ -121,7 +145,6 @@ export default function Dashboard() {
       const res = await fetch(url);
       if (!res.ok) throw new Error('Scripture not found for this translation.');
       const data = await res.json();
-      // bolls.life returns array of { verse, text, pk }
       setBibleText({ verses: data, reference: `${bk} ${ch}` });
     } catch (err) {
       setBibleError(err.message || 'Failed to load scripture. Please try another translation.');
@@ -157,8 +180,8 @@ export default function Dashboard() {
 
   /* ─── Helper: Get book name from numeric ID ─── */
   const getBookNameById = (id) => {
-    const book = BIBLE_BOOKS[id - 1];
-    return book ? book.name : `Book ${id}`;
+    const bookObj = BIBLE_BOOKS[id - 1];
+    return bookObj ? bookObj.name : `Book ${id}`;
   };
 
   // Load Bible text on mount and when reader settings change
@@ -172,7 +195,6 @@ export default function Dashboard() {
     if (readerChapter > 1) {
       setReaderChapter(prev => prev - 1);
     } else {
-      // Go to previous book's last chapter
       const idx = BIBLE_BOOKS.findIndex(b => b.name === readerBook);
       if (idx > 0) {
         const prevBook = BIBLE_BOOKS[idx - 1];
@@ -187,7 +209,6 @@ export default function Dashboard() {
     if (readerChapter < bookData.chapters) {
       setReaderChapter(prev => prev + 1);
     } else {
-      // Go to next book's chapter 1
       const idx = BIBLE_BOOKS.findIndex(b => b.name === readerBook);
       if (idx < BIBLE_BOOKS.length - 1) {
         const nextBook = BIBLE_BOOKS[idx + 1];
@@ -217,7 +238,7 @@ export default function Dashboard() {
     }
 
     try {
-      const result = await dbService.submitReport({
+      await dbService.submitReport({
         book,
         chapter,
         verses,
@@ -262,23 +283,13 @@ export default function Dashboard() {
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
       
-      // Check if there is a report on this date
       const isCompleted = reports.some(r => r.submission_date === dateStr);
       
       boxes.push(
         <div
           key={dateStr}
           title={`${d.toDateString()}: ${isCompleted ? 'SLAP Complete!' : 'No report'}`}
-          style={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '4px',
-            backgroundColor: isCompleted ? 'var(--accent-gold)' : 'var(--bg-tertiary)',
-            border: '1px solid var(--border-color)',
-            opacity: isCompleted ? 1 : 0.4,
-            cursor: 'help',
-            boxShadow: isCompleted ? '0 0 8px var(--accent-gold)' : 'none'
-          }}
+          className={`contribution-cell ${isCompleted ? 'completed' : 'empty'}`}
         />
       );
     }
@@ -288,84 +299,61 @@ export default function Dashboard() {
   const bookData = getBookData(readerBook);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '60px' }}>
+    <div className="page-wrapper">
       
       {/* Top Welcome / Stats */}
-      <section style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '24px',
-        padding: '24px',
-        background: 'linear-gradient(135deg, rgba(184,134,11,0.08), rgba(212,168,67,0.05))',
-        borderRadius: '16px',
-        border: '1px solid var(--border-color)'
-      }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '28px' }}>Your Daily Study Dashboard</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Read scripture, study the Word, and submit your daily SLAP report.</p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <div className="glass-card" style={{ padding: '12px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 'bold' }}>Current Streak</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '24px', fontWeight: '800', color: 'var(--accent-gold)' }}>
-              <Flame fill="var(--accent-gold)" size={20} />
-              {streak.current_streak} Days
-            </div>
+      <AnimateOnScroll animation="fadeUp">
+        <section className="dashboard-welcome">
+          <div>
+            <h1>Your Daily Study Dashboard</h1>
+            <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
+              Read scripture, study the Word, and submit your daily SLAP report.
+            </p>
           </div>
 
-          <div className="glass-card" style={{ padding: '12px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 'bold' }}>Longest Streak</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '24px', fontWeight: '800', color: 'var(--accent-gold)' }}>
-              <Sparkles size={20} />
-              {streak.longest_streak} Days
+          <div className="dashboard-stats">
+            <div className="glass-card streak-card">
+              <span className="streak-label">Current Streak</span>
+              <div className="streak-value">
+                <Flame fill="var(--accent-gold)" size={20} />
+                {streak.current_streak} Days
+              </div>
+            </div>
+
+            <div className="glass-card streak-card">
+              <span className="streak-label">Longest Streak</span>
+              <div className="streak-value">
+                <Sparkles size={20} />
+                {streak.longest_streak} Days
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </AnimateOnScroll>
 
       {/* Consistency Calendar grid */}
-      <section className="glass-card">
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
-          <Calendar size={18} /> Consistency Tracker (Last 28 Days)
-        </h3>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {renderContributionGrid()}
-        </div>
-      </section>
+      <AnimateOnScroll animation="fadeUp" delay={100}>
+        <section className="glass-card">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
+            <Calendar size={18} /> Consistency Tracker (Last 28 Days)
+          </h3>
+          <div className="contribution-grid">
+            {renderContributionGrid()}
+          </div>
+        </section>
+      </AnimateOnScroll>
 
       {/* ═══════════ Tab Switcher: Read / Report / Concordance ═══════════ */}
-      <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid var(--border-color)', flexWrap: 'wrap' }}>
-        {[{ key: 'read', icon: <BookOpen size={16} />, label: 'Read Scripture' },
+      <div className="tab-bar">
+        {[
+          { key: 'read', icon: <BookOpen size={16} />, label: 'Read Scripture' },
           { key: 'concordance', icon: <Search size={16} />, label: 'Concordance' },
           { key: 'report', icon: <Plus size={16} />, label: 'Write Report' }
         ].map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            style={{
-              flex: 1,
-              padding: '14px 16px',
-              background: activeTab === tab.key ? 'var(--accent-gold)' : 'transparent',
-              color: activeTab === tab.key ? '#fff' : 'var(--text-secondary)',
-              border: 'none',
-              borderBottom: activeTab === tab.key ? '3px solid var(--accent-gold)' : '3px solid transparent',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '700',
-              fontFamily: 'var(--font-display)',
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-              borderRadius: '8px 8px 0 0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.3s ease',
-              minWidth: '120px'
-            }}
+            className={`tab-item ${activeTab === tab.key ? 'active' : ''}`}
           >
             {tab.icon} {tab.label}
           </button>
@@ -374,19 +362,11 @@ export default function Dashboard() {
 
       {/* ═══════════ TAB: Bible Reader ═══════════ */}
       {activeTab === 'read' && (
-        <section className="glass-card" style={{ padding: '0' }}>
+        <section className="glass-card-static" style={{ padding: 0, overflow: 'hidden' }}>
           {/* Reader Toolbar */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '12px',
-            padding: '20px 24px',
-            borderBottom: '1px solid var(--border-color)',
-            alignItems: 'flex-end',
-            background: 'linear-gradient(135deg, rgba(184,134,11,0.06), transparent)'
-          }}>
-            <div className="form-group" style={{ margin: 0, flex: '2', minWidth: '160px' }}>
-              <label style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', color: 'var(--text-secondary)', letterSpacing: '0.5px' }}>Book</label>
+          <div className="reader-toolbar">
+            <div className="form-group book-select">
+              <label className="text-label-sm">Book</label>
               <select value={readerBook} onChange={e => { setReaderBook(e.target.value); setReaderChapter(1); }}>
                 <optgroup label="Old Testament">
                   {BIBLE_BOOKS.filter(b => b.testament === 'OT').map(b => (
@@ -401,8 +381,8 @@ export default function Dashboard() {
               </select>
             </div>
 
-            <div className="form-group" style={{ margin: 0, flex: '1', minWidth: '100px' }}>
-              <label style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', color: 'var(--text-secondary)', letterSpacing: '0.5px' }}>Chapter</label>
+            <div className="form-group chapter-select">
+              <label className="text-label-sm">Chapter</label>
               <select value={readerChapter} onChange={e => setReaderChapter(Number(e.target.value))}>
                 {bookData && Array.from({ length: bookData.chapters }, (_, i) => i + 1).map(ch => (
                   <option key={ch} value={ch}>{ch}</option>
@@ -410,8 +390,8 @@ export default function Dashboard() {
               </select>
             </div>
 
-            <div className="form-group" style={{ margin: 0, flex: '1.5', minWidth: '180px' }}>
-              <label style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', color: 'var(--text-secondary)', letterSpacing: '0.5px' }}>Translation</label>
+            <div className="form-group translation-select">
+              <label className="text-label-sm">Translation</label>
               <select value={readerTranslation} onChange={e => setReaderTranslation(e.target.value)}>
                 {Object.entries(API_TRANSLATIONS).map(([key, val]) => (
                   <option key={key} value={key}>{val.label}</option>
@@ -421,43 +401,18 @@ export default function Dashboard() {
           </div>
 
           {/* Chapter Title & Navigation */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '16px 24px',
-            borderBottom: '1px solid var(--border-color)'
-          }}>
+          <div className="reader-nav">
             <button
               onClick={goToPrevChapter}
               disabled={readerBook === 'Genesis' && readerChapter === 1}
-              style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                padding: '8px 14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-                opacity: (readerBook === 'Genesis' && readerChapter === 1) ? 0.4 : 1
-              }}
+              className="reader-nav-btn"
             >
               <ChevronLeft size={16} /> Prev
             </button>
 
-            <h2 style={{
-              margin: 0,
-              fontFamily: 'var(--font-serif)',
-              fontSize: '22px',
-              fontWeight: '700',
-              color: 'var(--text-primary)',
-              textAlign: 'center'
-            }}>
+            <h2 className="reader-chapter-title">
               {readerBook} {readerChapter}
-              <span style={{ display: 'block', fontSize: '12px', fontWeight: '400', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginTop: '2px' }}>
+              <span className="reader-chapter-subtitle">
                 {API_TRANSLATIONS[readerTranslation]?.label || readerTranslation}
               </span>
             </h2>
@@ -465,83 +420,51 @@ export default function Dashboard() {
             <button
               onClick={goToNextChapter}
               disabled={readerBook === 'Revelation' && readerChapter === 22}
-              style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                padding: '8px 14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-                opacity: (readerBook === 'Revelation' && readerChapter === 22) ? 0.4 : 1
-              }}
+              className="reader-nav-btn"
             >
               Next <ChevronRight size={16} />
             </button>
           </div>
 
           {/* Scripture Content */}
-          <div style={{ padding: '28px 32px', minHeight: '300px' }}>
+          <div className="scripture-body">
             {bibleLoading && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: '12px', color: 'var(--text-secondary)' }}>
-                <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
-                <span style={{ fontSize: '15px' }}>Loading scripture...</span>
+              <div className="flex-center" style={{ padding: '80px 0', gap: '12px', color: 'var(--text-secondary)' }}>
+                <Loader size={24} className="animate-spin" />
+                <span>Loading scripture...</span>
               </div>
             )}
 
             {bibleError && (
-              <div style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', padding: '16px 20px', borderRadius: '10px', color: '#f43f5e', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '14px' }}>
+              <div className="alert alert-error">
                 <AlertCircle size={18} />
                 <div>
                   <strong>Unable to load this passage.</strong>
-                  <p style={{ margin: '4px 0 0', fontSize: '13px', opacity: 0.8 }}>{bibleError} Try using KJV or WEB translation.</p>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', opacity: 0.85 }}>{bibleError} Try selecting another translation.</p>
                 </div>
               </div>
             )}
 
             {bibleText && bibleText.verses && (
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', lineHeight: '1.9', color: 'var(--text-primary)' }}>
+              <div>
                 {bibleText.verses.map((v, idx) => (
-                  <span key={idx} style={{ marginBottom: '4px' }}>
-                    <sup style={{
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      color: 'var(--accent-gold)',
-                      marginRight: '4px',
-                      verticalAlign: 'super'
-                    }}>
-                      {v.verse}
-                    </sup>
-                    {v.text}
+                  <span key={idx} style={{ marginRight: '4px' }}>
+                    <sup className="verse-number">{v.verse}</sup>
+                    {cleanScriptureText(v.text)}
                   </span>
                 ))}
               </div>
             )}
-
-
           </div>
 
           {/* Bottom Navigation + CTA */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '16px 24px',
-            borderTop: '1px solid var(--border-color)',
-            background: 'linear-gradient(135deg, rgba(184,134,11,0.04), transparent)',
-            flexWrap: 'wrap',
-            gap: '12px'
-          }}>
+          <div className="reader-bottom-bar">
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={goToPrevChapter} className="btn-secondary" style={{ padding: '10px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ChevronLeft size={14} /> Previous Chapter
+                <ChevronLeft size={14} /> Previous
               </button>
               <button onClick={goToNextChapter} className="btn-secondary" style={{ padding: '10px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                Next Chapter <ChevronRight size={14} />
+                Next <ChevronRight size={14} />
               </button>
             </div>
 
@@ -565,20 +488,20 @@ export default function Dashboard() {
             <h2>Submit Daily SLAP</h2>
             
             {error && (
-              <div style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', padding: '12px', borderRadius: '8px', color: '#f43f5e', display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', fontSize: '13px' }}>
+              <div className="alert alert-error" style={{ marginBottom: '16px' }}>
                 <AlertCircle size={16} /> {error}
               </div>
             )}
 
             {success && (
-              <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', padding: '12px', borderRadius: '8px', color: '#10b981', display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', fontSize: '13px' }}>
+              <div className="alert alert-success" style={{ marginBottom: '16px' }}>
                 <CheckCircle size={16} /> {success}
               </div>
             )}
 
             <form onSubmit={handleSLAPSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2">
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>Bible Book</label>
                   <select value={book} onChange={e => setBook(e.target.value)}>
@@ -600,7 +523,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2">
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>Verses (optional)</label>
                   <input type="text" placeholder="e.g. 16-21" value={verses} onChange={e => setVerses(e.target.value)} />
@@ -616,100 +539,120 @@ export default function Dashboard() {
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label>S – Striking Verses</label>
+                <label><strong style={{ color: 'var(--accent-gold)' }}>S</strong> – Striking Verses</label>
                 <textarea rows="3" placeholder="Which scripture stood out today?" value={strikingVerses} onChange={e => setStrikingVerses(e.target.value)} />
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label>L – Lessons Learnt</label>
+                <label><strong style={{ color: 'var(--accent-brown)' }}>L</strong> – Lessons Learnt</label>
                 <textarea rows="3" placeholder="What core revelations did you extract?" value={lessonsLearnt} onChange={e => setLessonsLearnt(e.target.value)} />
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label>A – Action Plans</label>
+                <label><strong style={{ color: 'var(--accent-olive)' }}>A</strong> – Action Plans</label>
                 <textarea rows="3" placeholder="What specific actions will you take today?" value={actionPlans} onChange={e => setActionPlans(e.target.value)} />
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label>P – Prayers</label>
+                <label><strong style={{ color: 'var(--accent-rose)' }}>P</strong> – Prayers</label>
                 <textarea rows="3" placeholder="Write a short sealing prayer..." value={prayers} onChange={e => setPrayers(e.target.value)} />
               </div>
 
-              <button type="submit" className="btn-primary" style={{ width: '100%' }}>Submit SLAP Devotion</button>
+              <button type="submit" className="btn-primary" style={{ width: '100%', padding: '14px' }}>
+                Submit SLAP Devotion
+              </button>
             </form>
           </section>
 
-          {/* Report Log History */}
+          {/* Report Log History & Documents */}
           <section className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '725px', overflowY: 'auto' }}>
-            <h2>Report Log History ({reports.length})</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '20px' }}>My SLAP Journal ({reports.length})</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>View and download your daily study documents</p>
+              </div>
+              {reports.length > 0 && (
+                <button
+                  onClick={() => printOrDownloadFullJournal(reports, user)}
+                  className="btn-secondary"
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: 'var(--accent-gold)',
+                    borderColor: 'var(--accent-gold)'
+                  }}
+                  title="Download all entries as a compiled study journal document"
+                >
+                  <Download size={14} /> Export Full Journal (PDF/Doc)
+                </button>
+              )}
+            </div>
+
             {reports.length === 0 ? (
-              <p style={{ textAlign: 'center', padding: '40px 0' }}>No reports logged yet. Start today!</p>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
+                <BookOpen size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                <p style={{ fontSize: '15px', fontWeight: '600' }}>No devotions logged yet</p>
+                <p style={{ fontSize: '13px' }}>Submit your daily SLAP study to build your personal faith archive.</p>
+              </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {reports.map((r) => (
-                  <div key={r.id} style={{
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    background: 'var(--bg-secondary)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h3 style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <BookOpen size={16} /> {r.book} {r.chapter}{r.verses ? `:${r.verses}` : ''} ({r.translation})
-                      </h3>
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Calendar size={12} /> {new Date(r.submission_date).toLocaleDateString()}
-                      </span>
+                  <div key={r.id} className="report-card" style={{ padding: '16px', borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                    <div className="report-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                          <BookOpen size={16} style={{ color: 'var(--accent-gold)' }} /> {r.book} {r.chapter}{r.verses ? `:${r.verses}` : ''} <span style={{ fontSize: '12px', opacity: 0.7 }}>({r.translation || 'KJV'})</span>
+                        </h3>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                          <Calendar size={12} /> {new Date(r.submission_date || r.created_at).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          className="btn-secondary"
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onClick={() => setSelectedReportModal(r)}
+                          title="View complete report in detail"
+                        >
+                          <Eye size={12} /> View Report
+                        </button>
+                        <button
+                          className="btn-primary"
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: 'var(--accent-gold)',
+                            color: '#1a1409'
+                          }}
+                          onClick={() => printOrDownloadSingleReport(r, user)}
+                          title="Print or Save as Document/PDF"
+                        >
+                          <Printer size={12} /> Document
+                        </button>
+                      </div>
                     </div>
 
-                    <button
-                      className="btn-secondary"
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        alignSelf: 'flex-start',
-                        marginTop: '4px'
-                      }}
-                      onClick={() => setExpandedReport(expandedReport === r.id ? null : r.id)}
-                    >
-                      <Eye size={12} /> {expandedReport === r.id ? 'Collapse SLAP' : 'Expand SLAP'}
-                    </button>
-
-                    {expandedReport === r.id && (
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '12px',
-                        marginTop: '12px',
-                        paddingTop: '12px',
-                        borderTop: '1px solid var(--border-color)',
-                        fontSize: '14px'
-                      }}>
-                        <div>
-                          <strong style={{ color: 'var(--accent-gold)' }}>Striking Verses:</strong>
-                          <p style={{ margin: '4px 0 0', fontSize: '13px' }}>{r.striking_verses || r.strikingVerses}</p>
-                        </div>
-                        <div>
-                          <strong style={{ color: 'var(--accent-gold)' }}>Lessons Learnt:</strong>
-                          <p style={{ margin: '4px 0 0', fontSize: '13px' }}>{r.lessons_learnt || r.lessonsLearnt}</p>
-                        </div>
-                        <div>
-                          <strong style={{ color: 'var(--accent-gold)' }}>Action Plans:</strong>
-                          <p style={{ margin: '4px 0 0', fontSize: '13px' }}>{r.action_plans || r.actionPlans}</p>
-                        </div>
-                        <div>
-                          <strong style={{ color: '#10b981' }}>Prayers:</strong>
-                          <p style={{ margin: '4px 0 0', fontSize: '13px' }}>{r.prayers}</p>
-                        </div>
-                      </div>
-                    )}
+                    {/* Quick collapsible snippet */}
+                    <div style={{ marginTop: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 6px' }}>
+                        <strong style={{ color: 'var(--accent-gold)' }}>Striking: </strong>
+                        {((r.striking_verses || r.strikingVerses || '').slice(0, 110)) + ((r.striking_verses || r.strikingVerses || '').length > 110 ? '...' : '')}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -718,10 +661,107 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ═══════════ VIEW REPORT MODAL ═══════════ */}
+      {selectedReportModal && (
+        <div className="drawer-backdrop open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 1100 }}>
+          <div className="glass-card" style={{ maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative', border: '1px solid var(--accent-gold)', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedReportModal(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+              aria-label="Close Modal"
+            >
+              <X size={22} />
+            </button>
+
+            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '14px', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-gold)', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <BookOpen size={16} /> SLAP Bible Daily Devotion Report
+              </div>
+              <h2 style={{ fontSize: '24px', margin: '6px 0 2px', color: 'var(--text-primary)' }}>
+                {selectedReportModal.book} {selectedReportModal.chapter}{selectedReportModal.verses ? `:${selectedReportModal.verses}` : ''}
+              </h2>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <span><strong>Date:</strong> {new Date(selectedReportModal.submission_date || selectedReportModal.created_at).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                <span><strong>Translation:</strong> {selectedReportModal.translation || 'KJV'}</span>
+              </div>
+            </div>
+
+            {/* S-L-A-P Content Blocks */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Striking Verse */}
+              <div style={{ background: 'rgba(212, 160, 23, 0.08)', borderLeft: '4px solid var(--accent-gold)', padding: '14px', borderRadius: '4px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--accent-gold)', letterSpacing: '1px' }}>
+                  [S] Striking Scripture
+                </span>
+                <p style={{ margin: '6px 0 0', fontSize: '14px', lineHeight: '1.6', fontStyle: 'italic', fontFamily: 'var(--font-serif)' }}>
+                  "{selectedReportModal.striking_verses || selectedReportModal.strikingVerses || 'None recorded'}"
+                </p>
+              </div>
+
+              {/* Lessons Learnt */}
+              <div style={{ background: 'rgba(92, 74, 50, 0.1)', borderLeft: '4px solid var(--accent-brown)', padding: '14px', borderRadius: '4px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--accent-brown)', letterSpacing: '1px' }}>
+                  [L] Lessons Learnt & Revelations
+                </span>
+                <p style={{ margin: '6px 0 0', fontSize: '14px', lineHeight: '1.6' }}>
+                  {selectedReportModal.lessons_learnt || selectedReportModal.lessonsLearnt || 'None recorded'}
+                </p>
+              </div>
+
+              {/* Action Plans */}
+              <div style={{ background: 'rgba(16, 185, 129, 0.08)', borderLeft: '4px solid #10b981', padding: '14px', borderRadius: '4px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#10b981', letterSpacing: '1px' }}>
+                  [A] Action Plans & Application
+                </span>
+                <p style={{ margin: '6px 0 0', fontSize: '14px', lineHeight: '1.6' }}>
+                  {selectedReportModal.action_plans || selectedReportModal.actionPlans || 'None recorded'}
+                </p>
+              </div>
+
+              {/* Prayers */}
+              <div style={{ background: 'rgba(244, 63, 94, 0.08)', borderLeft: '4px solid #f43f5e', padding: '14px', borderRadius: '4px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#f43f5e', letterSpacing: '1px' }}>
+                  [P] Sealing Prayers & Declarations
+                </span>
+                <p style={{ margin: '6px 0 0', fontSize: '14px', lineHeight: '1.6' }}>
+                  {selectedReportModal.prayers || 'None recorded'}
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  const textContent = `SLAP BIBLE REPORT\nScripture: ${selectedReportModal.book} ${selectedReportModal.chapter} (${selectedReportModal.translation})\nDate: ${selectedReportModal.submission_date}\n\n[S] Striking Verses:\n${selectedReportModal.striking_verses || selectedReportModal.strikingVerses}\n\n[L] Lessons Learnt:\n${selectedReportModal.lessons_learnt || selectedReportModal.lessonsLearnt}\n\n[A] Action Plans:\n${selectedReportModal.action_plans || selectedReportModal.actionPlans}\n\n[P] Prayers:\n${selectedReportModal.prayers}`;
+                  navigator.clipboard.writeText(textContent);
+                  alert('Report copied to clipboard! 📋');
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+              >
+                <Share2 size={15} /> Copy Text
+              </button>
+
+              <button
+                className="btn-primary"
+                onClick={() => printOrDownloadSingleReport(selectedReportModal, user)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', background: 'var(--accent-gold)', color: '#1a1409' }}
+              >
+                <Printer size={15} /> Print / Save PDF Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══════════ TAB: Concordance / Bible Search ═══════════ */}
       {activeTab === 'concordance' && (
         <section className="glass-card">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
             <Search size={22} /> Bible Concordance
           </h2>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
@@ -730,7 +770,7 @@ export default function Dashboard() {
 
           <form onSubmit={handleConcordanceSearch} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
             <div className="form-group" style={{ margin: 0, flex: '3', minWidth: '200px' }}>
-              <label style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', color: 'var(--text-secondary)' }}>Search Word or Phrase</label>
+              <label className="text-label-sm">Search Word or Phrase</label>
               <input
                 type="text"
                 placeholder='e.g. "faith", "love", "Holy Spirit", "grace"'
@@ -741,7 +781,7 @@ export default function Dashboard() {
               />
             </div>
             <div className="form-group" style={{ margin: 0, flex: '1.5', minWidth: '180px' }}>
-              <label style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', color: 'var(--text-secondary)' }}>Translation</label>
+              <label className="text-label-sm">Translation</label>
               <select value={searchTranslation} onChange={e => setSearchTranslation(e.target.value)}>
                 {Object.entries(API_TRANSLATIONS).map(([key, val]) => (
                   <option key={key} value={key}>{val.label}</option>
@@ -757,14 +797,14 @@ export default function Dashboard() {
 
           {/* Search Results */}
           {searchLoading && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px 0', gap: '12px', color: 'var(--text-secondary)' }}>
-              <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
+            <div className="flex-center" style={{ padding: '60px 0', gap: '12px', color: 'var(--text-secondary)' }}>
+              <Loader size={24} className="animate-spin" />
               <span>Searching scripture for "{searchQuery}"...</span>
             </div>
           )}
 
           {searchError && (
-            <div style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', padding: '16px 20px', borderRadius: '10px', color: '#f43f5e', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '14px' }}>
+            <div className="alert alert-error">
               <AlertCircle size={18} /> {searchError}
             </div>
           )}
@@ -785,42 +825,24 @@ export default function Dashboard() {
                 {searchResults.map((result, idx) => (
                   <div
                     key={idx}
-                    style={{
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '10px',
-                      padding: '16px',
-                      background: 'var(--bg-secondary)',
-                      cursor: 'pointer',
-                      transition: 'border-color 0.2s ease'
-                    }}
+                    className="search-result-card"
                     onClick={() => {
-                      setReaderBook(getBookNameById(result.bookid));
+                      setReaderBook(getBookNameById(result.bookid || result.book));
                       setReaderChapter(result.chapter);
                       setReaderTranslation(searchTranslation);
                       setActiveTab('read');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '13px',
-                        fontWeight: '700',
-                        color: 'var(--accent-gold)',
-                        letterSpacing: '0.5px'
-                      }}>
-                        {getBookNameById(result.bookid)} {result.chapter}:{result.verse}
-                      </span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Click to read →</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <strong style={{ color: 'var(--accent-gold)', fontSize: '14px' }}>
+                        {getBookNameById(result.bookid || result.book)} {result.chapter}:{result.verse}
+                      </strong>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Click to read chapter</span>
                     </div>
-                    <p style={{
-                      margin: 0,
-                      fontFamily: 'var(--font-serif)',
-                      fontSize: '15px',
-                      lineHeight: '1.7',
-                      color: 'var(--text-primary)'
-                    }}
-                      dangerouslySetInnerHTML={{ __html: result.text }}
-                    />
+                    <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
+                      {cleanScriptureText(result.text)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -831,3 +853,337 @@ export default function Dashboard() {
     </div>
   );
 }
+
+/* ═══════════ DOCUMENT EXPORT UTILITIES (Single & Full Journal) ═══════════ */
+
+export function printOrDownloadSingleReport(report, user) {
+  const participantName = user?.user_metadata?.full_name || user?.fullName || 'Participant';
+  const participantEmail = user?.email || '';
+  const dateFormatted = new Date(report.submission_date || report.created_at).toLocaleDateString(undefined, {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  const docHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SLAP Report - ${report.book} ${report.chapter} - ${participantName}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 20mm; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #1a1a1a;
+      background: #ffffff;
+      line-height: 1.6;
+      margin: 0;
+      padding: 24px;
+    }
+    .doc-container {
+      max-width: 800px;
+      margin: 0 auto;
+      border: 2px solid #d4a017;
+      padding: 32px;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #f1f1f1;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+    }
+    .logo-title {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: #92660a;
+      letter-spacing: 2px;
+      margin: 0 0 6px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 0;
+    }
+    .meta-bar {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      background: #fdfaf3;
+      border: 1px solid #fae8b6;
+      border-radius: 6px;
+      padding: 12px 18px;
+      font-size: 13px;
+      margin-bottom: 28px;
+    }
+    .meta-item {
+      margin: 4px 12px 4px 0;
+    }
+    .meta-item strong {
+      color: #92660a;
+    }
+    .section-box {
+      margin-bottom: 22px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+    .section-title {
+      background: #f8fafc;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .section-title.s { background: #fef9ed; color: #92660a; border-color: #fae8b6; }
+    .section-title.l { background: #fbf7f4; color: #5c4a32; border-color: #eeddd0; }
+    .section-title.a { background: #f0fdf4; color: #047857; border-color: #bbf7d0; }
+    .section-title.p { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+    .section-content {
+      padding: 14px 18px;
+      font-size: 14px;
+      color: #222;
+      background: #fff;
+    }
+    .verse-quote {
+      font-style: italic;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 36px;
+      padding-top: 18px;
+      border-top: 1px solid #eee;
+      font-size: 12px;
+      color: #888;
+    }
+    @media print {
+      body { padding: 0; }
+      .doc-container { border: 1px solid #ccc; padding: 20px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-container">
+    <div class="header">
+      <h1 class="logo-title">SLAP BIBLE CHALLENGE</h1>
+      <p class="subtitle">Daily Scriptural Devotion & Study Report</p>
+    </div>
+
+    <div class="meta-bar">
+      <div class="meta-item"><strong>Participant:</strong> ${participantName} ${participantEmail ? '(' + participantEmail + ')' : ''}</div>
+      <div class="meta-item"><strong>Scripture:</strong> ${report.book} ${report.chapter}${report.verses ? ':' + report.verses : ''} (${report.translation || 'KJV'})</div>
+      <div class="meta-item"><strong>Date:</strong> ${dateFormatted}</div>
+    </div>
+
+    <div class="section-box">
+      <div class="section-title s">[S] – Striking Scripture Verse</div>
+      <div class="section-content verse-quote">
+        "${report.striking_verses || report.strikingVerses || 'None recorded'}"
+      </div>
+    </div>
+
+    <div class="section-box">
+      <div class="section-title l">[L] – Lessons Learnt & Spiritual Revelations</div>
+      <div class="section-content">
+        ${(report.lessons_learnt || report.lessonsLearnt || 'None recorded').replace(/\\n/g, '<br>')}
+      </div>
+    </div>
+
+    <div class="section-box">
+      <div class="section-title a">[A] – Action Plans & Life Application</div>
+      <div class="section-content">
+        ${(report.action_plans || report.actionPlans || 'None recorded').replace(/\\n/g, '<br>')}
+      </div>
+    </div>
+
+    <div class="section-box">
+      <div class="section-title p">[P] – Sealing Prayers & Declarations</div>
+      <div class="section-content">
+        ${(report.prayers || 'None recorded').replace(/\\n/g, '<br>')}
+      </div>
+    </div>
+
+    <div class="footer">
+      <p style="margin: 0 0 4px; font-weight: 600; color: #92660a;">Build People. Build Faith. Build on Christ.</p>
+      <p style="margin: 0;">SLAP Bible Challenge Devotional System • Generated on ${new Date().toLocaleDateString()}</p>
+    </div>
+  </div>
+  <script>
+    window.onload = function() {
+      window.print();
+    }
+  </script>
+</body>
+</html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(docHtml);
+    printWindow.document.close();
+  } else {
+    // Fallback: download as .html document
+    const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `SLAP-Report-${report.book}-${report.chapter}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+export function printOrDownloadFullJournal(reports, user) {
+  const participantName = user?.user_metadata?.full_name || user?.fullName || 'Participant';
+  const participantEmail = user?.email || '';
+
+  const entriesHtml = reports.map((report, idx) => {
+    const dateFormatted = new Date(report.submission_date || report.created_at).toLocaleDateString(undefined, {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+
+    return `
+    <div class="journal-entry" style="${idx > 0 ? 'page-break-before: always; margin-top: 40px;' : ''}">
+      <div class="entry-header">
+        <span class="entry-number">Entry #${reports.length - idx}</span>
+        <h2 style="font-size: 20px; margin: 4px 0; color: #92660a;">${report.book} ${report.chapter}${report.verses ? ':' + report.verses : ''} (${report.translation || 'KJV'})</h2>
+        <span style="font-size: 12px; color: #666;">Date: ${dateFormatted}</span>
+      </div>
+
+      <div class="section-box" style="margin-top: 16px;">
+        <div class="section-title s">[S] Striking Scripture</div>
+        <div class="section-content" style="font-style: italic;">"${report.striking_verses || report.strikingVerses || 'None'}"</div>
+      </div>
+
+      <div class="section-box">
+        <div class="section-title l">[L] Lessons Learnt</div>
+        <div class="section-content">${(report.lessons_learnt || report.lessonsLearnt || 'None').replace(/\\n/g, '<br>')}</div>
+      </div>
+
+      <div class="section-box">
+        <div class="section-title a">[A] Action Plans</div>
+        <div class="section-content">${(report.action_plans || report.actionPlans || 'None').replace(/\\n/g, '<br>')}</div>
+      </div>
+
+      <div class="section-box">
+        <div class="section-title p">[P] Prayers</div>
+        <div class="section-content">${(report.prayers || 'None').replace(/\\n/g, '<br>')}</div>
+      </div>
+    </div>
+    `;
+  }).join('');
+
+  const fullDocHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SLAP Bible Devotional Journal - ${participantName}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #1a1a1a;
+      background: #ffffff;
+      line-height: 1.6;
+      margin: 0;
+      padding: 24px;
+    }
+    .journal-cover {
+      text-align: center;
+      padding: 60px 20px 40px;
+      border-bottom: 2px dashed #d4a017;
+      margin-bottom: 40px;
+    }
+    .title {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: #92660a;
+      letter-spacing: 2px;
+      margin: 0 0 8px;
+    }
+    .section-box {
+      margin-bottom: 14px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+    .section-title {
+      background: #f8fafc;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .section-title.s { background: #fef9ed; color: #92660a; }
+    .section-title.l { background: #fbf7f4; color: #5c4a32; }
+    .section-title.a { background: #f0fdf4; color: #047857; }
+    .section-title.p { background: #fff1f2; color: #be123c; }
+    .section-content {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #222;
+      background: #fff;
+    }
+    .entry-number {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #92660a;
+    }
+    @media print {
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="journal-cover">
+    <h1 class="title">MY SLAP BIBLE JOURNAL</h1>
+    <p style="font-size: 15px; color: #666; margin: 0 0 16px;">Daily Study &amp; Spiritual Reflections Archive</p>
+    <div style="font-size: 14px; color: #333;">
+      <strong>Participant:</strong> ${participantName} | <strong>Total Devotions:</strong> ${reports.length} Entries
+    </div>
+  </div>
+
+  ${entriesHtml}
+
+  <script>
+    window.onload = function() {
+      window.print();
+    }
+  </script>
+</body>
+</html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(fullDocHtml);
+    printWindow.document.close();
+  } else {
+    const blob = new Blob([fullDocHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `SLAP-Full-Journal-${participantName.replace(/\s+/g, '-')}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+}
+

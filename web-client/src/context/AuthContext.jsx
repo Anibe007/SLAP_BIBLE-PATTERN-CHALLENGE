@@ -36,12 +36,40 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (email, password, fullName) => {
+  const register = async (email, password, fullName, country = '') => {
     setLoading(true);
     try {
-      const registeredUser = await dbService.signUp(email, password, fullName);
+      const registeredUser = await dbService.signUp(email, password, fullName, country);
       setUser(registeredUser);
       return registeredUser;
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginAdmin = async (email, password) => {
+    setLoading(true);
+    try {
+      const adminUser = await dbService.signInAdmin(email, password);
+      setUser(adminUser);
+      return adminUser;
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registerAdmin = async (email, password, fullName, country = '', adminPasskey = '') => {
+    setLoading(true);
+    try {
+      const newAdmin = await dbService.signUpAdmin(email, password, fullName, country, adminPasskey);
+      setUser(newAdmin);
+      return newAdmin;
     } catch (err) {
       setLoading(false);
       throw err;
@@ -73,8 +101,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    const currentUser = await dbService.getCurrentUser();
+    setUser(currentUser);
+    return currentUser;
+  };
+
+  const verifyAdminPasskey = async (secretKey) => {
+    await dbService.verifyAdminKey(secretKey);
+    await refreshUser();
+    return true;
+  };
+
+  const isAdmin = !!(user && (user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org'));
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      login,
+      register,
+      loginAdmin,
+      registerAdmin,
+      logout,
+      updateProfile,
+      refreshUser,
+      verifyAdminPasskey,
+      isAuthenticated: !!user,
+      isAdmin
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -87,3 +142,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

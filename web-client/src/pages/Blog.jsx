@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Calendar, User, X, ArrowLeft } from 'lucide-react';
+import { Calendar, User, ArrowLeft } from 'lucide-react';
+import AnimateOnScroll from '../components/AnimateOnScroll';
 
 const ARTICLES = [
   {
@@ -58,37 +59,31 @@ export default function Blog() {
 
   if (activeArticle) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '40px' }}>
+      <div className="page-wrapper">
         <button
           className="btn-secondary"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}
-          onClick={() => setActiveArticle(null)}
+          onClick={() => { setActiveArticle(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         >
-          <ArrowLeft size={16} /> Back to Blog
+          <ArrowLeft size={16} /> Back to Newsroom
         </button>
 
-        <article style={{ maxWidth: '720px', margin: '0 auto', width: '100%' }}>
-          <div style={{
-            width: '100%',
-            height: '300px',
-            borderRadius: '16px',
-            backgroundImage: `url(${activeArticle.image})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            marginBottom: '32px',
-            border: '1px solid var(--border-color)'
-          }} />
+        <article className="article-full">
+          <div
+            className="article-full-image"
+            style={{ backgroundImage: `url(${activeArticle.image})` }}
+          />
 
-          <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={13} /> {activeArticle.date}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={13} /> {activeArticle.author}</span>
+          <div className="article-meta" style={{ marginBottom: '16px' }}>
+            <span><Calendar size={14} /> {activeArticle.date}</span>
+            <span><User size={14} /> {activeArticle.author}</span>
           </div>
 
           <h1 style={{ fontSize: '32px', marginBottom: '24px', lineHeight: 1.3 }}>{activeArticle.title}</h1>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {activeArticle.content.split('\n\n').map((paragraph, i) => (
-              <p key={i} style={{ fontSize: '16px', lineHeight: 1.8, margin: 0, color: 'var(--text-secondary)' }}>
+              <p key={i} style={{ fontSize: '17px', lineHeight: 1.8, margin: 0, color: 'var(--text-secondary)' }}>
                 {paragraph}
               </p>
             ))}
@@ -99,43 +94,44 @@ export default function Blog() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '48px', paddingBottom: '40px' }}>
-      <section style={{ textAlign: 'center' }}>
-        <h1 style={{ fontSize: '38px', marginBottom: '16px' }}>Newsroom &amp; Devotional Blog</h1>
-        <p style={{ maxWidth: '700px', margin: '0 auto', fontSize: '18px' }}>
-          Explore articles on spiritual disciplines, Bible study tips, and challenge updates from our community.
-        </p>
-      </section>
+    <div className="page-wrapper-lg">
+      <AnimateOnScroll animation="fadeUp">
+        <section className="page-header">
+          <span className="text-label">SPIRITUAL FORMATION &amp; ARTICLES</span>
+          <h1>Newsroom &amp; Devotional Blog</h1>
+          <p>
+            Explore articles on spiritual disciplines, Bible study tips, and challenge updates from our community.
+          </p>
+        </section>
+      </AnimateOnScroll>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-        {ARTICLES.map(a => (
-          <div key={a.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', cursor: 'pointer' }}
-            onClick={() => setActiveArticle(a)}
-          >
-            <div style={{
-              width: '100%',
-              height: '180px',
-              borderRadius: '12px',
-              backgroundImage: `url(${a.image})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              border: '1px solid var(--border-color)',
-              transition: 'transform 0.3s ease'
-            }} />
-            <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={12} /> {a.date}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={12} /> {a.author}</span>
-            </div>
-            <h3 style={{ margin: 0 }}>{a.title}</h3>
-            <p style={{ margin: 0, fontSize: '14px', flexGrow: 1 }}>{a.excerpt}</p>
-            <button
-              className="btn-secondary"
-              style={{ width: '100%' }}
-              onClick={(e) => { e.stopPropagation(); setActiveArticle(a); }}
+      <div className="grid-auto-sm">
+        {ARTICLES.map((a, i) => (
+          <AnimateOnScroll key={a.id} animation="fadeUp" delay={i * 120}>
+            <div
+              className="glass-card"
+              style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px', cursor: 'pointer', height: '100%' }}
+              onClick={() => { setActiveArticle(a); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             >
-              Read Article →
-            </button>
-          </div>
+              <div
+                className="article-image"
+                style={{ height: '180px', backgroundImage: `url(${a.image})` }}
+              />
+              <div className="article-meta">
+                <span><Calendar size={12} /> {a.date}</span>
+                <span><User size={12} /> {a.author}</span>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '20px' }}>{a.title}</h3>
+              <p style={{ margin: 0, fontSize: '14px', flexGrow: 1 }}>{a.excerpt}</p>
+              <button
+                className="btn-secondary"
+                style={{ width: '100%', marginTop: '8px' }}
+                onClick={(e) => { e.stopPropagation(); setActiveArticle(a); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              >
+                Read Article →
+              </button>
+            </div>
+          </AnimateOnScroll>
         ))}
       </div>
     </div>
