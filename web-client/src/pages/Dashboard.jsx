@@ -253,18 +253,18 @@ export default function Dashboard() {
 
       const updatedStreak = response?.streak?.current_streak || (streak?.current_streak ? streak.current_streak + 1 : 1);
 
-      setSuccess('Daily SLAP report successfully submitted! Streak updated! 🔥');
+      setSuccess('Thank You! Your Report has been submitted Successfully');
       
-      // Fire congratulations modal
+      // Fire thank you modal
       setCelebrationData({
         isOpen: true,
         type: 'report',
-        title: `🎉 Congratulations on Today's SLAP Devotion!`,
-        subtitle: `Your daily scripture reflections have been recorded. Keep your spiritual consistency burning bright!`,
+        title: `Thank You! 🙏`,
+        subtitle: `Your Report has been submitted Successfully`,
         details: [
           { label: '📖 Scripture Studied', value: `${book} ${chapter}${verses ? ':' + verses : ''} (${translation})` },
-          { label: '🔥 Current Consistency Streak', value: `${updatedStreak} Days Consecutive` },
-          { label: '📅 Submission Date', value: new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) }
+          { label: '🔥 Current Streak', value: `${updatedStreak} Days Consecutive` },
+          { label: '📅 Submitted On', value: new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) }
         ]
       });
 

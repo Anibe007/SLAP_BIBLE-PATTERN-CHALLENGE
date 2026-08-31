@@ -46,11 +46,11 @@ export default function CelebrationModal({
     switch (type) {
       case 'report':
         return {
-          icon: <Flame size={38} style={{ color: '#ffffff' }} />,
-          iconBg: 'linear-gradient(135deg, #e11d48, #b8860b)',
-          badgeText: 'DAILY DEVOTIONAL LOGGED',
-          defaultTitle: '🎉 Congratulations on Today\'s SLAP Devotion!',
-          defaultSubtitle: 'Your devotional report has been recorded in Heaven and on Earth.'
+          icon: <CheckCircle2 size={38} style={{ color: '#ffffff' }} />,
+          iconBg: 'linear-gradient(135deg, #10b981, #b8860b)',
+          badgeText: 'REPORT SUBMITTED SUCCESSFULLY',
+          defaultTitle: 'Thank You! 🙏',
+          defaultSubtitle: 'Your Report has been submitted Successfully'
         };
       case 'download':
         return {
