@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dbService, DECLARATION_CATEGORIES } from '../services/db';
+import { isSupabaseConfigured } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import {
   Users, BookOpen, Flame, Globe, Shield, ShieldCheck, ShieldAlert,
@@ -332,6 +333,64 @@ export default function Admin() {
       {actionMessage && (
         <div className="alert alert-success" style={{ marginBottom: '20px' }}>
           <CheckCircle size={16} /> {actionMessage}
+        </div>
+      )}
+
+      {/* Database Mode Status Banner */}
+      {!isSupabaseConfigured ? (
+        <div style={{
+          background: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '50%',
+            background: 'rgba(234, 179, 8, 0.2)', color: '#eab308',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <AlertCircle size={22} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px' }}>
+              ⚠️ Local Device Demo Mode Active
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+              Participants on other devices or networks cannot be seen on this dashboard because Supabase cloud keys are not yet configured. To connect all devices globally, create a <code>.env</code> file inside <code>web-client/</code> with your Supabase URL &amp; Anon Key.
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          borderRadius: '12px',
+          padding: '14px 20px',
+          marginBottom: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px'
+        }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: 'rgba(16, 185, 129, 0.2)', color: '#10b981',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <CheckCircle size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
+              🌐 Supabase Multi-Device Cloud Sync Active
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Live cloud database connected. Registrations and daily SLAP devotions from participants across all devices and networks are synced here in real-time.
+            </div>
+          </div>
         </div>
       )}
 
