@@ -6,11 +6,58 @@ import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
 
 const COUNTRIES = [
-  "Nigeria", "Ghana", "Kenya", "South Africa", "United States", "United Kingdom",
-  "Canada", "Australia", "Uganda", "Cameroon", "Liberia", "Sierra Leone", "Zambia",
-  "Zimbabwe", "Tanzania", "Rwanda", "India", "Philippines", "Germany", "France",
-  "Brazil", "Jamaica", "Trinidad and Tobago", "Other"
+  // ── Africa (Primary Audience First) ──
+  "Nigeria", "Ghana", "Kenya", "South Africa", "Uganda", "Tanzania", "Rwanda",
+  "Cameroon", "Liberia", "Sierra Leone", "Zambia", "Zimbabwe", "Ethiopia",
+  "Senegal", "Ivory Coast", "Benin", "Togo", "Mali", "Burkina Faso", "Niger",
+  "Guinea", "Guinea-Bissau", "Gambia", "Cape Verde", "São Tomé and Príncipe",
+  "Mauritania", "Morocco", "Algeria", "Tunisia", "Libya", "Egypt", "Sudan",
+  "South Sudan", "Chad", "Central African Republic", "Democratic Republic of Congo",
+  "Republic of Congo", "Gabon", "Equatorial Guinea", "Angola", "Namibia",
+  "Botswana", "Lesotho", "Eswatini", "Mozambique", "Malawi", "Madagascar",
+  "Comoros", "Mauritius", "Seychelles", "Djibouti", "Eritrea", "Somalia",
+  "Burundi", "Sao Tome and Principe",
+
+  // ── Americas ──
+  "United States", "Canada", "Brazil", "Jamaica", "Trinidad and Tobago",
+  "Barbados", "Bahamas", "Antigua and Barbuda", "Saint Lucia", "Saint Vincent and the Grenadines",
+  "Grenada", "Dominica", "Saint Kitts and Nevis", "Haiti", "Dominican Republic",
+  "Cuba", "Puerto Rico", "Mexico", "Guatemala", "Belize", "Honduras",
+  "El Salvador", "Nicaragua", "Costa Rica", "Panama", "Colombia", "Venezuela",
+  "Guyana", "Suriname", "Ecuador", "Peru", "Bolivia", "Paraguay",
+  "Uruguay", "Argentina", "Chile",
+
+  // ── Europe ──
+  "United Kingdom", "Ireland", "France", "Germany", "Italy", "Spain",
+  "Portugal", "Netherlands", "Belgium", "Luxembourg", "Switzerland", "Austria",
+  "Denmark", "Sweden", "Norway", "Finland", "Iceland", "Poland", "Czech Republic",
+  "Slovakia", "Hungary", "Romania", "Bulgaria", "Greece", "Croatia",
+  "Slovenia", "Serbia", "Bosnia and Herzegovina", "Montenegro", "North Macedonia",
+  "Albania", "Kosovo", "Moldova", "Ukraine", "Belarus", "Russia",
+  "Estonia", "Latvia", "Lithuania", "Malta", "Cyprus", "Andorra",
+  "Monaco", "Liechtenstein", "San Marino", "Vatican City",
+
+  // ── Asia ──
+  "India", "Philippines", "China", "Japan", "South Korea", "North Korea",
+  "Indonesia", "Malaysia", "Singapore", "Thailand", "Vietnam", "Cambodia",
+  "Laos", "Myanmar", "Bangladesh", "Sri Lanka", "Nepal", "Pakistan",
+  "Afghanistan", "Maldives", "Bhutan", "Mongolia", "Taiwan", "Hong Kong",
+  "Macau", "Brunei", "East Timor", "Papua New Guinea",
+
+  // ── Middle East ──
+  "Saudi Arabia", "United Arab Emirates", "Israel", "Palestine", "Jordan",
+  "Lebanon", "Syria", "Iraq", "Iran", "Kuwait", "Qatar", "Bahrain",
+  "Oman", "Yemen", "Turkey", "Azerbaijan", "Armenia", "Georgia",
+  "Kazakhstan", "Uzbekistan", "Turkmenistan", "Tajikistan", "Kyrgyzstan",
+
+  // ── Oceania ──
+  "Australia", "New Zealand", "Fiji", "Papua New Guinea", "Solomon Islands",
+  "Vanuatu", "Samoa", "Tonga", "Kiribati", "Micronesia", "Palau",
+  "Marshall Islands", "Nauru", "Tuvalu",
+
+  "Other"
 ];
+
 
 export default function Auth() {
   const [searchParams] = useSearchParams();

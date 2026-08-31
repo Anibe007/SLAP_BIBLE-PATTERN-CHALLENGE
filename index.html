@@ -1,89 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SLAP Bible Challenge</title>
-
-<link rel="stylesheet" href="style.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLAP Bible Challenge — Redirecting...</title>
+  <meta http-equiv="refresh" content="2; url=http://localhost:5173/">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1a1409, #3a2d1d, #b8860b);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    .box {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(212,160,23,0.4);
+      border-radius: 16px;
+      padding: 48px 40px;
+      max-width: 480px;
+    }
+    h1 { font-size: 28px; color: #fbbf24; margin-bottom: 12px; letter-spacing: 2px; }
+    p  { font-size: 15px; color: rgba(255,255,255,0.75); line-height: 1.6; margin-bottom: 24px; }
+    .btn {
+      display: inline-block;
+      background: #d4a017;
+      color: #1a1409;
+      font-weight: 700;
+      padding: 12px 28px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 15px;
+    }
+    .btn:hover { background: #fbbf24; }
+    .spinner { font-size: 36px; margin-bottom: 20px; animation: spin 2s linear infinite; display: inline-block; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .sub-link { margin-top: 16px; font-size: 13px; opacity: 0.6; }
+    .sub-link a { color: #fbbf24; }
+  </style>
 </head>
-
 <body>
-
-<header class="header">
-  <h2>SLAP BIBLE</h2>
-
-  <div id="menuBtn" class="menu-btn">
-    <span id="menuIcon">☰</span>
-  </div>
-
-  <nav id="mobileMenu" class="mobile-menu">
-    <a href="#" onclick="showSection('home')">Home</a>
-    <a href="#" onclick="showSection('dashboard')">Dashboard</a>
-    <a href="#" onclick="showSection('tube')">SLAP Tube</a>
-  </nav>
-</header>
-
-<!-- HOME -->
-<section id="home" class="show">
-  <div class="card">
-    <h1>SLAP Bible Pattern</h1>
-    <p>Build consistency with God daily.</p>
-
-    <button onclick="startPlan()">Start Plan</button>
-  </div>
-</section>
-
-<!-- DASHBOARD -->
-<section id="dashboard" class="hidden">
-  <div class="card">
-    <h2>Today's Reading</h2>
-    <p><b>John 3</b></p>
-
-    <textarea placeholder="Striking Verse"></textarea>
-    <textarea placeholder="Lessons Learnt"></textarea>
-    <textarea placeholder="Action Plan"></textarea>
-    <textarea placeholder="Prayer"></textarea>
-
-    <button onclick="completeSLAP()">Complete SLAP</button>
-  </div>
-</section>
-
-<!-- DECLARE -->
-<section id="declareSection" class="hidden">
-  <div class="card">
-    <h2>I Speak & Declare</h2>
-
-    <p id="declareVerse">
-      For God so loved the world - John 3:16
+  <div class="box">
+    <div class="spinner">✦</div>
+    <h1>SLAP BIBLE</h1>
+    <p>
+      This is the old prototype page. The full SLAP Bible Challenge app is running on the Vite dev server.
+      <br><br>
+      Redirecting you automatically in 2 seconds...
     </p>
-
-    <input id="userName" placeholder="Enter your name">
-
-    <canvas id="cardCanvas" width="400" height="500"></canvas>
-
-    <button onclick="generateCard()">Generate Card</button>
-    <button onclick="downloadCard()">Download Image</button>
-    <button onclick="showSection('tube')">Go to SLAP Tube</button>
+    <a class="btn" href="http://localhost:5173/">Open SLAP Bible App &rarr;</a>
+    <p class="sub-link">
+      Admin Dashboard: <a href="http://localhost:5173/admin">localhost:5173/admin</a>
+    </p>
   </div>
-</section>
-
-<!-- SLAP TUBE -->
-<section id="tube" class="hidden">
-  <div class="video-container">
-    <iframe id="videoPlayer"
-      src="https://www.youtube.com/embed/ysz5S6PUM-U?autoplay=1&mute=1"
-      allowfullscreen>
-    </iframe>
-  </div>
-
-  <div class="video-controls">
-    <button onclick="prevVideo()">⬆</button>
-    <button onclick="nextVideo()">⬇</button>
-  </div>
-</section>
-
-<script src="script.js"></script>
 </body>
 </html>
