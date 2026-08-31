@@ -111,6 +111,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const simulateTestLogin = async (portalMode = 'participant') => {
+    setLoading(true);
+    try {
+      const res = await dbService.simulateTestLoginAndReport(portalMode);
+      setUser(res.user);
+      return res;
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
@@ -157,6 +171,7 @@ export const AuthProvider = ({ children }) => {
       loginAdmin,
       registerAdmin,
       loginWithGoogle,
+      simulateTestLogin,
       logout,
       updateProfile,
       refreshUser,
@@ -180,6 +195,7 @@ export const useAuth = () => {
       loginAdmin: async () => {},
       registerAdmin: async () => {},
       loginWithGoogle: async () => {},
+      simulateTestLogin: async () => {},
       logout: async () => {},
       updateProfile: async () => {},
       refreshUser: async () => {},

@@ -627,6 +627,72 @@ export const dbService = {
     };
   },
 
+  async simulateTestLoginAndReport(portalMode = 'participant') {
+    const isAdmin = portalMode === 'admin';
+    const testEmail = isAdmin ? 'admin.test@slapbible.org' : 'believer.test@slapbible.org';
+    const testName = isAdmin ? 'Simulated Lead Admin' : 'Simulated Test Believer';
+    const testCountry = 'Nigeria';
+
+    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    let user = users.find(u => u.email === testEmail);
+
+    if (!user) {
+      user = {
+        id: 'u-test-' + Math.random().toString(36).substr(2, 9),
+        email: testEmail,
+        fullName: testName,
+        country: testCountry,
+        is_admin: isAdmin,
+        role: isAdmin ? 'admin' : 'user',
+        login_count: 1,
+        user_metadata: { full_name: testName, country: testCountry, is_admin: isAdmin, role: isAdmin ? 'admin' : 'user' },
+        created_at: new Date().toISOString()
+      };
+      users.push(user);
+    } else {
+      user.login_count = (user.login_count || 0) + 1;
+      const idx = users.findIndex(u => u.id === user.id);
+      if (idx !== -1) users[idx].login_count = user.login_count;
+    }
+
+    localStorage.setItem('slap_users', JSON.stringify(users));
+    localStorage.setItem('slap_current_user', JSON.stringify(user));
+
+    const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    const sampleBookChoices = ['John', 'Psalms', 'Romans', 'Proverbs', 'Ephesians'];
+    const randomBook = sampleBookChoices[Math.floor(Math.random() * sampleBookChoices.length)];
+    const randomChapter = Math.floor(Math.random() * 5) + 1;
+
+    const sampleReport = {
+      id: 'rep-sim-' + Math.random().toString(36).substr(2, 9),
+      user_id: user.id,
+      book: randomBook,
+      chapter: randomChapter,
+      verses: '1-16',
+      translation: 'KJV',
+      strikingVerses: `"For God so loved the world, that he gave his only begotten Son..." — ${randomBook} ${randomChapter}:16`,
+      lessonsLearnt: "God's love is unconditional and empowering. Daily devotion builds spiritual endurance and inner peace.",
+      actionPlans: "Share scripture with 2 believers today and meditate on God's promises throughout the afternoon.",
+      prayers: "Father Lord, strengthen my walk of faith and give me consistency in studying Your Word every day.",
+      submission_date: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString()
+    };
+    reports.push(sampleReport);
+    localStorage.setItem('slap_reports', JSON.stringify(reports));
+
+    const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+    const userStreak = streaks[user.id] || { current_streak: 1, longest_streak: 1, last_activity_date: new Date().toISOString().split('T')[0] };
+    userStreak.current_streak = (userStreak.current_streak || 0) + 1;
+    userStreak.longest_streak = Math.max(userStreak.current_streak, userStreak.longest_streak || 0);
+    userStreak.last_activity_date = new Date().toISOString().split('T')[0];
+    streaks[user.id] = userStreak;
+    localStorage.setItem('slap_streaks', JSON.stringify(streaks));
+
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
+
+    return { user, report: sampleReport, streak: userStreak };
+  },
+
   async signInAdmin(email, password) {
     if (isSupabaseConfigured) {
       const user = await this.signIn(email, password);

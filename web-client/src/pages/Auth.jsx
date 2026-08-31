@@ -75,7 +75,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [celebrationData, setCelebrationData] = useState(null);
 
-  const { login, register, loginAdmin, registerAdmin, loginWithGoogle } = useAuth();
+  const { login, register, loginAdmin, registerAdmin, loginWithGoogle, simulateTestLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -181,6 +181,30 @@ export default function Auth() {
       });
     } catch (err) {
       setError(err.message || 'Google Sign-In failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleSimulateTestLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await simulateTestLogin(portalMode);
+      setLoading(false);
+      setCelebrationData({
+        isOpen: true,
+        type: 'signin',
+        title: `🎉 Test Account Authenticated & Devotion Logged!`,
+        subtitle: `Logged into simulated test account (${res.user.fullName}) and auto-created a sample SLAP study log for testing!`,
+        details: [
+          { label: '📧 Account Email', value: res.user.email },
+          { label: '📖 Auto Journal Log', value: `${res.report.book} ${res.report.chapter}:${res.report.verses}` },
+          { label: '🔥 Updated Streak', value: `${res.streak.current_streak} Days Active` }
+        ],
+        targetPath: portalMode === 'admin' ? '/admin' : '/dashboard'
+      });
+    } catch (err) {
+      setError(err.message || 'Simulated test login failed.');
       setLoading(false);
     }
   };
@@ -537,6 +561,34 @@ export default function Auth() {
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
               </svg>
               <span>Continue with Google</span>
+            </button>
+
+            {/* Quick Demo Test Login Button */}
+            <button
+              type="button"
+              onClick={handleSimulateTestLogin}
+              disabled={loading}
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                padding: '11px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                fontWeight: '700',
+                background: 'rgba(212, 160, 23, 0.12)',
+                border: '1px dashed var(--accent-gold)',
+                borderRadius: '8px',
+                color: 'var(--accent-gold)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(212, 160, 23, 0.22)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(212, 160, 23, 0.12)'}
+            >
+              <span>⚡ One-Click Demo Test Login &amp; Auto-Journal Entry</span>
             </button>
 
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
