@@ -3,6 +3,7 @@ import { dbService } from '../services/db';
 import { Flame, CheckCircle, Calendar, Plus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import AnimateOnScroll from '../components/AnimateOnScroll';
+import CelebrationModal from '../components/CelebrationModal';
 import { useAuth } from '../context/AuthContext';
 
 /* ─── Bible Books Data with chapter counts ─── */
@@ -98,6 +99,7 @@ export default function Dashboard() {
   const [success, setSuccess] = useState('');
   const [expandedReport, setExpandedReport] = useState(null);
   const [selectedReportModal, setSelectedReportModal] = useState(null);
+  const [celebrationData, setCelebrationData] = useState(null);
 
   /* ─── Bible Reader State ─── */
   const [readerBook, setReaderBook] = useState('John');
@@ -238,7 +240,7 @@ export default function Dashboard() {
     }
 
     try {
-      await dbService.submitReport({
+      const response = await dbService.submitReport({
         book,
         chapter,
         verses,
@@ -249,14 +251,21 @@ export default function Dashboard() {
         prayers
       });
 
+      const updatedStreak = response?.streak?.current_streak || (streak?.current_streak ? streak.current_streak + 1 : 1);
+
       setSuccess('Daily SLAP report successfully submitted! Streak updated! 🔥');
       
-      // Fire confetti celebration
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#b8860b', '#d4a843', '#fbbf24']
+      // Fire congratulations modal
+      setCelebrationData({
+        isOpen: true,
+        type: 'report',
+        title: `🎉 Congratulations on Today's SLAP Devotion!`,
+        subtitle: `Your daily scripture reflections have been recorded. Keep your spiritual consistency burning bright!`,
+        details: [
+          { label: '📖 Scripture Studied', value: `${book} ${chapter}${verses ? ':' + verses : ''} (${translation})` },
+          { label: '🔥 Current Consistency Streak', value: `${updatedStreak} Days Consecutive` },
+          { label: '📅 Submission Date', value: new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) }
+        ]
       });
 
       // Reset form fields
@@ -850,6 +859,18 @@ export default function Dashboard() {
           )}
         </section>
       )}
+
+      {/* Celebratory Modal for Report Submissions */}
+      <CelebrationModal
+        isOpen={!!celebrationData?.isOpen}
+        onClose={() => setCelebrationData(null)}
+        type={celebrationData?.type || 'report'}
+        title={celebrationData?.title}
+        subtitle={celebrationData?.subtitle}
+        details={celebrationData?.details || []}
+        primaryBtnText="Continue to Journal"
+        primaryBtnAction={() => setCelebrationData(null)}
+      />
     </div>
   );
 }

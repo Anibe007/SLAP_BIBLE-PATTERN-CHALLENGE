@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, BookOpen, Flame, ShieldCheck, ShieldAlert, Eye, EyeOff, Globe, Key, UserCheck, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AnimateOnScroll from '../components/AnimateOnScroll';
+import CelebrationModal from '../components/CelebrationModal';
 
 const COUNTRIES = [
   "Nigeria", "Ghana", "Kenya", "South Africa", "United States", "United Kingdom",
@@ -23,6 +24,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [celebrationData, setCelebrationData] = useState(null);
 
   const { login, register, loginAdmin, registerAdmin } = useAuth();
   const navigate = useNavigate();
@@ -43,19 +45,62 @@ export default function Auth() {
     try {
       if (portalMode === 'admin') {
         if (isRegister) {
-          await registerAdmin(email, password, fullName, country, adminPasskey);
+          const registeredAdmin = await registerAdmin(email, password, fullName, country, adminPasskey);
+          setCelebrationData({
+            isOpen: true,
+            type: 'signup',
+            title: `🎉 Congratulations & Welcome, ${fullName || 'Administrator'}!`,
+            subtitle: `Your Super Administrator account has been successfully created with full platform oversight controls.`,
+            details: [
+              { label: '📧 Admin Email', value: email },
+              { label: '🛡️ Role', value: 'Super Administrator' },
+              { label: '🌍 Nation', value: country || 'Global' }
+            ],
+            targetPath: '/admin'
+          });
         } else {
-          await loginAdmin(email, password);
+          const loggedAdmin = await loginAdmin(email, password);
+          setCelebrationData({
+            isOpen: true,
+            type: 'signin',
+            title: `🎉 Welcome Back, ${loggedAdmin?.user_metadata?.full_name || loggedAdmin?.fullName || 'Administrator'}!`,
+            subtitle: `Successfully authenticated into the SLAP Administrator Portal.`,
+            details: [
+              { label: '📧 Admin Account', value: email },
+              { label: '🛡️ Access Level', value: 'Full Super-Admin Controls' }
+            ],
+            targetPath: '/admin'
+          });
         }
-        navigate('/admin');
       } else {
         if (isRegister) {
-          await register(email, password, fullName, country);
+          const registeredUser = await register(email, password, fullName, country);
+          setCelebrationData({
+            isOpen: true,
+            type: 'signup',
+            title: `🎉 Congratulations & Welcome, ${fullName || 'Believer'}!`,
+            subtitle: `You have successfully joined the global SLAP Bible Challenge family! Ready to build consistency in the Word?`,
+            details: [
+              { label: '📧 Member Email', value: email },
+              { label: '🌍 Nation', value: country || 'Global' },
+              { label: '🔥 Initial Goal', value: 'Start Day 1 Devotion' }
+            ],
+            targetPath: location.state?.from || '/dashboard'
+          });
         } else {
-          await login(email, password);
+          const loggedUser = await login(email, password);
+          setCelebrationData({
+            isOpen: true,
+            type: 'signin',
+            title: `🎉 Welcome Back, ${loggedUser?.user_metadata?.full_name || loggedUser?.fullName || 'Believer'}!`,
+            subtitle: `Authentication successful! Let's continue your daily scripture devotion and keep your streak burning.`,
+            details: [
+              { label: '📧 Account', value: email },
+              { label: '📖 Status', value: 'Ready for Today\'s Devotion' }
+            ],
+            targetPath: location.state?.from || '/dashboard'
+          });
         }
-        const redirectPath = location.state?.from || '/dashboard';
-        navigate(redirectPath);
       }
     } catch (err) {
       setError(err.message || 'Authentication failed. Please verify your credentials.');
@@ -321,6 +366,26 @@ export default function Auth() {
           </div>
         </div>
       </AnimateOnScroll>
+
+      {/* Celebration Modal for Signup and Signin */}
+      <CelebrationModal
+        isOpen={!!celebrationData?.isOpen}
+        onClose={() => {
+          const path = celebrationData?.targetPath || '/dashboard';
+          setCelebrationData(null);
+          navigate(path);
+        }}
+        type={celebrationData?.type || 'signup'}
+        title={celebrationData?.title}
+        subtitle={celebrationData?.subtitle}
+        details={celebrationData?.details || []}
+        primaryBtnText="Enter Dashboard"
+        primaryBtnAction={() => {
+          const path = celebrationData?.targetPath || '/dashboard';
+          setCelebrationData(null);
+          navigate(path);
+        }}
+      />
     </div>
   );
 }

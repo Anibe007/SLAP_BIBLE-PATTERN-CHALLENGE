@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import AnimateOnScroll from '../components/AnimateOnScroll';
+import CelebrationModal from '../components/CelebrationModal';
 
 // ─── CURATED HIGH-RESOLUTION SPIRITUAL BACKGROUND IMAGES ───
 const IMAGE_BACKGROUNDS = [
@@ -214,6 +215,7 @@ export default function Declare() {
   
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [celebrationData, setCelebrationData] = useState(null);
   
   // 3D Tilt State
   const [tiltStyle, setTiltStyle] = useState({});
@@ -684,15 +686,18 @@ export default function Declare() {
     link.href = canvas.toDataURL('image/png', 1.0);
     link.click();
 
-    confetti({
-      particleCount: 60,
-      spread: 80,
-      origin: { y: 0.7 },
-      colors: ['#d4a017', '#f7d070', '#ffffff', '#3b82f6']
+    setCelebrationData({
+      isOpen: true,
+      type: 'download',
+      title: '🎉 Proclamation Card Downloaded!',
+      subtitle: 'Your high-resolution scripture declaration card is saved to your device and ready to share with friends, family, or fellowship circles!',
+      details: [
+        { label: '📖 Proclamation Theme', value: (selectedCategory || 'FAITH').toUpperCase() },
+        { label: '✦ Declarant Name', value: name.trim() || 'Believer in Christ' },
+        { label: '📐 Format Ratio', value: aspectRatio === 'portrait' ? 'Story / Mobile (9:16)' : (aspectRatio === 'square' ? 'Instagram Square (1:1)' : 'Classic Frame (4:5)') },
+        { label: '🛡️ Scripture Reference', value: ref }
+      ]
     });
-
-    setToastMessage('🎉 High-Resolution Declaration Card Downloaded!');
-    setTimeout(() => setToastMessage(''), 3500);
   };
 
   // ─── COPY IMAGE DIRECTLY TO CLIPBOARD ───
@@ -1390,6 +1395,18 @@ export default function Declare() {
         </div>
 
       </div>
+
+      {/* Celebratory Modal for Card Downloads */}
+      <CelebrationModal
+        isOpen={!!celebrationData?.isOpen}
+        onClose={() => setCelebrationData(null)}
+        type={celebrationData?.type || 'download'}
+        title={celebrationData?.title}
+        subtitle={celebrationData?.subtitle}
+        details={celebrationData?.details || []}
+        primaryBtnText="Done"
+        primaryBtnAction={() => setCelebrationData(null)}
+      />
     </div>
   );
 }
