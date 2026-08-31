@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, BookOpen, Flame, ShieldCheck, ShieldAlert, Eye, EyeOff, Globe, Key, UserCheck, Shield } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, BookOpen, Flame, ShieldCheck, ShieldAlert, Eye, EyeOff, Globe, Key, UserCheck, Shield, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
@@ -67,6 +67,8 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [country, setCountry] = useState('Nigeria');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [adminPasskey, setAdminPasskey] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -295,17 +297,93 @@ export default function Auth() {
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontSize: '13px' }}>Nationality / Country</label>
                     <div style={{ position: 'relative' }}>
-                      <Globe size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-secondary)' }} />
-                      <select
-                        value={country}
-                        onChange={e => setCountry(e.target.value)}
-                        style={{ paddingLeft: '44px' }}
-                      >
-                        {COUNTRIES.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
+                      {/* Search Input */}
+                      <Search size={16} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--accent-gold)', zIndex: 2, pointerEvents: 'none' }} />
+                      <input
+                        type="text"
+                        placeholder={country || 'Search your country...'}
+                        value={countrySearch}
+                        onChange={e => { setCountrySearch(e.target.value); setShowCountryDropdown(true); }}
+                        onFocus={() => setShowCountryDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowCountryDropdown(false), 180)}
+                        style={{
+                          paddingLeft: '44px',
+                          paddingRight: '36px',
+                          cursor: 'text',
+                          background: 'var(--bg-card)'
+                        }}
+                        autoComplete="off"
+                      />
+                      {/* Globe icon right side showing selected */}
+                      <Globe size={15} style={{ position: 'absolute', right: '12px', top: '15px', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+
+                      {/* Dropdown List */}
+                      {showCountryDropdown && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          zIndex: 999,
+                          background: 'var(--bg-card)',
+                          border: '1px solid var(--accent-gold)',
+                          borderRadius: '8px',
+                          maxHeight: '220px',
+                          overflowY: 'auto',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                          marginTop: '4px'
+                        }}>
+                          {COUNTRIES.filter(c =>
+                            c.toLowerCase().includes(countrySearch.toLowerCase())
+                          ).length === 0 ? (
+                            <div style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                              No country found for "{countrySearch}"
+                            </div>
+                          ) : (
+                            COUNTRIES.filter(c =>
+                              c.toLowerCase().includes(countrySearch.toLowerCase())
+                            ).map(c => (
+                              <div
+                                key={c}
+                                onMouseDown={() => {
+                                  setCountry(c);
+                                  setCountrySearch('');
+                                  setShowCountryDropdown(false);
+                                }}
+                                style={{
+                                  padding: '10px 16px',
+                                  fontSize: '14px',
+                                  cursor: 'pointer',
+                                  color: c === country ? 'var(--accent-gold)' : 'var(--text-primary)',
+                                  background: c === country ? 'rgba(212,160,23,0.12)' : 'transparent',
+                                  fontWeight: c === country ? '700' : '400',
+                                  borderBottom: '1px solid var(--border-color)',
+                                  transition: 'background 0.15s ease'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,160,23,0.1)'}
+                                onMouseLeave={e => e.currentTarget.style.background = c === country ? 'rgba(212,160,23,0.12)' : 'transparent'}
+                              >
+                                {c === country && <span style={{ marginRight: '6px', fontSize: '11px' }}>✓</span>}
+                                {c}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
+                    {/* Show selected country as a badge */}
+                    {country && !showCountryDropdown && (
+                      <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Selected:</span>
+                        <span style={{
+                          fontSize: '12px', fontWeight: '700',
+                          color: 'var(--accent-gold)',
+                          background: 'rgba(212,160,23,0.12)',
+                          padding: '2px 10px', borderRadius: '20px',
+                          border: '1px solid rgba(212,160,23,0.3)'
+                        }}>{country}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Required Admin Authorization Passkey for Admin Sign-Up */}
