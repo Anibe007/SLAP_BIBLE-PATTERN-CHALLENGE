@@ -1212,6 +1212,43 @@ export const dbService = {
     return true;
   },
 
+  async deleteParticipantByAdmin(userEmail, userId) {
+    const isCurAdmin = await this.isCurrentUserAdmin();
+    if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required to remove participants");
+
+    const cleanEmail = (userEmail || '').trim().toLowerCase();
+
+    if (isSupabaseConfigured) {
+      if (cleanEmail) {
+        await supabase.from('profiles').delete().eq('email', cleanEmail);
+      }
+      if (userId) {
+        await supabase.from('profiles').delete().eq('id', userId);
+        await supabase.from('slap_reports').delete().eq('user_id', userId);
+        await supabase.from('user_streaks').delete().eq('user_id', userId);
+      }
+      return true;
+    } else {
+      let users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      let reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+      let streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+
+      const targetUserIds = new Set();
+      if (userId) targetUserIds.add(userId);
+      users.filter(u => (u.email || '').trim().toLowerCase() === cleanEmail).forEach(u => targetUserIds.add(u.id));
+
+      users = users.filter(u => !targetUserIds.has(u.id) && (u.email || '').trim().toLowerCase() !== cleanEmail);
+      reports = reports.filter(r => !targetUserIds.has(r.user_id));
+      targetUserIds.forEach(id => { delete streaks[id]; });
+
+      localStorage.setItem('slap_users', JSON.stringify(users));
+      localStorage.setItem('slap_reports', JSON.stringify(reports));
+      localStorage.setItem('slap_streaks', JSON.stringify(streaks));
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
+      return true;
+    }
+  },
+
   // --- VIDEO LIBRARY SERVICE ---
 
   async getVideos() {

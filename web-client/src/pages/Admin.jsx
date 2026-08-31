@@ -108,6 +108,22 @@ export default function Admin() {
     }
   };
 
+  const handleDeleteParticipant = async (targetUser) => {
+    const pName = targetUser.fullName || targetUser.full_name || targetUser.user_metadata?.full_name || targetUser.email;
+    if (!window.confirm(`⚠️ ARE YOU SURE you want to delete participant "${pName}" (${targetUser.email})?\n\nThis action will permanently delete their account record, study logs, and streak metrics.`)) {
+      return;
+    }
+
+    try {
+      await dbService.deleteParticipantByAdmin(targetUser.email, targetUser.id);
+      setActionMessage(`Participant "${pName}" has been successfully deleted.`);
+      loadAdminData();
+      setTimeout(() => setActionMessage(''), 4000);
+    } catch (err) {
+      alert(err.message || "Failed to delete participant");
+    }
+  };
+
   const exportReportsToCSV = () => {
     if (reports.length === 0) return alert("No reports available to export.");
     const headers = ["Participant Name", "Email", "Country", "Book", "Chapter", "Verses", "Translation", "Striking Verses", "Lessons Learnt", "Action Plans", "Prayers", "Date"];
@@ -472,19 +488,39 @@ export default function Admin() {
                           )}
                         </td>
                         <td style={{ padding: '14px', textAlign: 'right' }}>
-                          <button
-                            onClick={() => handleToggleAdminPermission(u)}
-                            className="btn-secondary"
-                            style={{
-                              padding: '6px 12px',
-                              fontSize: '12px',
-                              color: isUserAdmin ? '#f43f5e' : 'var(--accent-gold)',
-                              borderColor: isUserAdmin ? '#f43f5e' : 'var(--accent-gold)'
-                            }}
-                            title={isUserAdmin ? 'Revoke admin access' : 'Grant admin access'}
-                          >
-                            {isUserAdmin ? 'Revoke Admin' : 'Grant Admin'}
-                          </button>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <button
+                              onClick={() => handleToggleAdminPermission(u)}
+                              className="btn-secondary"
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '12px',
+                                color: isUserAdmin ? '#f43f5e' : 'var(--accent-gold)',
+                                borderColor: isUserAdmin ? '#f43f5e' : 'var(--accent-gold)'
+                              }}
+                              title={isUserAdmin ? 'Revoke admin access' : 'Grant admin access'}
+                            >
+                              {isUserAdmin ? 'Revoke Admin' : 'Grant Admin'}
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteParticipant(u)}
+                              className="btn-secondary"
+                              style={{
+                                padding: '6px 10px',
+                                fontSize: '12px',
+                                color: '#ef4444',
+                                borderColor: '#ef4444',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title={`Delete participant ${u.email}`}
+                            >
+                              <Trash2 size={13} /> Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
