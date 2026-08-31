@@ -4,27 +4,58 @@ import { Link } from 'react-router-dom';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CountUp from '../components/CountUp';
 import { dbService } from '../services/db';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 export default function About() {
-  const [stats, setStats] = useState({ activeBelievers: 0, nationsReached: 0, totalReports: 0 });
+  const [stats, setStats] = useState({ activeBelievers: 0, totalParticipants: 0, nationsReached: 0, totalReports: 0 });
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadStats = async () => {
       try {
         const data = await dbService.getGlobalStats();
-        setStats(data);
+        if (isMounted && data) {
+          setStats(data);
+        }
       } catch (err) {
         console.error('Error loading stats:', err);
       }
     };
+
     loadStats();
+
     const handleStatsUpdated = () => loadStats();
-    const handleStorage = (e) => { if (e.key === 'slap_users' || e.key === 'slap_reports') loadStats(); };
+    const handleStorage = (e) => { 
+      if (e.key === 'slap_users' || e.key === 'slap_reports') loadStats(); 
+    };
+
     window.addEventListener('slap_stats_updated', handleStatsUpdated);
     window.addEventListener('storage', handleStorage);
+
+    const interval = setInterval(loadStats, 4000);
+
+    let subscription = null;
+    if (isSupabaseConfigured && supabase) {
+      const channel = supabase.channel('realtime_about_stats')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          loadStats();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'slap_reports' }, () => {
+          loadStats();
+        })
+        .subscribe();
+      subscription = channel;
+    }
+
     return () => {
+      isMounted = false;
+      clearInterval(interval);
       window.removeEventListener('slap_stats_updated', handleStatsUpdated);
       window.removeEventListener('storage', handleStorage);
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
     };
   }, []);
 

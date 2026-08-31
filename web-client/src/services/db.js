@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { supabase, isSupabaseConfigured, STORAGE_BUCKETS } from '../supabaseClient';
 
 // --- CATEGORIZED SEED DECLARATIONS ---
 export const DECLARATION_CATEGORIES = [
@@ -178,25 +178,33 @@ function calculateUpdatedStreak(lastActivityDateStr, currentStreak, longestStrea
   const lastDate = new Date(lastActivityDateStr);
   const today = new Date(todayStr);
   
-  // Calculate difference in days
   const diffTime = Math.abs(today - lastDate);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
-    // Already did it today, streak doesn't change
     return { current: currentStreak, longest: longestStreak, date: todayStr };
   } else if (diffDays === 1) {
-    // Consecutive day
     const newCurrent = currentStreak + 1;
     const newLongest = Math.max(newCurrent, longestStreak);
     return { current: newCurrent, longest: newLongest, date: todayStr };
   } else {
-    // Streak broken (diffDays > 1)
     return { current: 1, longest: longestStreak, date: todayStr };
   }
 }
 
-// Sample Seed Participants for rich Admin demo
+// Data URI to Blob conversion helper
+function dataURItoBlob(dataURI) {
+  const byteString = atob(dataURI.split(',')[1]);
+  const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([ab], { type: mimeString });
+}
+
+// LocalStorage Fallback Seed
 const INITIAL_DEMO_USERS = [
   {
     id: 'user-admin-1',
@@ -208,242 +216,333 @@ const INITIAL_DEMO_USERS = [
     role: 'admin',
     is_admin: true,
     created_at: new Date(Date.now() - 86400000 * 30).toISOString()
-  },
-  {
-    id: 'user-part-1',
-    email: 'grace.mensah@gmail.com',
-    password: 'password123',
-    fullName: 'Grace Mensah',
-    user_metadata: { full_name: 'Grace Mensah', country: 'Ghana' },
-    country: 'Ghana',
-    role: 'user',
-    is_admin: false,
-    created_at: new Date(Date.now() - 86400000 * 18).toISOString()
-  },
-  {
-    id: 'user-part-2',
-    email: 'emmanuel.okafor@yahoo.com',
-    password: 'password123',
-    fullName: 'Emmanuel Okafor',
-    user_metadata: { full_name: 'Emmanuel Okafor', country: 'Nigeria' },
-    country: 'Nigeria',
-    role: 'user',
-    is_admin: false,
-    created_at: new Date(Date.now() - 86400000 * 14).toISOString()
-  },
-  {
-    id: 'user-part-3',
-    email: 'sarah.jenkins@outlook.com',
-    password: 'password123',
-    fullName: 'Sarah Jenkins',
-    user_metadata: { full_name: 'Sarah Jenkins', country: 'United Kingdom' },
-    country: 'United Kingdom',
-    role: 'user',
-    is_admin: false,
-    created_at: new Date(Date.now() - 86400000 * 10).toISOString()
-  },
-  {
-    id: 'user-part-4',
-    email: 'chidi.nwosu@gmail.com',
-    password: 'password123',
-    fullName: 'Chidi Nwosu',
-    user_metadata: { full_name: 'Chidi Nwosu', country: 'United States' },
-    country: 'United States',
-    role: 'user',
-    is_admin: false,
-    created_at: new Date(Date.now() - 86400000 * 7).toISOString()
   }
 ];
 
-const INITIAL_DEMO_REPORTS = [
-  {
-    id: 'rep-demo-1',
-    user_id: 'user-part-1',
-    book: 'Romans',
-    chapter: '8',
-    verses: 'Romans 8:1-11',
-    translation: 'KJV',
-    strikingVerses: 'There is therefore now no condemnation to them which are in Christ Jesus, who walk not after the flesh, but after the Spirit. (Romans 8:1)',
-    lessonsLearnt: 'I am completely freed from guilt and condemnation. Walking in the Spirit gives me eternal victory and joy.',
-    actionPlans: 'Spend 15 minutes before work in intentional spiritual meditation and silence unnecessary negative thoughts.',
-    prayers: 'Father, thank You for the law of the Spirit of life in Christ Jesus that has set me free. Guide my steps today. Amen.',
-    submission_date: new Date().toISOString().split('T')[0],
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
-  },
-  {
-    id: 'rep-demo-2',
-    user_id: 'user-part-2',
-    book: 'Philippians',
-    chapter: '4',
-    verses: 'Philippians 4:4-13',
-    translation: 'NIV',
-    strikingVerses: 'I can do all this through him who gives me strength. (Philippians 4:13)',
-    lessonsLearnt: 'Christ is my boundless source of supernatural capacity. Anxiety melts away through prayer with thanksgiving.',
-    actionPlans: 'Write down 3 things I am thankful for whenever feeling overwhelmed at the office today.',
-    prayers: 'Lord Jesus, I surrender all worry to You. You are my peace and my strength. Amen.',
-    submission_date: new Date().toISOString().split('T')[0],
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString()
-  },
-  {
-    id: 'rep-demo-3',
-    user_id: 'user-part-3',
-    book: 'Psalms',
-    chapter: '23',
-    verses: 'Psalms 23:1-6',
-    translation: 'KJV',
-    strikingVerses: 'The Lord is my shepherd; I shall not want. He maketh me to lie down in green pastures... (Psalm 23:1-2)',
-    lessonsLearnt: 'God actively cares for my emotional and physical restoration. Goodness and mercy are guaranteed followers of my life.',
-    actionPlans: 'Take a break at lunch to declare Psalm 23 over my family and ministry goals.',
-    prayers: 'Good Shepherd, thank You for leading me by still waters and restoring my soul today. In Jesus name.',
-    submission_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    created_at: new Date(Date.now() - 86400000).toISOString()
+const SLAP_DB_VERSION = 'slap_db_v4';
+if (typeof window !== 'undefined' && window.localStorage) {
+  if (localStorage.getItem('slap_db_version') !== SLAP_DB_VERSION) {
+    localStorage.removeItem('slap_users');
+    localStorage.removeItem('slap_reports');
+    localStorage.removeItem('slap_streaks');
+    localStorage.removeItem('slap_declarations');
+    localStorage.setItem('slap_db_version', SLAP_DB_VERSION);
   }
-];
 
-const INITIAL_DEMO_STREAKS = {
-  'user-admin-1': { current_streak: 21, longest_streak: 21, last_activity_date: new Date().toISOString().split('T')[0] },
-  'user-part-1': { current_streak: 7, longest_streak: 12, last_activity_date: new Date().toISOString().split('T')[0] },
-  'user-part-2': { current_streak: 4, longest_streak: 9, last_activity_date: new Date().toISOString().split('T')[0] },
-  'user-part-3': { current_streak: 3, longest_streak: 5, last_activity_date: new Date(Date.now() - 86400000).toISOString().split('T')[0] },
-  'user-part-4': { current_streak: 1, longest_streak: 3, last_activity_date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0] }
-};
-
-// ── DB Version Reset ─────────────────────────────────────────────────────────
-// Bump this version whenever the seed data changes so stale localStorage is wiped.
-const SLAP_DB_VERSION = 'slap_db_v3';
-if (localStorage.getItem('slap_db_version') !== SLAP_DB_VERSION) {
-  // Clear all participant-seeded data so counters start from real registrations
-  localStorage.removeItem('slap_users');
-  localStorage.removeItem('slap_reports');
-  localStorage.removeItem('slap_streaks');
-  localStorage.removeItem('slap_declarations');
-  localStorage.setItem('slap_db_version', SLAP_DB_VERSION);
+  if (!localStorage.getItem('slap_users') || JSON.parse(localStorage.getItem('slap_users') || '[]').length === 0) {
+    localStorage.setItem('slap_users', JSON.stringify(INITIAL_DEMO_USERS));
+  }
+  if (!localStorage.getItem('slap_reports')) {
+    localStorage.setItem('slap_reports', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('slap_declarations')) {
+    localStorage.setItem('slap_declarations', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('slap_videos')) {
+    localStorage.setItem('slap_videos', JSON.stringify(DEFAULT_VIDEOS));
+  }
+  if (!localStorage.getItem('slap_streaks') || Object.keys(JSON.parse(localStorage.getItem('slap_streaks') || '{}')).length === 0) {
+    localStorage.setItem('slap_streaks', JSON.stringify({
+      'user-admin-1': { current_streak: 21, longest_streak: 21, last_activity_date: new Date().toISOString().split('T')[0] }
+    }));
+  }
 }
 
-// Initialize LocalStorage DB — only admin user seeded; participants start at 0
-const ADMIN_ONLY_SEED = [INITIAL_DEMO_USERS[0]]; // only David Anibe (admin)
-const ADMIN_ONLY_STREAKS = { 'user-admin-1': INITIAL_DEMO_STREAKS['user-admin-1'] };
-
-if (!localStorage.getItem('slap_users') || JSON.parse(localStorage.getItem('slap_users') || '[]').length === 0) {
-  localStorage.setItem('slap_users', JSON.stringify(ADMIN_ONLY_SEED));
-}
-if (!localStorage.getItem('slap_reports')) {
-  localStorage.setItem('slap_reports', JSON.stringify([]));
-}
-if (!localStorage.getItem('slap_declarations')) {
-  localStorage.setItem('slap_declarations', JSON.stringify([]));
-}
-if (!localStorage.getItem('slap_videos')) {
-  localStorage.setItem('slap_videos', JSON.stringify(DEFAULT_VIDEOS));
-}
-if (!localStorage.getItem('slap_streaks') || Object.keys(JSON.parse(localStorage.getItem('slap_streaks') || '{}')).length === 0) {
-  localStorage.setItem('slap_streaks', JSON.stringify(ADMIN_ONLY_STREAKS));
-}
-
-// Core Database Service
+// ─────────────────────────────────────────────────────────────────────────────
+// CORE DATABASE & STORAGE SERVICE (Direct-to-Supabase)
+// ─────────────────────────────────────────────────────────────────────────────
 export const dbService = {
-  // --- AUTH SERVICE ---
+
+  // --- SUPABASE STORAGE SERVICE (Unlimited User Media Storage) ---
+
+  /**
+   * Upload user profile avatar to Supabase Storage bucket 'avatars'
+   */
+  async uploadAvatar(file, userId) {
+    if (!file) throw new Error("No file provided for upload");
+    const uid = userId || (await this.getCurrentUser())?.id;
+    if (!uid) throw new Error("Authentication required to upload avatar");
+
+    const fileExt = file.name ? file.name.split('.').pop() : 'png';
+    const filePath = `${uid}/${Date.now()}.${fileExt}`;
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.storage
+        .from(STORAGE_BUCKETS.AVATARS)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from(STORAGE_BUCKETS.AVATARS)
+        .getPublicUrl(data.path);
+
+      // Update user profile with new avatar URL
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq('id', uid);
+
+      return publicUrl;
+    } else {
+      // Local fallback: convert to base64 DataURL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result;
+          const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+          const idx = users.findIndex(u => u.id === uid);
+          if (idx !== -1) {
+            users[idx].avatar_url = dataUrl;
+            users[idx].user_metadata = { ...(users[idx].user_metadata || {}), avatar_url: dataUrl };
+            localStorage.setItem('slap_users', JSON.stringify(users));
+            localStorage.setItem('slap_current_user', JSON.stringify(users[idx]));
+          }
+          resolve(dataUrl);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  },
+
+  /**
+   * Upload rendered declaration card (Blob / DataURI) to Supabase Storage bucket 'declarations'
+   */
+  async uploadDeclarationImage(imageBlobOrDataUri, userId) {
+    const uid = userId || (await this.getCurrentUser())?.id || 'anonymous';
+    const filename = `${uid}/decl_${Date.now()}.png`;
+
+    let blob = imageBlobOrDataUri;
+    if (typeof imageBlobOrDataUri === 'string' && imageBlobOrDataUri.startsWith('data:')) {
+      blob = dataURItoBlob(imageBlobOrDataUri);
+    }
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.storage
+        .from(STORAGE_BUCKETS.DECLARATIONS)
+        .upload(filename, blob, {
+          contentType: 'image/png',
+          cacheControl: '86400',
+          upsert: true
+        });
+
+      if (error) {
+        console.warn("Could not upload card to Supabase Storage, using fallback:", error.message);
+        return typeof imageBlobOrDataUri === 'string' ? imageBlobOrDataUri : '';
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(STORAGE_BUCKETS.DECLARATIONS)
+        .getPublicUrl(data.path);
+
+      return publicUrl;
+    } else {
+      return typeof imageBlobOrDataUri === 'string' ? imageBlobOrDataUri : '';
+    }
+  },
+
+  /**
+   * General file upload helper to Supabase Storage
+   */
+  async uploadFile(file, bucket = STORAGE_BUCKETS.MEDIA, customPath = '') {
+    if (!file) throw new Error("No file provided");
+    const user = await this.getCurrentUser();
+    const uid = user?.id || 'public';
+    const fileExt = file.name ? file.name.split('.').pop() : 'bin';
+    const filePath = customPath || `${uid}/${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${fileExt}`;
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(data.path);
+
+      return publicUrl;
+    } else {
+      return URL.createObjectURL(file);
+    }
+  },
+
+  // --- AUTH SERVICE (Supabase Auth) ---
+
   async signUp(email, password, fullName, country = '') {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName, country } }
+        options: {
+          data: {
+            full_name: fullName,
+            country: country,
+            is_admin: false,
+            role: 'user'
+          }
+        }
       });
       if (error) throw error;
-      
-      // Sync with user profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({ id: data.user.id, email, full_name: fullName, country });
-      if (profileError) console.error("Error creating profile:", profileError);
 
+      if (data.user) {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email,
+            full_name: fullName,
+            country: country,
+            is_admin: false,
+            role: 'user',
+            updated_at: new Date().toISOString()
+          });
+
+        await supabase
+          .from('user_streaks')
+          .upsert({
+            user_id: data.user.id,
+            current_streak: 0,
+            longest_streak: 0,
+            last_activity_date: null
+          });
+      }
+
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
       return data.user;
     } else {
-      // LocalStorage Auth Mock
       const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      if (users.find(u => u.email === email)) {
-        throw new Error("User already exists with this email address");
+      if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+        throw new Error("User with this email already exists");
       }
+
       const newUser = {
-        id: 'user-' + Math.random().toString(36).substr(2, 9),
+        id: 'u-' + Math.random().toString(36).substr(2, 9),
         email,
-        password, // stored plain for demo mock purposes
-        user_metadata: { full_name: fullName, country },
+        password,
+        fullName,
         country,
+        is_admin: false,
+        role: 'user',
+        user_metadata: { full_name: fullName, country, is_admin: false, role: 'user' },
         created_at: new Date().toISOString()
       };
+
       users.push(newUser);
       localStorage.setItem('slap_users', JSON.stringify(users));
       localStorage.setItem('slap_current_user', JSON.stringify(newUser));
-      // Notify Home page to refresh live stats
-      window.dispatchEvent(new Event('slap_stats_updated'));
+
+      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+      streaks[newUser.id] = { current_streak: 0, longest_streak: 0, last_activity_date: null };
+      localStorage.setItem('slap_streaks', JSON.stringify(streaks));
+
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
       return newUser;
     }
   },
 
-  // --- DEDICATED ADMIN AUTH SERVICES ---
   async signUpAdmin(email, password, fullName, country = '', adminPasskey = '') {
     const VALID_ADMIN_KEYS = ['SLAP_ADMIN_2026', 'admin123', 'admin'];
-    if (!adminPasskey || !VALID_ADMIN_KEYS.includes(adminPasskey.trim())) {
-      throw new Error("Invalid Admin Authorization Passkey. Only authorized administrators with a valid key can create an admin account.");
+    if (!VALID_ADMIN_KEYS.includes(adminPasskey.trim())) {
+      throw new Error("Invalid admin authorization passkey. Please check with the lead administrator.");
     }
 
     if (isSupabaseConfigured) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName, country, role: 'admin', is_admin: true } }
+        options: {
+          data: {
+            full_name: fullName,
+            country: country,
+            is_admin: true,
+            role: 'admin'
+          }
+        }
       });
       if (error) throw error;
-      
-      await supabase
-        .from('profiles')
-        .upsert({ id: data.user.id, email, full_name: fullName, country, role: 'admin', is_admin: true });
 
+      if (data.user) {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email,
+            full_name: fullName,
+            country: country,
+            is_admin: true,
+            role: 'admin',
+            updated_at: new Date().toISOString()
+          });
+
+        await supabase
+          .from('user_streaks')
+          .upsert({
+            user_id: data.user.id,
+            current_streak: 0,
+            longest_streak: 0,
+            last_activity_date: null
+          });
+      }
+
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
       return data.user;
     } else {
       const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      if (users.find(u => u.email === email)) {
-        throw new Error("User already exists with this email address");
+      if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+        throw new Error("Account with this email already exists");
       }
+
       const newAdmin = {
-        id: 'admin-' + Math.random().toString(36).substr(2, 9),
+        id: 'u-adm-' + Math.random().toString(36).substr(2, 9),
         email,
         password,
         fullName,
-        user_metadata: { full_name: fullName, country, role: 'admin', is_admin: true },
         country,
-        role: 'admin',
         is_admin: true,
+        role: 'admin',
+        user_metadata: { full_name: fullName, country, is_admin: true, role: 'admin' },
         created_at: new Date().toISOString()
       };
+
       users.push(newAdmin);
       localStorage.setItem('slap_users', JSON.stringify(users));
       localStorage.setItem('slap_current_user', JSON.stringify(newAdmin));
+
+      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+      streaks[newAdmin.id] = { current_streak: 0, longest_streak: 0, last_activity_date: null };
+      localStorage.setItem('slap_streaks', JSON.stringify(streaks));
+
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
       return newAdmin;
     }
   },
 
-  async signInAdmin(email, password) {
+  async signIn(email, password) {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
       const profile = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
-      const isAdminUser = !!(profile.data?.is_admin || profile.data?.role === 'admin' || data.user.email === 'admin@slapbible.org');
-      if (!isAdminUser) {
-        throw new Error("Access Denied: This account is not authorized as an administrator. Please use the Participant Login.");
+      if (profile.data) {
+        data.user.user_metadata = { ...data.user.user_metadata, ...profile.data };
+        data.user.is_admin = !!profile.data.is_admin;
+        data.user.role = profile.data.role || 'user';
       }
       return data.user;
     } else {
       const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      const user = users.find(u => u.email === email && u.password === password);
+      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
       if (!user) {
-        throw new Error("Invalid administrator credentials");
-      }
-      const isAdminUser = !!(user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org');
-      if (!isAdminUser) {
-        throw new Error("Access Denied: This account does not have administrator privileges. Please sign in via the Participant Portal.");
+        throw new Error("Invalid email or password");
       }
       localStorage.setItem('slap_current_user', JSON.stringify(user));
       return user;
@@ -456,14 +555,16 @@ export const dbService = {
         const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
         const { data: countries } = await supabase.from('profiles').select('country');
         const { count: reportCount } = await supabase.from('slap_reports').select('*', { count: 'exact', head: true });
-        
-        const distinctCountries = new Set(countries?.map(c => c.country).filter(Boolean));
 
-        return {
+        const uniqueCountries = new Set((countries || []).map(c => c.country).filter(Boolean));
+
+        const result = {
           activeBelievers: userCount || 0,
-          nationsReached: distinctCountries.size || 0,
+          totalParticipants: userCount || 0,
+          nationsReached: uniqueCountries.size || 0,
           totalReports: reportCount || 0
         };
+        return result;
       } catch (e) {
         console.warn("Could not fetch global stats from Supabase:", e);
       }
@@ -471,30 +572,31 @@ export const dbService = {
 
     const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
     const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-
-    // Exclude admin accounts — only count real participant registrations
-    const participants = users.filter(u => !u.is_admin && u.role !== 'admin' && u.email !== 'admin@slapbible.org');
-    const distinctCountries = new Set(
-      participants.map(u => u.user_metadata?.country || u.country).filter(Boolean)
-    );
+    const countries = new Set(users.map(u => u.country || u.user_metadata?.country).filter(Boolean));
 
     return {
-      activeBelievers: participants.length,
-      nationsReached: distinctCountries.size,
+      activeBelievers: users.length,
+      totalParticipants: users.length,
+      nationsReached: countries.size,
       totalReports: reports.length
     };
   },
 
-  async signIn(email, password) {
+  async signInAdmin(email, password) {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      return data.user;
+      const user = await this.signIn(email, password);
+      const isAdm = await this.isCurrentUserAdmin();
+      if (!isAdm) {
+        await this.signOut();
+        throw new Error("Access restricted: This account does not have administrator privileges.");
+      }
+      return user;
     } else {
       const users = JSON.parse(localStorage.getItem('slap_users'));
       const user = users.find(u => u.email === email && u.password === password);
-      if (!user) {
-        throw new Error("Invalid email or password");
+      if (!user) throw new Error("Invalid credentials");
+      if (!user.is_admin && user.role !== 'admin' && user.email !== 'admin@slapbible.org') {
+        throw new Error("Access restricted: This account does not have administrator privileges.");
       }
       localStorage.setItem('slap_current_user', JSON.stringify(user));
       return user;
@@ -514,7 +616,6 @@ export const dbService = {
     if (isSupabaseConfigured) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Fetch full profile info
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -522,6 +623,8 @@ export const dbService = {
           .single();
         if (profile) {
           user.user_metadata = { ...user.user_metadata, ...profile };
+          user.is_admin = !!profile.is_admin;
+          user.role = profile.role || 'user';
         }
       }
       return user;
@@ -538,14 +641,20 @@ export const dbService = {
     if (isSupabaseConfigured) {
       const { error } = await supabase
         .from('profiles')
-        .upsert({ id: user.id, full_name: fullName, avatar_url: avatarUrl });
+        .upsert({ 
+          id: user.id, 
+          full_name: fullName, 
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString()
+        });
       if (error) throw error;
       return { ...user, user_metadata: { ...user.user_metadata, full_name: fullName, avatar_url: avatarUrl } };
     } else {
       const users = JSON.parse(localStorage.getItem('slap_users'));
       const index = users.findIndex(u => u.id === user.id);
       if (index !== -1) {
-        users[index].user_metadata.full_name = fullName;
+        users[index].user_metadata = { ...(users[index].user_metadata || {}), full_name: fullName };
+        users[index].fullName = fullName;
         users[index].avatar_url = avatarUrl;
         localStorage.setItem('slap_users', JSON.stringify(users));
         localStorage.setItem('slap_current_user', JSON.stringify(users[index]));
@@ -555,7 +664,8 @@ export const dbService = {
     }
   },
 
-  // --- SLAP REPORTS SERVICE ---
+  // --- SLAP REPORTS SERVICE (PostgreSQL with RLS) ---
+
   async submitReport(report) {
     const user = await this.getCurrentUser();
     if (!user) throw new Error("Authentication required to submit report");
@@ -563,15 +673,15 @@ export const dbService = {
     const todayStr = new Date().toISOString().split('T')[0];
 
     if (isSupabaseConfigured) {
-      // 1. Submit report
+      // 1. Submit report to Supabase slap_reports table
       const { data, error } = await supabase
         .from('slap_reports')
         .insert({
           user_id: user.id,
           book: report.book,
-          chapter: parseInt(report.chapter),
+          chapter: parseInt(report.chapter) || 1,
           verses: report.verses,
-          translation: report.translation,
+          translation: report.translation || 'KJV',
           striking_verses: report.strikingVerses,
           lessons_learnt: report.lessonsLearnt,
           action_plans: report.actionPlans,
@@ -582,7 +692,7 @@ export const dbService = {
         .single();
       if (error) throw error;
 
-      // 2. Update Streak
+      // 2. Fetch and Update Streak
       const { data: streak } = await supabase
         .from('user_streaks')
         .select('*')
@@ -601,12 +711,13 @@ export const dbService = {
           user_id: user.id,
           current_streak: newStreakData.current,
           longest_streak: newStreakData.longest,
-          last_activity_date: newStreakData.date
+          last_activity_date: newStreakData.date,
+          updated_at: new Date().toISOString()
         });
 
       return { report: data, streak: newStreakData };
     } else {
-      const reports = JSON.parse(localStorage.getItem('slap_reports'));
+      const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
       const newReport = {
         id: 'rep-' + Math.random().toString(36).substr(2, 9),
         user_id: user.id,
@@ -616,11 +727,10 @@ export const dbService = {
       };
       reports.push(newReport);
       localStorage.setItem('slap_reports', JSON.stringify(reports));
-      // Notify Home page to refresh live stats
       window.dispatchEvent(new Event('slap_stats_updated'));
 
-      // Update Streak
-      const streaks = JSON.parse(localStorage.getItem('slap_streaks'));
+      // Update Streak in localStorage
+      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
       const userStreak = streaks[user.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
 
       const newStreakData = calculateUpdatedStreak(
@@ -653,7 +763,7 @@ export const dbService = {
       if (error) throw error;
       return data;
     } else {
-      const reports = JSON.parse(localStorage.getItem('slap_reports'));
+      const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
       return reports.filter(r => r.user_id === user.id).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
     }
   },
@@ -669,22 +779,33 @@ export const dbService = {
         .eq('user_id', user.id)
         .single();
       
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 is code for no rows returned
+      if (error && error.code !== 'PGRST116') throw error;
       return data || { current_streak: 0, longest_streak: 0, last_activity_date: null };
     } else {
-      const streaks = JSON.parse(localStorage.getItem('slap_streaks'));
+      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
       return streaks[user.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
     }
   },
 
   // --- DECLARATIONS SERVICE ---
+
   async getPreseededDeclarations() {
     return DEFAULT_DECLARATIONS;
   },
 
   async saveDeclaration(decl) {
     const user = await this.getCurrentUser();
-    const userId = user ? user.id : 'anonymous';
+    const userId = user ? user.id : null;
+
+    // If a canvas render or card image is provided, upload to Supabase Storage
+    let finalImageUrl = decl.imageUrl || '';
+    if (decl.cardDataUrl && isSupabaseConfigured) {
+      try {
+        finalImageUrl = await this.uploadDeclarationImage(decl.cardDataUrl, userId);
+      } catch (err) {
+        console.warn("Storage upload failed, fallback to local URL:", err);
+      }
+    }
 
     if (isSupabaseConfigured && user) {
       const { data, error } = await supabase
@@ -694,21 +815,23 @@ export const dbService = {
           declaration_text: decl.text,
           scripture_reference: decl.ref,
           background_style: decl.backgroundStyle,
-          exported_image_url: decl.imageUrl || ''
+          exported_image_url: finalImageUrl,
+          category: decl.category || 'faith'
         })
         .select()
         .single();
       if (error) throw error;
       return data;
     } else {
-      const declarations = JSON.parse(localStorage.getItem('slap_declarations'));
+      const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
       const newDecl = {
         id: 'decl-user-' + Math.random().toString(36).substr(2, 9),
-        user_id: userId,
+        user_id: userId || 'anonymous',
         declaration_text: decl.text,
         scripture_reference: decl.ref,
         background_style: decl.backgroundStyle,
-        exported_image_url: decl.imageUrl || '',
+        exported_image_url: finalImageUrl,
+        category: decl.category || 'faith',
         created_at: new Date().toISOString()
       };
       declarations.push(newDecl);
@@ -730,12 +853,13 @@ export const dbService = {
       if (error) throw error;
       return data;
     } else {
-      const declarations = JSON.parse(localStorage.getItem('slap_declarations'));
+      const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
       return declarations.filter(d => d.user_id === user.id).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
     }
   },
 
   // --- ADMIN SERVICES & PERMISSION CONTROL ---
+
   async getAdminMetrics() {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
@@ -751,13 +875,11 @@ export const dbService = {
     let topStreaks = [];
 
     if (isSupabaseConfigured) {
-      // Count declarations from Supabase
       const { count } = await supabase
         .from('declarations')
         .select('*', { count: 'exact', head: true });
       totalDeclarations = count || 0;
 
-      // Top streaks from Supabase
       const { data: streakRows } = await supabase
         .from('user_streaks')
         .select('user_id, current_streak, longest_streak, last_activity_date')
@@ -788,7 +910,6 @@ export const dbService = {
     if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
 
     if (isSupabaseConfigured) {
-      // Fetch profiles, report counts, and streaks all from Supabase
       const [profilesRes, reportsRes, streaksRes] = await Promise.all([
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('slap_reports').select('user_id'),
@@ -884,7 +1005,6 @@ export const dbService = {
         users[userIndex].role = 'admin';
         localStorage.setItem('slap_users', JSON.stringify(users));
 
-        // Update current user if self
         const currentUser = await this.getCurrentUser();
         if (currentUser && currentUser.id === userId) {
           currentUser.is_admin = true;
@@ -922,7 +1042,6 @@ export const dbService = {
   },
 
   async verifyAdminKey(secretKey) {
-    // Secret admin key set to 'SLAP_ADMIN_2026' or 'admin123'
     const VALID_ADMIN_KEYS = ['SLAP_ADMIN_2026', 'admin123', 'admin'];
     if (!VALID_ADMIN_KEYS.includes(secretKey.trim())) {
       throw new Error("Invalid admin authorization passkey");
@@ -932,13 +1051,12 @@ export const dbService = {
     if (!user) throw new Error("No authenticated user");
 
     if (isSupabaseConfigured) {
-      // Persist admin role to Supabase profiles table
       const { error } = await supabase
         .from('profiles')
         .update({ is_admin: true, role: 'admin' })
         .eq('id', user.id);
       if (error) throw error;
-      // Also update Supabase auth user_metadata
+
       await supabase.auth.updateUser({
         data: { is_admin: true, role: 'admin' }
       });
@@ -962,13 +1080,11 @@ export const dbService = {
     const user = await this.getCurrentUser();
     if (!user) return false;
 
-    // Quick check from cached user object first
     const cachedIsAdmin = !!(user.is_admin || user.role === 'admin'
       || user.user_metadata?.is_admin || user.user_metadata?.role === 'admin'
       || user.email === 'admin@slapbible.org');
     if (cachedIsAdmin) return true;
 
-    // If Supabase is configured, verify from the profiles table (source of truth)
     if (isSupabaseConfigured && user.id) {
       const { data: profile } = await supabase
         .from('profiles')
@@ -1002,6 +1118,7 @@ export const dbService = {
   },
 
   // --- VIDEO LIBRARY SERVICE ---
+
   async getVideos() {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
@@ -1053,4 +1170,3 @@ export const dbService = {
     }
   }
 };
-

@@ -3,18 +3,23 @@ import { Link } from 'react-router-dom';
 import { BookOpen, Flame, ShieldCheck, Share2, Award, Users, TrendingUp, Heart, Layers, Zap, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { dbService } from '../services/db';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CountUp from '../components/CountUp';
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
-  const [stats, setStats] = useState({ activeBelievers: 0, nationsReached: 0, totalReports: 0 });
+  const [stats, setStats] = useState({ activeBelievers: 0, totalParticipants: 0, nationsReached: 0, totalReports: 0 });
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadStats = async () => {
       try {
         const data = await dbService.getGlobalStats();
-        setStats(data);
+        if (isMounted && data) {
+          setStats(data);
+        }
       } catch (err) {
         console.error("Error loading stats:", err);
       }
@@ -36,9 +41,31 @@ export default function Home() {
     window.addEventListener('storage', handleStorage);
     window.addEventListener('slap_stats_updated', handleStatsUpdated);
 
+    // Periodic heartbeat sync every 4 seconds to guarantee live updates
+    const interval = setInterval(loadStats, 4000);
+
+    // Real-time Supabase subscription on profiles and slap_reports
+    let subscription = null;
+    if (isSupabaseConfigured && supabase) {
+      const channel = supabase.channel('realtime_home_stats')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          loadStats();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'slap_reports' }, () => {
+          loadStats();
+        })
+        .subscribe();
+      subscription = channel;
+    }
+
     return () => {
+      isMounted = false;
+      clearInterval(interval);
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('slap_stats_updated', handleStatsUpdated);
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
     };
   }, []);
 

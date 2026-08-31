@@ -1,63 +1,85 @@
-# SLAP Bible Challenge Codebase
+# SLAP Bible Pattern Challenge — Cloud-Native Platform
 
-This repository contains the complete code for the **SLAP Bible Challenge** platform, consisting of the web client, the backend Express server, and the mobile application.
-
-## 📂 Project Structure
-
-### 1. Web Application (`web-client/`)
-Located at: `c:\Users\Kezia\OneDrive\Desktop\CODING\SLAP BIBLE PATTER\web-client`
-
-*   **`index.html`**: Entry page with SEO tags and pre-loaded Google Fonts (Outfit & Inter).
-*   **`src/App.jsx`**: Main application router implementing 12 page routes, global header, responsive navigation drawer, and theme toggling.
-*   **`src/index.css`**: Design system specifying CSS variables for Light Mode and Dark Mode, glassmorphism cards, gradients, and custom animations.
-*   **`src/supabaseClient.js`**: Validates credentials and automatically switches to Demo Mode if keys are not present.
-*   **`src/services/db.js`**: Universal data abstraction layer. Directs auth, reports, streaks, declarations, and video queries to Supabase, falling back to a persistent LocalStorage mockup when unconfigured.
-*   **`src/context/ThemeContext.jsx`**: Manages the data-theme element property and localStorage theme state.
-*   **`src/context/AuthContext.jsx`**: Distributes user login, sign-up, sign-out, and profile updates across components.
-*   **`src/pages/`**:
-    *   `Home.jsx`: Vibrant landing page explaining the SLAP devotional method (Striking Verses, Lessons Learnt, Action Plans, Prayers) and featuring call-to-actions.
-    *   `About.jsx`: Mission story and statistics cards.
-    *   `Mission.jsx`: Detailed core spiritual values.
-    *   `GetInvolved.jsx`: Directives on reading plans, study circles, and leadership.
-    *   `Partner.jsx`: Form submission panel for financial and content partnerships.
-    *   `Products.jsx`: E-commerce catalog displaying journals, study cards, and Bible cases.
-    *   `Blog.jsx`: Newsroom displaying articles.
-    *   `Contact.jsx`: Contact channels and email inquiry forms.
-    *   `Auth.jsx`: Shared Login and Sign Up screen.
-    *   `Dashboard.jsx`: Daily devotions submit form, streak metrics, 28-day contribution chart, and report logs with detailed popovers.
-    *   `Declare.jsx`: Interactive card visualizer rendering scripture onto a canvas with customized names, QR code generators, and file download mechanisms.
-    *   `VideoLibrary.jsx`: Netflix-style playlist page categorized by tags, video player, and admin upload drawer.
-
-### 2. Backend API (`backend-server/`)
-Located at: `c:\Users\Kezia\OneDrive\Desktop\CODING\SLAP BIBLE PATTER\backend-server`
-
-*   **`server.js`**: Express server utilizing CORS, JSON parser, and REST routing for user auth, streak audits, canvas database indexing, and video lists.
-*   **`.env.example`**: Config templates for API Port and Supabase keys.
-
-### 3. Mobile Client (`mobile-app/` under SLAP DECLARATIONS)
-Located at: `c:\Users\Kezia\OneDrive\Desktop\CODING\SLAP DECLARATIONS\mobile-app`
-
-*   **`App.js`**: Complete React Native program providing tab routing, light/dark mode styles, a SLAP Devotional form, customizable declaration previews, OS Share sheets, and video links.
+The **SLAP Bible Pattern Challenge** is a faith-formation and scripture devotion platform built directly on top of **Supabase** (PostgreSQL Database, Auth, and Storage Buckets for unlimited users) with a modern React + Vite client.
 
 ---
 
-## 🚀 How to Run the Applications
+## 🏛️ Architecture: Pure Supabase Cloud Integration
 
-### 🌐 Web Front-end
+The platform operates **100% serverlessly**, directly interfacing with Supabase cloud infrastructure:
+
+*   **Database (PostgreSQL)**: Scalable relational database storing unlimited user profiles, daily devotional submissions (`slap_reports`), dynamic streak tracking (`user_streaks`), public/private declarations (`declarations`), and discipleship video library (`videos`).
+*   **Authentication (Supabase Auth)**: Secure JWT user session management, automated profile provisioning on signup via PostgreSQL triggers (`handle_new_user()`), and permission roles (`user`, `admin`).
+*   **Cloud Storage (Supabase Storage Buckets)**:
+    *   `avatars`: Profile pictures and member avatars.
+    *   `declarations`: High-resolution rendered scripture cards and shareable graphics.
+    *   `media_uploads`: Video thumbnails and devotional attachments.
+*   **Security (Row-Level Security / RLS)**: Strict database and storage RLS policies ensuring users can only manage their own data while admins retain oversight.
+
+---
+
+## 📂 Project Structure
+
+```
+SLAP BIBLE PATTER/
+├── web-client/                 # Main Web Application (React, Vite, Supabase SDK)
+│   ├── src/
+│   │   ├── components/         # Navigation, Theme, Modals, CountUp, Loaders
+│   │   ├── context/            # AuthContext (real-time Supabase Auth listener)
+│   │   ├── pages/              # Dashboard, Declare, VideoLibrary, Admin, Auth, etc.
+│   │   ├── services/           # db.js (Direct Supabase DB & Storage abstraction)
+│   │   └── supabaseClient.js   # Supabase client singleton & storage configuration
+│   ├── supabase_schema.sql     # Complete database DDL, triggers, RLS, and storage script
+│   ├── .env.example            # Supabase URL & Anon Key config template
+│   └── package.json
+├── supabase_schema.sql         # Root copy of Supabase SQL setup script
+└── README.md
+```
+
+---
+
+## 🚀 Getting Started
+
+### 1. Set Up Your Supabase Project (One-Time)
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Navigate to the **SQL Editor** in your Supabase Dashboard.
+3. Paste the contents of [supabase_schema.sql](supabase_schema.sql) and click **RUN**.
+   * *This automatically creates all 5 tables, triggers, indexes, and storage buckets (`avatars`, `declarations`, `media_uploads`).*
+4. Go to **Project Settings -> API** and copy:
+   * **Project URL**
+   * **Project API Anon (public) Key**
+
+### 2. Configure Environment Variables
+
+Inside `web-client/`:
+```bash
+cp .env.example .env
+```
+Update `.env` with your Supabase credentials:
+```env
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### 3. Run the Web Application
+
 ```powershell
-cd "c:\Users\Kezia\OneDrive\Desktop\CODING\SLAP BIBLE PATTER\web-client"
+cd web-client
+npm install
 npm run dev
 ```
 
-### ⚙️ Backend Server
-```powershell
-cd "c:\Users\Kezia\OneDrive\Desktop\CODING\SLAP BIBLE PATTER\backend-server"
-npm run dev
-```
+Visit `http://localhost:5173` in your browser.
+*(Note: If no Supabase keys are configured, the web client will automatically operate in zero-config demo/offline mode).*
 
-### 📱 Mobile App (Expo)
+---
+
+## 🛠️ Verification & Build
+
+To test and build the production bundle:
 ```powershell
-cd "c:\Users\Kezia\OneDrive\Desktop\CODING\SLAP DECLARATIONS\mobile-app"
-npm start
+cd web-client
+npm run lint
+npm run build
 ```
-*Scan the generated terminal QR code with your phone's **Expo Go** application (Android) or **Camera** application (iOS).*

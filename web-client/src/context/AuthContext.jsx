@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { dbService } from '../services/db';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const AuthContext = createContext();
 
@@ -20,6 +21,24 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkUser();
+
+    // Listen to Supabase Auth state changes in real-time
+    if (isSupabaseConfigured && supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            const freshUser = await dbService.getCurrentUser();
+            setUser(freshUser);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      });
+
+      return () => {
+        subscription?.unsubscribe();
+      };
+    }
   }, []);
 
   const login = async (email, password) => {
@@ -142,4 +161,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

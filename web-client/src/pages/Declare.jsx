@@ -733,15 +733,19 @@ export default function Declare() {
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
 
-  // ─── NATIVE SOCIAL SHARE ───
+  // ─── NATIVE SOCIAL SHARE & CLOUD STORAGE SYNC ───
   const handleShareCard = async () => {
     setLoading(true);
     try {
+      const canvas = canvasRef.current;
+      const cardDataUrl = canvas ? canvas.toDataURL('image/png') : null;
+
       await dbService.saveDeclaration({
         text,
         ref,
         category: selectedCategory,
-        backgroundStyle: bgMode === 'image' ? selectedImageBgId : themeId
+        backgroundStyle: bgMode === 'image' ? selectedImageBgId : themeId,
+        cardDataUrl
       });
 
       const shareText = `✦ ISPEAK & IDECLARE (${selectedCategory.toUpperCase()})\n\n"${text}"\n\nScripture: ${ref}\n${name.trim() ? `Declarant: ${name.trim()}\n` : ''}\nJoin the SLAP Bible Challenge: ${window.location.origin}/declare`;
@@ -754,7 +758,7 @@ export default function Declare() {
         });
       } else {
         await navigator.clipboard.writeText(shareText);
-        setToastMessage('Declaration copied to clipboard! 📋');
+        setToastMessage('Declaration saved & copied to clipboard! 📋');
         setTimeout(() => setToastMessage(''), 3000);
       }
     } catch (err) {
