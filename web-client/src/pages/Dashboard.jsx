@@ -307,19 +307,87 @@ export default function Dashboard() {
 
   const bookData = getBookData(readerBook);
 
+  // ─── Derive user display info ───
+  const displayName = user?.fullName || user?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Believer';
+  const avatarUrl   = user?.avatar_url || user?.user_metadata?.avatar_url || null;
+  const userCountry = user?.country || user?.user_metadata?.country || '';
+  const userEmail   = user?.email || '';
+  const initials    = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
   return (
     <div className="page-wrapper">
       
-      {/* Top Welcome / Stats */}
+      {/* ─── Personalized Profile Welcome Banner ─── */}
       <AnimateOnScroll animation="fadeUp">
-        <section className="dashboard-welcome">
-          <div>
-            <h1>Your Daily Study Dashboard</h1>
-            <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
-              Read scripture, study the Word, and submit your daily SLAP report.
-            </p>
+        <section className="dashboard-welcome" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+          {/* Avatar + Name block */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flex: 1 }}>
+            {/* Avatar */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  style={{
+                    width: '68px', height: '68px', borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid var(--accent-gold)',
+                    boxShadow: '0 0 0 4px rgba(212,160,23,0.18)'
+                  }}
+                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                />
+              ) : null}
+              <div style={{
+                width: '68px', height: '68px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--accent-gold), #b8860b)',
+                display: avatarUrl ? 'none' : 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                fontSize: '24px', fontWeight: '800', color: '#1a1409',
+                border: '3px solid var(--accent-gold)',
+                boxShadow: '0 0 0 4px rgba(212,160,23,0.18)'
+              }}>
+                {initials}
+              </div>
+              {/* Online dot */}
+              <div style={{
+                width: '14px', height: '14px', borderRadius: '50%', background: '#22c55e',
+                position: 'absolute', bottom: '2px', right: '2px',
+                border: '2px solid var(--bg-primary)'
+              }} />
+            </div>
+
+            {/* Name & Info */}
+            <div>
+              <div style={{ fontSize: '13px', color: 'var(--accent-gold)', fontWeight: '700', letterSpacing: '0.5px', marginBottom: '2px' }}>
+                {greeting()}, Believer! 👋
+              </div>
+              <h1 style={{ margin: '0 0 4px', fontSize: '26px', lineHeight: 1.2 }}>{displayName}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {userEmail && (
+                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{userEmail}</span>
+                )}
+                {userCountry && (
+                  <span style={{
+                    fontSize: '12px', fontWeight: '700', color: 'var(--accent-gold)',
+                    background: 'rgba(212,160,23,0.12)', padding: '2px 10px', borderRadius: '20px'
+                  }}>🌍 {userCountry}</span>
+                )}
+                <span style={{
+                  fontSize: '12px', fontWeight: '700', color: '#22c55e',
+                  background: 'rgba(34,197,94,0.12)', padding: '2px 10px', borderRadius: '20px'
+                }}>● Active Believer</span>
+              </div>
+            </div>
           </div>
 
+          {/* Streak Stats */}
           <div className="dashboard-stats">
             <div className="glass-card streak-card">
               <span className="streak-label">Current Streak</span>

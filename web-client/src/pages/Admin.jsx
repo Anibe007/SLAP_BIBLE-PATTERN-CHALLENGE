@@ -292,24 +292,75 @@ export default function Admin() {
     );
   }
 
+  // ─── Derive admin display info ───
+  const adminDisplayName = user?.fullName || user?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Administrator';
+  const adminAvatarUrl   = user?.avatar_url || user?.user_metadata?.avatar_url || null;
+  const adminEmail       = user?.email || '';
+  const adminInitials    = adminDisplayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
   return (
     <div className="section-container" style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px 60px' }}>
       
-      {/* Header Banner */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' }}>
-        <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-gold)', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            <ShieldCheck size={16} /> Lead Administrator: David Anibe Daniel
+      {/* ─── Personalized Admin Header Banner ─── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' }}>
+        {/* Admin Identity */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+          {/* Avatar */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            {adminAvatarUrl ? (
+              <img
+                src={adminAvatarUrl}
+                alt={adminDisplayName}
+                style={{
+                  width: '64px', height: '64px', borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '3px solid var(--accent-gold)',
+                  boxShadow: '0 0 0 4px rgba(212,160,23,0.18)'
+                }}
+                onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+              />
+            ) : null}
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--accent-gold), #92400e)',
+              display: adminAvatarUrl ? 'none' : 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              fontSize: '22px', fontWeight: '800', color: '#1a1409',
+              border: '3px solid var(--accent-gold)',
+              boxShadow: '0 0 0 4px rgba(212,160,23,0.18)'
+            }}>
+              {adminInitials}
+            </div>
+            {/* Online dot */}
+            <div style={{
+              width: '13px', height: '13px', borderRadius: '50%', background: '#22c55e',
+              position: 'absolute', bottom: '2px', right: '2px',
+              border: '2px solid var(--bg-primary)'
+            }} />
           </div>
-          <h1 style={{ fontSize: '32px', margin: '6px 0 4px', color: 'var(--text-primary)' }}>
-            Admin Dashboard
-          </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-            Monitor all participant records, oversee daily SLAP submissions, and manage system permissions.
-          </p>
+
+          {/* Name & Role */}
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-gold)', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+              <ShieldCheck size={14} /> Administrator
+            </div>
+            <h1 style={{ fontSize: '28px', margin: '0 0 4px', color: 'var(--text-primary)' }}>
+              {adminDisplayName}
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {adminEmail && (
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{adminEmail}</span>
+              )}
+              <span style={{
+                fontSize: '12px', fontWeight: '700', color: 'var(--accent-gold)',
+                background: 'rgba(212,160,23,0.12)', padding: '2px 10px', borderRadius: '20px'
+              }}>⚙️ Admin Dashboard</span>
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={loadAdminData}
             className="btn-secondary"
