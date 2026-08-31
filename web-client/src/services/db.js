@@ -542,6 +542,10 @@ export const dbService = {
       if (!user) {
         throw new Error("Invalid email or password. Please check your credentials and try again.");
       }
+      user.login_count = (user.login_count || 0) + 1;
+      const userIdx = users.findIndex(u => u.id === user.id);
+      if (userIdx !== -1) users[userIdx].login_count = user.login_count;
+      localStorage.setItem('slap_users', JSON.stringify(users));
       localStorage.setItem('slap_current_user', JSON.stringify(user));
       return user;
     }
@@ -572,13 +576,18 @@ export const dbService = {
           country: 'Nigeria',
           is_admin: isAdminPortal,
           role: isAdminPortal ? 'admin' : 'user',
+          login_count: 1,
           user_metadata: { full_name: googleName, country: 'Nigeria', is_admin: isAdminPortal, role: isAdminPortal ? 'admin' : 'user', provider: 'google' },
           created_at: new Date().toISOString()
         };
         users.push(user);
-        localStorage.setItem('slap_users', JSON.stringify(users));
+      } else {
+        user.login_count = (user.login_count || 0) + 1;
+        const idx = users.findIndex(u => u.id === user.id);
+        if (idx !== -1) users[idx].login_count = user.login_count;
       }
 
+      localStorage.setItem('slap_users', JSON.stringify(users));
       localStorage.setItem('slap_current_user', JSON.stringify(user));
       if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
       return user;
@@ -588,19 +597,18 @@ export const dbService = {
   async getGlobalStats() {
     if (isSupabaseConfigured) {
       try {
-        const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        const { data: countries } = await supabase.from('profiles').select('country');
+        const { data: profiles } = await supabase.from('profiles').select('email, country');
         const { count: reportCount } = await supabase.from('slap_reports').select('*', { count: 'exact', head: true });
 
-        const uniqueCountries = new Set((countries || []).map(c => c.country).filter(Boolean));
+        const uniqueEmails = new Set((profiles || []).map(p => (p.email || '').toLowerCase().trim()).filter(Boolean));
+        const uniqueCountries = new Set((profiles || []).map(c => c.country).filter(Boolean));
 
-        const result = {
-          activeBelievers: userCount || 0,
-          totalParticipants: userCount || 0,
+        return {
+          activeBelievers: uniqueEmails.size || (profiles || []).length,
+          totalParticipants: uniqueEmails.size || (profiles || []).length,
           nationsReached: uniqueCountries.size || 0,
           totalReports: reportCount || 0
         };
-        return result;
       } catch (e) {
         console.warn("Could not fetch global stats from Supabase:", e);
       }
@@ -608,11 +616,12 @@ export const dbService = {
 
     const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
     const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    const uniqueEmails = new Set(users.map(u => (u.email || '').toLowerCase().trim()).filter(Boolean));
     const countries = new Set(users.map(u => u.country || u.user_metadata?.country).filter(Boolean));
 
     return {
-      activeBelievers: users.length,
-      totalParticipants: users.length,
+      activeBelievers: uniqueEmails.size,
+      totalParticipants: uniqueEmails.size,
       nationsReached: countries.size,
       totalReports: reports.length
     };
@@ -961,35 +970,75 @@ export const dbService = {
       const streaksArr = streaksRes.data || [];
       const streaksMap = Object.fromEntries(streaksArr.map(s => [s.user_id, s]));
 
-      return users.map(u => {
+      const rawUserList = users.map(u => {
         const userReports = reports.filter(r => r.user_id === u.id);
         const userStreak = streaksMap[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
         return {
           ...u,
           totalSubmissions: userReports.length,
+          loginCount: u.login_count || 1,
           current_streak: userStreak.current_streak || 0,
           longest_streak: userStreak.longest_streak || 0,
           last_activity_date: userStreak.last_activity_date,
           isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
         };
       });
+
+      const emailMap = new Map();
+      rawUserList.forEach(u => {
+        const cleanEmail = (u.email || '').trim().toLowerCase();
+        if (!cleanEmail) return;
+        if (!emailMap.has(cleanEmail)) {
+          emailMap.set(cleanEmail, { ...u, totalLogins: u.loginCount || 1 });
+        } else {
+          const existing = emailMap.get(cleanEmail);
+          existing.totalSubmissions = (existing.totalSubmissions || 0) + (u.totalSubmissions || 0);
+          existing.totalLogins = (existing.totalLogins || 1) + (u.loginCount || 1);
+          existing.current_streak = Math.max(existing.current_streak || 0, u.current_streak || 0);
+          existing.longest_streak = Math.max(existing.longest_streak || 0, u.longest_streak || 0);
+          existing.isAdmin = existing.isAdmin || u.isAdmin;
+          if (u.full_name && !existing.full_name) existing.full_name = u.full_name;
+        }
+      });
+      return Array.from(emailMap.values());
     } else {
       const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
       const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
       const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
 
-      return users.map(u => {
+      const rawUserList = users.map(u => {
         const userReports = reports.filter(r => r.user_id === u.id);
         const userStreak = streaks[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
         return {
           ...u,
           totalSubmissions: userReports.length,
+          loginCount: u.login_count || 1,
           current_streak: userStreak.current_streak || 0,
           longest_streak: userStreak.longest_streak || 0,
           last_activity_date: userStreak.last_activity_date,
           isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
         };
       });
+
+      const emailMap = new Map();
+      rawUserList.forEach(u => {
+        const cleanEmail = (u.email || '').trim().toLowerCase();
+        if (!cleanEmail) return;
+        if (!emailMap.has(cleanEmail)) {
+          emailMap.set(cleanEmail, { ...u, totalLogins: u.loginCount || 1 });
+        } else {
+          const existing = emailMap.get(cleanEmail);
+          existing.totalSubmissions = (existing.totalSubmissions || 0) + (u.totalSubmissions || 0);
+          existing.totalLogins = (existing.totalLogins || 1) + (u.loginCount || 1);
+          existing.current_streak = Math.max(existing.current_streak || 0, u.current_streak || 0);
+          existing.longest_streak = Math.max(existing.longest_streak || 0, u.longest_streak || 0);
+          existing.isAdmin = existing.isAdmin || u.isAdmin;
+          if ((u.fullName || u.user_metadata?.full_name) && !existing.fullName) {
+            existing.fullName = u.fullName || u.user_metadata?.full_name;
+          }
+        }
+      });
+      return Array.from(emailMap.values());
     }
   },
 

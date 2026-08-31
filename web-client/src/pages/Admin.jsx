@@ -414,6 +414,7 @@ export default function Admin() {
                 <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   <th style={{ padding: '12px 14px' }}>Participant</th>
                   <th style={{ padding: '12px 14px' }}>Nation</th>
+                  <th style={{ padding: '12px 14px' }}>Total Logins</th>
                   <th style={{ padding: '12px 14px' }}>Submissions</th>
                   <th style={{ padding: '12px 14px' }}>Current Streak</th>
                   <th style={{ padding: '12px 14px' }}>Role</th>
@@ -423,7 +424,7 @@ export default function Admin() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                       No participants found matching your query.
                     </td>
                   </tr>
@@ -441,6 +442,12 @@ export default function Admin() {
                         <td style={{ padding: '14px' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <Globe size={13} style={{ color: 'var(--accent-gold)' }} /> {u.country || u.user_metadata?.country || 'Global'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px' }}>
+                          <span className="badge-pill" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', fontWeight: '700' }}>
+                            <Key size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
+                            {u.totalLogins || u.loginCount || 1} logins
                           </span>
                         </td>
                         <td style={{ padding: '14px' }}>
