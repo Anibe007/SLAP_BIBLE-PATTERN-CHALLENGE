@@ -535,9 +535,12 @@ export const dbService = {
       return data.user;
     } else {
       const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+      // Case-insensitive email + exact password match
+      const user = users.find(
+        u => u.email.toLowerCase() === email.toLowerCase().trim() && u.password === password
+      );
       if (!user) {
-        throw new Error("Invalid email or password");
+        throw new Error("Invalid email or password. Please check your credentials and try again.");
       }
       localStorage.setItem('slap_current_user', JSON.stringify(user));
       return user;
@@ -587,9 +590,11 @@ export const dbService = {
       }
       return user;
     } else {
-      const users = JSON.parse(localStorage.getItem('slap_users'));
-      const user = users.find(u => u.email === email && u.password === password);
-      if (!user) throw new Error("Invalid credentials");
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const user = users.find(
+        u => u.email.toLowerCase() === email.toLowerCase().trim() && u.password === password
+      );
+      if (!user) throw new Error("Invalid email or password. Please check your credentials.");
       if (!user.is_admin && user.role !== 'admin' && user.email !== 'admin@slapbible.org') {
         throw new Error("Access restricted: This account does not have administrator privileges.");
       }

@@ -45,7 +45,8 @@ export default function Auth() {
     try {
       if (portalMode === 'admin') {
         if (isRegister) {
-          const registeredAdmin = await registerAdmin(email, password, fullName, country, adminPasskey);
+          await registerAdmin(email, password, fullName, country, adminPasskey);
+          setLoading(false);
           setCelebrationData({
             isOpen: true,
             type: 'signup',
@@ -60,6 +61,7 @@ export default function Auth() {
           });
         } else {
           const loggedAdmin = await loginAdmin(email, password);
+          setLoading(false);
           setCelebrationData({
             isOpen: true,
             type: 'signin',
@@ -74,7 +76,8 @@ export default function Auth() {
         }
       } else {
         if (isRegister) {
-          const registeredUser = await register(email, password, fullName, country);
+          await register(email, password, fullName, country);
+          setLoading(false);
           setCelebrationData({
             isOpen: true,
             type: 'signup',
@@ -89,6 +92,7 @@ export default function Auth() {
           });
         } else {
           const loggedUser = await login(email, password);
+          setLoading(false);
           setCelebrationData({
             isOpen: true,
             type: 'signin',
@@ -96,7 +100,7 @@ export default function Auth() {
             subtitle: `Authentication successful! Let's continue your daily scripture devotion and keep your streak burning.`,
             details: [
               { label: '📧 Account', value: email },
-              { label: '📖 Status', value: 'Ready for Today\'s Devotion' }
+              { label: '📖 Status', value: "Ready for Today's Devotion" }
             ],
             targetPath: location.state?.from || '/dashboard'
           });
@@ -104,10 +108,10 @@ export default function Auth() {
       }
     } catch (err) {
       setError(err.message || 'Authentication failed. Please verify your credentials.');
-    } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="auth-wrapper" style={{ minHeight: '85vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '30px 16px' }}>
