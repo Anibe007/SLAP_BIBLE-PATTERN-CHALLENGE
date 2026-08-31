@@ -547,6 +547,44 @@ export const dbService = {
     }
   },
 
+  async signInWithGoogle(portalMode = 'participant') {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}${portalMode === 'admin' ? '/admin' : '/dashboard'}`
+        }
+      });
+      if (error) throw error;
+      return data;
+    } else {
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const isAdminPortal = portalMode === 'admin';
+      const googleEmail = isAdminPortal ? 'admin.google@slapbible.org' : 'believer.google@gmail.com';
+      const googleName = isAdminPortal ? 'Admin Believer (Google)' : 'Believer (Google User)';
+      
+      let user = users.find(u => u.email === googleEmail);
+      if (!user) {
+        user = {
+          id: 'u-google-' + Math.random().toString(36).substr(2, 9),
+          email: googleEmail,
+          fullName: googleName,
+          country: 'Nigeria',
+          is_admin: isAdminPortal,
+          role: isAdminPortal ? 'admin' : 'user',
+          user_metadata: { full_name: googleName, country: 'Nigeria', is_admin: isAdminPortal, role: isAdminPortal ? 'admin' : 'user', provider: 'google' },
+          created_at: new Date().toISOString()
+        };
+        users.push(user);
+        localStorage.setItem('slap_users', JSON.stringify(users));
+      }
+
+      localStorage.setItem('slap_current_user', JSON.stringify(user));
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
+      return user;
+    }
+  },
+
   async getGlobalStats() {
     if (isSupabaseConfigured) {
       try {

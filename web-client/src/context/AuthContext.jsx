@@ -97,6 +97,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (portalMode = 'participant') => {
+    setLoading(true);
+    try {
+      const gUser = await dbService.signInWithGoogle(portalMode);
+      setUser(gUser);
+      return gUser;
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
@@ -142,6 +156,7 @@ export const AuthProvider = ({ children }) => {
       register,
       loginAdmin,
       registerAdmin,
+      loginWithGoogle,
       logout,
       updateProfile,
       refreshUser,
@@ -164,6 +179,7 @@ export const useAuth = () => {
       register: async () => {},
       loginAdmin: async () => {},
       registerAdmin: async () => {},
+      loginWithGoogle: async () => {},
       logout: async () => {},
       updateProfile: async () => {},
       refreshUser: async () => {},
