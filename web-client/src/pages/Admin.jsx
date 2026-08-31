@@ -19,6 +19,7 @@ export default function Admin() {
   
   // Admin Key Unlock state for non-admins
   const [adminKeyInput, setAdminKeyInput] = useState('');
+  const [showPasskey, setShowPasskey] = useState(false);
   const [keyError, setKeyError] = useState('');
   const [keySuccess, setKeySuccess] = useState('');
   const [keyLoading, setKeyLoading] = useState(false);
@@ -163,19 +164,32 @@ export default function Admin() {
         <AnimateOnScroll animation="fadeIn">
           <div className="glass-card" style={{ padding: '36px', textAlign: 'center', border: '1px solid var(--accent-gold)' }}>
             <div style={{
-              width: '64px', height: '64px', borderRadius: '50%',
-              background: 'rgba(212, 160, 23, 0.15)', color: 'var(--accent-gold)',
+              width: '68px', height: '68px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(212, 160, 23, 0.25), rgba(184, 134, 11, 0.15))',
+              color: 'var(--accent-gold)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 20px'
+              margin: '0 auto 20px',
+              border: '2px solid rgba(212, 160, 23, 0.4)',
+              boxShadow: '0 8px 24px rgba(212, 160, 23, 0.2)'
             }}>
-              <ShieldAlert size={32} />
+              <ShieldAlert size={36} />
+            </div>
+
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1.2px',
+              color: 'var(--accent-gold)', background: 'rgba(212, 160, 23, 0.12)',
+              padding: '4px 14px', borderRadius: '20px', marginBottom: '14px',
+              border: '1px solid rgba(212, 160, 23, 0.3)'
+            }}>
+              <Lock size={13} /> High-Security Admin Portal
             </div>
 
             <h2 style={{ fontSize: '26px', color: 'var(--text-primary)', margin: '0 0 10px' }}>
-              Authorized Admin Access Only
+              Authorized Admin Passkey Required
             </h2>
             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '24px' }}>
-              The SLAP Bible Admin Dashboard is restricted. Only authorized administrators who have been granted permission by the platform administrator can monitor participants and manage daily submissions.
+              Access to participant study logs, streak records, and system administration is restricted to authorized personnel with a valid passkey.
             </p>
 
             {keyError && (
@@ -190,19 +204,34 @@ export default function Admin() {
               </div>
             )}
 
-            <form onSubmit={handleUnlockAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleUnlockAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-group" style={{ textAlign: 'left', margin: 0 }}>
-                <label className="text-label-sm">Enter Admin Authorization Passkey</label>
+                <label className="text-label-sm" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Admin Passkey</span>
+                  <span style={{ fontSize: '11px', color: 'var(--accent-gold)', fontWeight: '700' }}>Confidential</span>
+                </label>
                 <div style={{ position: 'relative' }}>
                   <input
-                    type="password"
-                    placeholder="Enter confidential administrator passkey"
+                    type={showPasskey ? "text" : "password"}
+                    placeholder="Enter confidential passkey (e.g. SLAP_ADMIN_2026)"
                     value={adminKeyInput}
                     onChange={e => setAdminKeyInput(e.target.value)}
                     required
-                    style={{ paddingLeft: '38px', fontSize: '15px' }}
+                    style={{ paddingLeft: '38px', paddingRight: '42px', fontSize: '15px' }}
                   />
                   <Key size={16} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--accent-gold)' }} />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasskey(!showPasskey)}
+                    style={{
+                      position: 'absolute', right: '12px', top: '12px',
+                      background: 'none', border: 'none', color: 'var(--text-secondary)',
+                      cursor: 'pointer', padding: '2px'
+                    }}
+                    title={showPasskey ? "Hide passkey" : "Show passkey"}
+                  >
+                    {showPasskey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </div>
 
@@ -210,11 +239,36 @@ export default function Admin() {
                 type="submit"
                 className="btn-primary"
                 disabled={keyLoading}
-                style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{
+                  padding: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  background: 'var(--accent-gold)',
+                  color: '#1a1409'
+                }}
               >
-                <ShieldCheck size={18} /> {keyLoading ? 'Verifying Permission...' : 'Authorize Admin Dashboard'}
+                <ShieldCheck size={18} /> {keyLoading ? 'Verifying Admin Passkey...' : 'Authorize Admin Dashboard'}
               </button>
             </form>
+
+            <div style={{
+              marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)',
+              fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+            }}>
+              <span>Default Administrator Passkey:</span>
+              <code style={{
+                background: 'rgba(212, 160, 23, 0.15)',
+                color: 'var(--accent-gold)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontWeight: '700',
+                fontSize: '12px'
+              }}>SLAP_ADMIN_2026</code>
+            </div>
           </div>
         </AnimateOnScroll>
       </div>
