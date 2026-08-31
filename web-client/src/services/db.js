@@ -221,13 +221,8 @@ const INITIAL_DEMO_USERS = [
 
 const SLAP_DB_VERSION = 'slap_db_v4';
 if (typeof window !== 'undefined' && window.localStorage) {
-  if (localStorage.getItem('slap_db_version') !== SLAP_DB_VERSION) {
-    localStorage.removeItem('slap_users');
-    localStorage.removeItem('slap_reports');
-    localStorage.removeItem('slap_streaks');
-    localStorage.removeItem('slap_declarations');
-    localStorage.setItem('slap_db_version', SLAP_DB_VERSION);
-  }
+  // Preserve existing users and reports across code updates
+  localStorage.setItem('slap_db_version', SLAP_DB_VERSION);
 
   if (!localStorage.getItem('slap_users') || JSON.parse(localStorage.getItem('slap_users') || '[]').length === 0) {
     localStorage.setItem('slap_users', JSON.stringify(INITIAL_DEMO_USERS));
