@@ -1047,10 +1047,10 @@ export const dbService = {
       throw new Error("Invalid admin authorization passkey");
     }
 
-    const user = await this.getCurrentUser();
-    if (!user) throw new Error("No authenticated user");
+    let user = await this.getCurrentUser();
 
     if (isSupabaseConfigured) {
+      if (!user) throw new Error("Please sign in to your account before authorizing admin privileges.");
       const { error } = await supabase
         .from('profiles')
         .update({ is_admin: true, role: 'admin' })
@@ -1061,11 +1061,19 @@ export const dbService = {
         data: { is_admin: true, role: 'admin' }
       });
     } else {
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      if (!user) {
+        // Auto-authenticate as Lead Admin if unauthenticated in demo mode
+        user = users.find(u => u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org') || INITIAL_DEMO_USERS[0];
+        if (!users.some(u => u.id === user.id)) {
+          users.push(user);
+        }
+      }
+
       user.is_admin = true;
       user.role = 'admin';
       localStorage.setItem('slap_current_user', JSON.stringify(user));
 
-      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
       const idx = users.findIndex(u => u.id === user.id);
       if (idx !== -1) {
         users[idx].is_admin = true;
