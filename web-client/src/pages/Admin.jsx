@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import {
   Users, BookOpen, Flame, Globe, Shield, ShieldCheck, ShieldAlert,
   Search, Download, Trash2, CheckCircle, AlertCircle, Eye,
-  Lock, Key, RefreshCw, Filter, Calendar, FileText, ChevronRight, X, Printer
+  Lock, Key, RefreshCw, Filter, Calendar, FileText, ChevronRight, X, Printer,
+  TrendingUp, Activity, Award, Clock, Zap
 } from 'lucide-react';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import { printOrDownloadSingleReport } from './Dashboard';
@@ -16,7 +17,8 @@ export default function Admin() {
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'reports'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'reports', 'consistency'
+  const [consistencySort, setConsistencySort] = useState('streak'); // 'streak' | 'submissions' | 'rate' | 'name'
   
   // Admin Key Unlock state for non-admins
   const [adminKeyInput, setAdminKeyInput] = useState('');
@@ -494,6 +496,12 @@ export default function Admin() {
         >
           <BookOpen size={16} /> All Daily Submissions ({reports.length})
         </button>
+        <button
+          className={`tab-btn ${activeTab === 'consistency' ? 'active' : ''}`}
+          onClick={() => setActiveTab('consistency')}
+        >
+          <TrendingUp size={16} /> Consistency Tracker
+        </button>
       </div>
 
       {/* ═══════════ TAB: PARTICIPANTS MANAGEMENT ═══════════ */}
@@ -801,6 +809,236 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {/* ═══════════ TAB: CONSISTENCY TRACKER ═══════════ */}
+      {activeTab === 'consistency' && (() => {
+        const todayMs = Date.now();
+
+        // Compute a simple consistency rate: submissions / days since created_at (capped at 100%)
+        const withRates = users.map(u => {
+          const createdMs = u.created_at ? new Date(u.created_at).getTime() : todayMs;
+          const daysSinceJoined = Math.max(1, Math.round((todayMs - createdMs) / 86400000));
+          const rate = Math.min(100, Math.round(((u.totalSubmissions || 0) / daysSinceJoined) * 100));
+
+          // Activity status
+          let status = 'inactive';
+          if (u.last_activity_date) {
+            const daysSinceActive = Math.round((todayMs - new Date(u.last_activity_date).getTime()) / 86400000);
+            if (daysSinceActive <= 1) status = 'active';
+            else if (daysSinceActive <= 7) status = 'at-risk';
+          } else if ((u.current_streak || 0) > 0) {
+            status = 'at-risk';
+          }
+
+          return { ...u, consistencyRate: rate, status };
+        });
+
+        const sorted = [...withRates].sort((a, b) => {
+          if (consistencySort === 'streak') return (b.current_streak || 0) - (a.current_streak || 0);
+          if (consistencySort === 'submissions') return (b.totalSubmissions || 0) - (a.totalSubmissions || 0);
+          if (consistencySort === 'rate') return (b.consistencyRate || 0) - (a.consistencyRate || 0);
+          if (consistencySort === 'name') return (a.full_name || a.fullName || '').localeCompare(b.full_name || b.fullName || '');
+          return 0;
+        });
+
+        const maxStreak = Math.max(...sorted.map(u => u.longest_streak || 0), 1);
+        const activeCount = sorted.filter(u => u.status === 'active').length;
+        const atRiskCount = sorted.filter(u => u.status === 'at-risk').length;
+        const inactiveCount = sorted.filter(u => u.status === 'inactive').length;
+
+        const statusStyle = {
+          active:   { bg: 'rgba(16,185,129,0.15)',  color: '#10b981', label: '🟢 Active',   border: 'rgba(16,185,129,0.35)' },
+          'at-risk':{ bg: 'rgba(234,179,8,0.15)',   color: '#eab308', label: '🟡 At Risk',  border: 'rgba(234,179,8,0.35)' },
+          inactive: { bg: 'rgba(244,63,94,0.12)',   color: '#f43f5e', label: '🔴 Inactive', border: 'rgba(244,63,94,0.3)' }
+        };
+
+        return (
+          <div>
+            {/* Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '28px' }}>
+              <div className="glass-card" style={{ padding: '18px 20px', borderLeft: '3px solid #10b981', textAlign: 'center' }}>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>{activeCount}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: '600' }}>🟢 Active (last 24h)</div>
+              </div>
+              <div className="glass-card" style={{ padding: '18px 20px', borderLeft: '3px solid #eab308', textAlign: 'center' }}>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#eab308' }}>{atRiskCount}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: '600' }}>🟡 At Risk (2–7 days)</div>
+              </div>
+              <div className="glass-card" style={{ padding: '18px 20px', borderLeft: '3px solid #f43f5e', textAlign: 'center' }}>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#f43f5e' }}>{inactiveCount}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: '600' }}>🔴 Inactive (7+ days)</div>
+              </div>
+              <div className="glass-card" style={{ padding: '18px 20px', borderLeft: '3px solid var(--accent-gold)', textAlign: 'center' }}>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--accent-gold)' }}>
+                  {sorted[0]?.current_streak || 0}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: '600' }}>🔥 Top Active Streak</div>
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: '24px' }}>
+              {/* Header + Sort Controls */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <TrendingUp size={20} style={{ color: 'var(--accent-gold)' }} /> Participant Consistency Tracker
+                  </h2>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Monitor streaks, activity status, and study consistency for every participant.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Sort by:</span>
+                  {[['streak','🔥 Streak'],['submissions','📖 Submissions'],['rate','📊 Rate'],['name','🔤 Name']].map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => setConsistencySort(val)}
+                      style={{
+                        padding: '5px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', border: '1px solid',
+                        background: consistencySort === val ? 'var(--accent-gold)' : 'transparent',
+                        color: consistencySort === val ? '#1a1409' : 'var(--text-secondary)',
+                        borderColor: consistencySort === val ? 'var(--accent-gold)' : 'var(--border-color)'
+                      }}
+                    >{label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Consistency Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      <th style={{ padding: '10px 14px' }}>#</th>
+                      <th style={{ padding: '10px 14px' }}>Participant</th>
+                      <th style={{ padding: '10px 14px' }}>Status</th>
+                      <th style={{ padding: '10px 14px' }}>Current Streak</th>
+                      <th style={{ padding: '10px 14px' }}>Longest Streak</th>
+                      <th style={{ padding: '10px 14px', minWidth: '160px' }}>Streak Progress</th>
+                      <th style={{ padding: '10px 14px' }}>Submissions</th>
+                      <th style={{ padding: '10px 14px' }}>Consistency Rate</th>
+                      <th style={{ padding: '10px 14px' }}>Last Active</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.length === 0 ? (
+                      <tr>
+                        <td colSpan="9" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                          No participants found.
+                        </td>
+                      </tr>
+                    ) : sorted.map((u, idx) => {
+                      const st = statusStyle[u.status];
+                      const barPct = Math.min(100, Math.round(((u.longest_streak || 0) / maxStreak) * 100));
+                      const rate = u.consistencyRate;
+                      const lastActive = u.last_activity_date
+                        ? new Date(u.last_activity_date).toLocaleDateString()
+                        : (u.created_at ? new Date(u.created_at).toLocaleDateString() : '—');
+                      const name = u.full_name || u.fullName || u.user_metadata?.full_name || 'Participant';
+
+                      return (
+                        <tr key={u.id || u.email} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '13px', transition: 'background 0.15s' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,160,23,0.04)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {/* Rank */}
+                          <td style={{ padding: '14px', fontWeight: '700', color: idx < 3 ? 'var(--accent-gold)' : 'var(--text-secondary)', fontSize: '14px' }}>
+                            {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                          </td>
+
+                          {/* Name + Email */}
+                          <td style={{ padding: '14px' }}>
+                            <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{name}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{u.email}</div>
+                          </td>
+
+                          {/* Activity Status */}
+                          <td style={{ padding: '14px' }}>
+                            <span style={{
+                              display: 'inline-block', padding: '3px 10px', borderRadius: '12px',
+                              fontSize: '11px', fontWeight: '700',
+                              background: st.bg, color: st.color, border: `1px solid ${st.border}`
+                            }}>{st.label}</span>
+                          </td>
+
+                          {/* Current Streak */}
+                          <td style={{ padding: '14px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: '700', fontSize: '15px', color: (u.current_streak || 0) > 0 ? '#f43f5e' : 'var(--text-secondary)' }}>
+                              {(u.current_streak || 0) > 0 ? <Flame size={15} /> : null}
+                              {u.current_streak || 0} days
+                            </span>
+                          </td>
+
+                          {/* Longest Streak */}
+                          <td style={{ padding: '14px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--accent-gold)', fontWeight: '600' }}>
+                              <Award size={13} />
+                              {u.longest_streak || 0} days
+                            </span>
+                          </td>
+
+                          {/* Visual Streak Bar */}
+                          <td style={{ padding: '14px' }}>
+                            <div style={{ position: 'relative', height: '8px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden', minWidth: '120px' }}>
+                              <div style={{
+                                position: 'absolute', left: 0, top: 0, bottom: 0,
+                                width: `${barPct}%`,
+                                background: `linear-gradient(90deg, var(--accent-gold), #f43f5e)`,
+                                borderRadius: '4px',
+                                transition: 'width 0.5s ease'
+                              }} />
+                            </div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '3px' }}>{barPct}% of top</div>
+                          </td>
+
+                          {/* Submissions */}
+                          <td style={{ padding: '14px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(212,160,23,0.12)', color: 'var(--accent-gold)', padding: '2px 10px', borderRadius: '10px', fontWeight: '700', fontSize: '13px' }}>
+                              <BookOpen size={12} /> {u.totalSubmissions || 0}
+                            </span>
+                          </td>
+
+                          {/* Consistency Rate */}
+                          <td style={{ padding: '14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ position: 'relative', height: '6px', width: '60px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden', flexShrink: 0 }}>
+                                <div style={{
+                                  position: 'absolute', left: 0, top: 0, bottom: 0,
+                                  width: `${rate}%`,
+                                  background: rate >= 70 ? '#10b981' : rate >= 40 ? '#eab308' : '#f43f5e',
+                                  borderRadius: '3px'
+                                }} />
+                              </div>
+                              <span style={{ fontWeight: '700', fontSize: '13px', color: rate >= 70 ? '#10b981' : rate >= 40 ? '#eab308' : '#f43f5e' }}>
+                                {rate}%
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Last Active */}
+                          <td style={{ padding: '14px', whiteSpace: 'nowrap' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                              <Clock size={12} /> {lastActive}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Legend */}
+              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <span><strong style={{ color: '#10b981' }}>🟢 Active</strong> — submitted in the last 24 hours</span>
+                <span><strong style={{ color: '#eab308' }}>🟡 At Risk</strong> — no submission in 2–7 days</span>
+                <span><strong style={{ color: '#f43f5e' }}>🔴 Inactive</strong> — no submission in 7+ days</span>
+                <span style={{ marginLeft: 'auto' }}><strong>Consistency Rate</strong> = submissions ÷ days since joining</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
