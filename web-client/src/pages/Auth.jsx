@@ -75,9 +75,17 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [celebrationData, setCelebrationData] = useState(null);
 
-  const { login, register, loginAdmin, registerAdmin, loginWithGoogle, simulateTestLogin } = useAuth();
+  const { login, register, loginAdmin, registerAdmin, loginWithGoogle, simulateTestLogin, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Redirect already-authenticated users away from /auth
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = location.state?.from;
+      navigate(from || (isAdmin ? '/admin' : '/dashboard'), { replace: true });
+    }
+  }, [isAuthenticated, isAdmin, navigate, location.state]);
 
   useEffect(() => {
     const portalParam = searchParams.get('portal') || searchParams.get('role');
@@ -218,45 +226,55 @@ export default function Auth() {
           {/* Left: Brand Panel */}
           <div className="auth-brand-panel" style={{
             background: portalMode === 'admin'
-              ? 'linear-gradient(135deg, #1a1409, #3a2d1d, #b8860b)'
-              : 'linear-gradient(135deg, var(--accent-gold), var(--accent-warm), var(--accent-brown))'
+              ? 'linear-gradient(150deg, #07090f 0%, #0d1840 50%, #1a0a18 100%)'
+              : 'linear-gradient(150deg, #070c22 0%, #0d1840 50%, #101f55 100%)'
           }}>
-            <div className="auth-watermark">{portalMode === 'admin' ? 'A' : 'S'}</div>
+            <div className="auth-watermark" style={{ color: portalMode === 'admin' ? 'rgba(178,13,48,0.08)' : 'rgba(178,13,48,0.07)' }}>{portalMode === 'admin' ? 'A' : 'S'}</div>
+
+            {/* Logo */}
+            <img src="/SLAP LOGO-Picsart-AiImageEnhancer.jpeg" alt="SLAP Bible" style={{ width: '72px', height: '72px', borderRadius: '12px', objectFit: 'contain', border: '2px solid rgba(178,13,48,0.4)', boxShadow: '0 0 24px rgba(178,13,48,0.25)', marginBottom: '4px' }} onError={e => e.target.style.display='none'} />
 
             <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
-              <span className="text-label" style={{ color: 'white', opacity: 0.9 }}>
-                {portalMode === 'admin' ? 'ADMINISTRATOR PORTAL' : 'SLAP BIBLE CHALLENGE'}
-              </span>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'white', margin: 0, lineHeight: 1.2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(178,13,48,0.15)', border: '1px solid rgba(178,13,48,0.3)', borderRadius: '30px', padding: '5px 14px' }}>
+                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '2.5px', color: '#f2a8b6', textTransform: 'uppercase' }}>
+                  {portalMode === 'admin' ? 'ADMINISTRATOR PORTAL' : 'SLAP BIBLE CHALLENGE'}
+                </span>
+              </div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: '800', color: 'white', margin: 0, lineHeight: 1.15, textAlign: 'center' }}>
                 {portalMode === 'admin'
-                  ? <>Platform Oversight.<br />Member Records.<br />Super Admin Controls.</>
-                  : <>Build People.<br />Build Faith.<br />Build on Christ.</>}
+                  ? <>Platform Oversight.<br />Member Records.<br /><span style={{ color: 'var(--brand-crimson)' }}>Super Admin.</span></>
+                  : <>Build People.<br />Build Faith.<br /><span style={{ color: 'var(--brand-crimson)' }}>Build on Christ.</span></>}
               </h2>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '16px', width: '100%', maxWidth: '280px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', maxWidth: '280px' }}>
                 {portalMode === 'admin' ? (
                   [
-                    { icon: <ShieldCheck size={18} />, text: 'Super admin authorization' },
-                    { icon: <UserCheck size={18} />, text: 'Full participant records & streaks' },
-                    { icon: <BookOpen size={18} />, text: 'Global submissions inspection' }
+                    { icon: <ShieldCheck size={16} />, text: 'Super admin authorization' },
+                    { icon: <UserCheck size={16} />, text: 'Full participant records & streaks' },
+                    { icon: <BookOpen size={16} />, text: 'Global submissions inspection' }
                   ].map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: 'rgba(255,255,255,0.95)', textAlign: 'left' }}>
-                      <div style={{ opacity: 0.9, flexShrink: 0, color: 'var(--accent-gold)' }}>{item.icon}</div>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: 'rgba(255,255,255,0.85)', textAlign: 'left', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ flexShrink: 0, color: 'var(--brand-crimson)' }}>{item.icon}</div>
                       <span>{item.text}</span>
                     </div>
                   ))
                 ) : (
                   [
-                    { icon: <BookOpen size={18} />, text: 'Daily structured Bible study' },
-                    { icon: <Flame size={18} />, text: 'Streak tracking & accountability' },
-                    { icon: <ShieldCheck size={18} />, text: 'iSPEAK & iDECLARE cards' }
+                    { icon: <BookOpen size={16} />, text: 'Daily structured Bible study' },
+                    { icon: <Flame size={16} />, text: 'Streak tracking & accountability' },
+                    { icon: <ShieldCheck size={16} />, text: 'iSPEAK & iDECLARE cards' }
                   ].map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: 'rgba(255,255,255,0.95)', textAlign: 'left' }}>
-                      <div style={{ opacity: 0.8, flexShrink: 0 }}>{item.icon}</div>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: 'rgba(255,255,255,0.85)', textAlign: 'left', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ flexShrink: 0, color: 'var(--brand-crimson)' }}>{item.icon}</div>
                       <span>{item.text}</span>
                     </div>
                   ))
                 )}
+              </div>
+
+              {/* Trusted by line */}
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: '8px' }}>
+                Trusted by believers in <strong style={{ color: 'rgba(255,255,255,0.65)' }}>30+ nations</strong>
               </div>
             </div>
           </div>
@@ -265,21 +283,17 @@ export default function Auth() {
           <div className="auth-form-panel">
             
             {/* Portal Switcher (Participant vs Admin) */}
-            <div style={{ display: 'flex', background: 'var(--bg-card)', borderRadius: '8px', padding: '4px', border: '1px solid var(--border-color)', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: '10px', padding: '4px', border: '1px solid var(--border-color)', marginBottom: '8px' }}>
               <button
                 type="button"
                 onClick={() => { setPortalMode('participant'); setError(''); }}
                 style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
+                  flex: 1, padding: '9px 12px', borderRadius: '7px', border: 'none',
+                  fontSize: '13px', fontWeight: '700', cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  background: portalMode === 'participant' ? 'var(--accent-gold)' : 'transparent',
-                  color: portalMode === 'participant' ? '#1a1409' : 'var(--text-secondary)'
+                  background: portalMode === 'participant' ? 'var(--brand-crimson)' : 'transparent',
+                  color: portalMode === 'participant' ? '#ffffff' : 'var(--text-secondary)',
+                  boxShadow: portalMode === 'participant' ? '0 2px 12px rgba(178,13,48,0.4)' : 'none'
                 }}
               >
                 Participant Portal
@@ -288,17 +302,13 @@ export default function Auth() {
                 type="button"
                 onClick={() => { setPortalMode('admin'); setError(''); }}
                 style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
+                  flex: 1, padding: '9px 12px', borderRadius: '7px', border: 'none',
+                  fontSize: '13px', fontWeight: '700', cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  background: portalMode === 'admin' ? 'rgba(212, 160, 23, 0.2)' : 'transparent',
-                  color: portalMode === 'admin' ? 'var(--accent-gold)' : 'var(--text-secondary)',
-                  border: portalMode === 'admin' ? '1px solid var(--accent-gold)' : '1px solid transparent'
+                  background: portalMode === 'admin' ? 'rgba(16,31,85,0.5)' : 'transparent',
+                  color: portalMode === 'admin' ? '#ffffff' : 'var(--text-secondary)',
+                  boxShadow: portalMode === 'admin' ? '0 2px 12px rgba(16,31,85,0.3)' : 'none',
+                  border: portalMode === 'admin' ? '1px solid rgba(178,13,48,0.25)' : '1px solid transparent'
                 }}
               >
                 <Shield size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> Admin Portal
@@ -402,14 +412,14 @@ export default function Auth() {
                                   padding: '10px 16px',
                                   fontSize: '14px',
                                   cursor: 'pointer',
-                                  color: c === country ? 'var(--accent-gold)' : 'var(--text-primary)',
-                                  background: c === country ? 'rgba(212,160,23,0.12)' : 'transparent',
+                                  color: c === country ? 'var(--brand-crimson)' : 'var(--text-primary)',
+                                  background: c === country ? 'rgba(178,13,48,0.10)' : 'transparent',
                                   fontWeight: c === country ? '700' : '400',
                                   borderBottom: '1px solid var(--border-color)',
                                   transition: 'background 0.15s ease'
                                 }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,160,23,0.1)'}
-                                onMouseLeave={e => e.currentTarget.style.background = c === country ? 'rgba(212,160,23,0.12)' : 'transparent'}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(178,13,48,0.08)'}
+                                onMouseLeave={e => e.currentTarget.style.background = c === country ? 'rgba(178,13,48,0.10)' : 'transparent'}
                               >
                                 {c === country && <span style={{ marginRight: '6px', fontSize: '11px' }}>✓</span>}
                                 {c}
@@ -428,7 +438,7 @@ export default function Auth() {
                           color: 'var(--accent-gold)',
                           background: 'rgba(212,160,23,0.12)',
                           padding: '2px 10px', borderRadius: '20px',
-                          border: '1px solid rgba(212,160,23,0.3)'
+                          border: '1px solid rgba(178,13,48,0.3)'
                         }}>{country}</span>
                       </div>
                     )}
@@ -437,18 +447,18 @@ export default function Auth() {
                   {/* Required Admin Authorization Passkey for Admin Sign-Up */}
                   {portalMode === 'admin' && (
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ fontSize: '13px', color: 'var(--accent-gold)', fontWeight: '700' }}>
+                      <label style={{ fontSize: '13px', color: 'var(--brand-crimson)', fontWeight: '700' }}>
                         Admin Authorization Passkey
                       </label>
                       <div style={{ position: 'relative' }}>
-                        <Key size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--accent-gold)' }} />
+                        <Key size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--brand-crimson)' }} />
                         <input
                           type="password"
                           required
                           placeholder="Enter confidential administrator passkey"
                           value={adminPasskey}
                           onChange={e => setAdminPasskey(e.target.value)}
-                          style={{ paddingLeft: '44px', borderColor: 'var(--accent-gold)' }}
+                          style={{ paddingLeft: '44px', borderColor: 'var(--brand-crimson)' }}
                         />
                       </div>
                       <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', display: 'block' }}>
@@ -507,16 +517,16 @@ export default function Auth() {
               </div>
 
               <button type="submit" className="btn-primary" disabled={loading} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                marginTop: '8px',
-                opacity: loading ? 0.7 : 1,
-                padding: '14px',
-                background: portalMode === 'admin' ? 'var(--accent-gold)' : undefined,
-                color: portalMode === 'admin' ? '#1a1409' : undefined,
-                fontWeight: '700'
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: '8px', marginTop: '8px', opacity: loading ? 0.7 : 1,
+                padding: '15px', fontWeight: '800', letterSpacing: '0.5px',
+                fontSize: '14px', borderRadius: '8px',
+                background: portalMode === 'admin'
+                  ? 'linear-gradient(135deg, #0d1840, #101f55)'
+                  : 'var(--brand-crimson)',
+                boxShadow: portalMode === 'admin'
+                  ? '0 4px 20px rgba(16,31,85,0.5)'
+                  : '0 4px 20px rgba(178,13,48,0.45)'
               }}>
                 {loading ? 'Authenticating...' : isRegister ? (portalMode === 'admin' ? 'Register Admin Account' : 'Register Participant Account') : (portalMode === 'admin' ? 'Sign In to Admin Dashboard' : 'Sign In')} <ArrowRight size={16} />
               </button>
@@ -535,24 +545,17 @@ export default function Auth() {
               onClick={handleGoogleAuth}
               disabled={loading}
               style={{
-                width: '100%',
-                padding: '12px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                fontSize: '14px',
-                fontWeight: '600',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                width: '100%', padding: '13px 16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: '10px', fontSize: '14px', fontWeight: '700',
+                background: 'var(--bg-secondary)',
+                border: '1.5px solid var(--border-color)',
+                borderRadius: '8px', color: 'var(--text-primary)',
+                cursor: 'pointer', transition: 'all 0.2s ease',
+                boxShadow: 'var(--card-shadow)'
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(178,13,48,0.3)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(178,13,48,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'var(--card-shadow)'; }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -563,43 +566,14 @@ export default function Auth() {
               <span>Continue with Google</span>
             </button>
 
-            {/* Quick Demo Test Login Button */}
-            <button
-              type="button"
-              onClick={handleSimulateTestLogin}
-              disabled={loading}
-              style={{
-                width: '100%',
-                marginTop: '10px',
-                padding: '11px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                fontSize: '13px',
-                fontWeight: '700',
-                background: 'rgba(212, 160, 23, 0.12)',
-                border: '1px dashed var(--accent-gold)',
-                borderRadius: '8px',
-                color: 'var(--accent-gold)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(212, 160, 23, 0.22)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(212, 160, 23, 0.12)'}
-            >
-              <span>⚡ One-Click Demo Test Login &amp; Auto-Journal Entry</span>
-            </button>
+
 
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--accent-gold)',
-                fontSize: '14px',
-                cursor: 'pointer',
-                fontWeight: '700',
-                padding: '4px 8px',
+                background: 'none', border: 'none',
+                color: 'var(--brand-crimson)',
+                fontSize: '14px', cursor: 'pointer',
+                fontWeight: '700', padding: '4px 8px',
               }} onClick={() => {
                 setIsRegister(!isRegister);
                 setError('');

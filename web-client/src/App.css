@@ -18,6 +18,12 @@
   animation: pageEnter 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ─── Pulse Glow (Partner success icon) ─── */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(178,13,48,0.15), 0 0 20px rgba(178,13,48,0.1); }
+  50%       { box-shadow: 0 0 0 8px rgba(178,13,48,0.05), 0 0 40px rgba(178,13,48,0.2); }
+}
+
 /* ─── Loading Spinner ─── */
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -57,8 +63,8 @@
 
 /* ─── Pulse Glow (badge / streak) ─── */
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(184, 134, 11, 0.2); }
-  50%       { box-shadow: 0 0 28px rgba(184, 134, 11, 0.55); }
+  0%, 100% { box-shadow: 0 0 8px rgba(178, 13, 48, 0.25), 0 0 16px rgba(16, 31, 85, 0.15); }
+  50%       { box-shadow: 0 0 28px rgba(178, 13, 48, 0.6), 0 0 48px rgba(16, 31, 85, 0.3); }
 }
 .pulse-glow {
   animation: pulseGlow 3s ease-in-out infinite;
@@ -88,7 +94,7 @@
   100% { background-position: 200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, transparent 33%, rgba(184,134,11,0.08) 50%, transparent 66%);
+  background: linear-gradient(90deg, transparent 33%, rgba(16, 31, 85, 0.08) 45%, rgba(178, 13, 48, 0.05) 50%, rgba(16, 31, 85, 0.08) 55%, transparent 66%);
   background-size: 200% 100%;
   animation: shimmer 2s ease-in-out infinite;
 }
@@ -97,7 +103,7 @@
   background: linear-gradient(
     90deg,
     var(--bg-tertiary) 25%,
-    rgba(184,134,11,0.06) 37%,
+    rgba(16,31,85,0.05) 37%,
     var(--bg-tertiary) 63%
   );
   background-size: 400% 100%;
@@ -164,14 +170,18 @@
   background: linear-gradient(
     120deg,
     transparent 0%,
-    rgba(184,134,11,0.04) 40%,
-    rgba(184,134,11,0.08) 50%,
-    rgba(184,134,11,0.04) 60%,
+    rgba(16, 31, 85, 0.04) 40%,
+    rgba(178, 13, 48, 0.07) 50%,
+    rgba(16, 31, 85, 0.04) 60%,
     transparent 100%
   );
   transition: left 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
   z-index: 1;
+}
+
+.glass-card:hover::before {
+  left: 100%;
 }
 
 /* ─── Floating WhatsApp Button ─── */
@@ -236,12 +246,12 @@
 }
 
 .bottom-nav-item.active {
-  color: var(--accent-gold) !important;
+  color: var(--brand-crimson) !important;
   transform: translateY(-1px);
 }
 
 .bottom-nav-item.active svg {
-  stroke: var(--accent-gold);
+  stroke: var(--brand-crimson);
 }
 
 @media (max-width: 640px) {
@@ -264,7 +274,7 @@
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent-gold), var(--accent-warm), var(--accent-rose), var(--accent-gold));
+  background: linear-gradient(135deg, #B20D30, #162870, #B20D30, #101F55);
   background-size: 300% 300%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

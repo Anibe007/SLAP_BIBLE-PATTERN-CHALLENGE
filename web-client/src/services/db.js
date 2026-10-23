@@ -445,7 +445,7 @@ export const dbService = {
   },
 
   async signUpAdmin(email, password, fullName, country = '', adminPasskey = '') {
-    const VALID_ADMIN_KEYS = ['SLAP_ADMIN_2026', 'admin123', 'admin'];
+    const VALID_ADMIN_KEYS = ['SLAP_ADMIN_2026#@'];
     if (!VALID_ADMIN_KEYS.includes(adminPasskey.trim())) {
       throw new Error("Invalid admin authorization passkey. Please check with the lead administrator.");
     }

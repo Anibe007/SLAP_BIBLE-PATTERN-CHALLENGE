@@ -73,10 +73,10 @@ export default function Home() {
     <div>
 
       {/* ═══════════════════════════════════════════════════════════
-          HERO SECTION — Full-width with image background + orbs
+          HERO SECTION — Full-width with image background
           ═══════════════════════════════════════════════════════════ */}
       <section className="hero-section">
-        <img src="/hero-bg.png" alt="" className="hero-bg" />
+        <img src="/hero-bible.jpg" alt="" className="hero-bg" />
         <div className="hero-overlay" />
 
         {/* Floating animated orbs */}
@@ -85,7 +85,6 @@ export default function Home() {
         <div className="hero-orb hero-orb-3" />
 
         <div className="hero-content">
-          {/* Left: Text */}
           <div className="hero-text slide-down">
             <h1>
               Build People.<br />
@@ -101,7 +100,7 @@ export default function Home() {
               <Link
                 to={isAuthenticated ? '/dashboard' : '/auth'}
                 className="btn-outline-gold"
-                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: '#1a1409', border: '2px solid white' }}
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: '#101F55', border: '2px solid white' }}
               >
                 START SLAP <ArrowRight size={14} />
               </Link>
@@ -110,46 +109,9 @@ export default function Home() {
                 className="btn-outline-gold"
                 style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', borderColor: 'rgba(255,255,255,0.5)', color: 'white' }}
               >
-                SEE <span style={{ textTransform: 'none' }}>i</span>SPEAK &amp; <span style={{ textTransform: 'none' }}>i</span>DECLARE <ArrowRight size={14} />
+                iSPEAK &amp; iDECLARE <ArrowRight size={14} />
               </Link>
             </div>
-          </div>
-
-          {/* Right: Product Card */}
-          <div className="hero-product-card fade-in" style={{ animationDelay: '0.3s' }}>
-            <div className="subtitle">SLAP BIBLE PATTERN</div>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontStyle: 'normal', color: '#1a1409', fontSize: '26px', letterSpacing: '1px', marginBottom: '8px' }}>
-              SLAP JOURNAL
-            </h3>
-            <div className="text-label" style={{ marginBottom: '14px' }}>
-              THE 4 PILLARS OF DAILY DEVOTION
-            </div>
-            <p style={{ fontSize: '14px', color: '#6b5d4d', lineHeight: 1.7 }}>
-              A practical and challenging journal for members who want to strengthen their
-              character, build discipline, and walk in their calling through the 4 pillars of SLAP:
-              Striking Verses, Lessons Learnt, Action Plans, and Prayers.
-            </p>
-            <Link
-              to={isAuthenticated ? '/dashboard' : '/auth'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'var(--accent-gold)',
-                color: 'white',
-                padding: '12px 24px',
-                borderRadius: '6px',
-                textDecoration: 'none',
-                fontWeight: '700',
-                fontSize: '12px',
-                letterSpacing: '1.5px',
-                textTransform: 'uppercase',
-                marginTop: '12px',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              ACCESS JOURNAL <ArrowRight size={14} />
-            </Link>
           </div>
         </div>
       </section>

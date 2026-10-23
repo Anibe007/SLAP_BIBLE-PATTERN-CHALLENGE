@@ -338,20 +338,20 @@ export default function Dashboard() {
                   style={{
                     width: '68px', height: '68px', borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '3px solid var(--accent-gold)',
-                    boxShadow: '0 0 0 4px rgba(212,160,23,0.18)'
+                    border: '3px solid var(--brand-crimson)',
+                    boxShadow: '0 0 0 4px rgba(178,13,48,0.18)'
                   }}
                   onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
                 />
               ) : null}
               <div style={{
                 width: '68px', height: '68px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--accent-gold), #b8860b)',
+                background: 'linear-gradient(135deg, var(--brand-crimson), #8a0a26)',
                 display: avatarUrl ? 'none' : 'flex',
                 alignItems: 'center', justifyContent: 'center',
-                fontSize: '24px', fontWeight: '800', color: '#1a1409',
-                border: '3px solid var(--accent-gold)',
-                boxShadow: '0 0 0 4px rgba(212,160,23,0.18)'
+                fontSize: '24px', fontWeight: '800', color: '#ffffff',
+                border: '3px solid var(--brand-crimson)',
+                boxShadow: '0 0 0 4px rgba(178,13,48,0.18)'
               }}>
                 {initials}
               </div>
@@ -365,7 +365,7 @@ export default function Dashboard() {
 
             {/* Name & Info */}
             <div>
-              <div style={{ fontSize: '13px', color: 'var(--accent-gold)', fontWeight: '700', letterSpacing: '0.5px', marginBottom: '2px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--brand-crimson)', fontWeight: '700', letterSpacing: '0.5px', marginBottom: '2px' }}>
                 {greeting()}, Believer! 👋
               </div>
               <h1 style={{ margin: '0 0 4px', fontSize: '26px', lineHeight: 1.2 }}>{displayName}</h1>
@@ -375,8 +375,9 @@ export default function Dashboard() {
                 )}
                 {userCountry && (
                   <span style={{
-                    fontSize: '12px', fontWeight: '700', color: 'var(--accent-gold)',
-                    background: 'rgba(212,160,23,0.12)', padding: '2px 10px', borderRadius: '20px'
+                    fontSize: '12px', fontWeight: '700', color: 'var(--brand-crimson)',
+                    background: 'rgba(178,13,48,0.10)', padding: '2px 10px', borderRadius: '20px',
+                    border: '1px solid rgba(178,13,48,0.2)'
                   }}>🌍 {userCountry}</span>
                 )}
                 <span style={{
@@ -389,18 +390,18 @@ export default function Dashboard() {
 
           {/* Streak Stats */}
           <div className="dashboard-stats">
-            <div className="glass-card streak-card">
+            <div className="glass-card streak-card" style={{ borderTop: '3px solid var(--brand-crimson)' }}>
               <span className="streak-label">Current Streak</span>
               <div className="streak-value">
-                <Flame fill="var(--accent-gold)" size={20} />
+                <Flame fill="var(--brand-crimson)" color="var(--brand-crimson)" size={20} />
                 {streak.current_streak} Days
               </div>
             </div>
 
-            <div className="glass-card streak-card">
+            <div className="glass-card streak-card" style={{ borderTop: '3px solid var(--brand-navy)' }}>
               <span className="streak-label">Longest Streak</span>
               <div className="streak-value">
-                <Sparkles size={20} />
+                <Sparkles size={20} style={{ color: 'var(--brand-navy)' }} />
                 {streak.longest_streak} Days
               </div>
             </div>
@@ -616,22 +617,22 @@ export default function Dashboard() {
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label><strong style={{ color: 'var(--accent-gold)' }}>S</strong> – Striking Verses</label>
+                <label><strong style={{ color: 'var(--brand-crimson)' }}>S</strong> – Striking Verses</label>
                 <textarea rows="3" placeholder="Which scripture stood out today?" value={strikingVerses} onChange={e => setStrikingVerses(e.target.value)} />
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label><strong style={{ color: 'var(--accent-brown)' }}>L</strong> – Lessons Learnt</label>
+                <label><strong style={{ color: 'var(--brand-navy)' }}>L</strong> – Lessons Learnt</label>
                 <textarea rows="3" placeholder="What core revelations did you extract?" value={lessonsLearnt} onChange={e => setLessonsLearnt(e.target.value)} />
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label><strong style={{ color: 'var(--accent-olive)' }}>A</strong> – Action Plans</label>
+                <label><strong style={{ color: '#2d7d46' }}>A</strong> – Action Plans</label>
                 <textarea rows="3" placeholder="What specific actions will you take today?" value={actionPlans} onChange={e => setActionPlans(e.target.value)} />
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label><strong style={{ color: 'var(--accent-rose)' }}>P</strong> – Prayers</label>
+                <label><strong style={{ color: '#7c3aed' }}>P</strong> – Prayers</label>
                 <textarea rows="3" placeholder="Write a short sealing prayer..." value={prayers} onChange={e => setPrayers(e.target.value)} />
               </div>
 
@@ -962,7 +963,7 @@ export function printOrDownloadSingleReport(report, user) {
   <style>
     @page { size: A4; margin: 20mm; }
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       color: #1a1a1a;
       background: #ffffff;
       line-height: 1.6;
@@ -984,7 +985,7 @@ export function printOrDownloadSingleReport(report, user) {
       margin-bottom: 24px;
     }
     .logo-title {
-      font-family: 'Cinzel', Georgia, serif;
+      font-family: 'Sora', Georgia, serif;
       font-size: 26px;
       font-weight: 700;
       color: #92660a;
@@ -1196,7 +1197,7 @@ export function printOrDownloadFullJournal(reports, user) {
       margin-bottom: 40px;
     }
     .title {
-      font-family: 'Cinzel', Georgia, serif;
+      font-family: 'Sora', Georgia, serif;
       font-size: 32px;
       font-weight: 700;
       color: #92660a;
