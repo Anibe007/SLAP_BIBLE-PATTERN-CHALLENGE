@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { dbService, DECLARATION_CATEGORIES } from '../services/db';
-import { 
-  Sparkles, Download, Share2, Palette, User, BookOpen, Check, 
-  Copy, RefreshCw, Heart, Zap, Coins, Cross, Sun, MessageCircle, 
+import { getDailyDeclaration, personalizeDeclarationText } from '../services/dailyDeclarations';
+import {
+  Sparkles, Download, Share2, Palette, User, BookOpen, Check,
+  Copy, RefreshCw, Heart, Zap, Coins, Cross, Sun, MessageCircle,
   Layers, Maximize2, Type, Sliders, CheckCircle2, Shield, Flame,
   Image as ImageIcon, Upload, Eye, SlidersHorizontal
 } from 'lucide-react';
@@ -12,6 +14,15 @@ import CelebrationModal from '../components/CelebrationModal';
 
 // ─── CURATED HIGH-RESOLUTION SPIRITUAL BACKGROUND IMAGES ───
 const IMAGE_BACKGROUNDS = [
+  {
+    id: 'bokeh-bible',
+    name: 'Illuminated Word',
+    subtitle: 'Open Scripture & Golden Bokeh Aura',
+    category: 'faith',
+    url: '/home-ispeak-ideclare.jpg',
+    tint: 'rgba(12, 8, 4, 0.38)',
+    badge: '★ Featured'
+  },
   {
     id: 'altar-bible',
     name: 'Sanctuary Open Bible',
@@ -189,16 +200,20 @@ const DEFAULT_DECLARATION = {
 };
 
 export default function Declare() {
+  const location = useLocation();
+  const initialName = location.state?.name || localStorage.getItem('slap_declarant_name') || DEFAULT_DECLARATION.name;
+  const todayDeclaration = getDailyDeclaration(new Date(), initialName);
+
   const canvasRef = useRef(null);
   const cardContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageCacheRef = useRef({});
 
   const [declarations, setDeclarations] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('faith');
-  const [text, setText] = useState(DEFAULT_DECLARATION.text);
-  const [ref, setRef] = useState(DEFAULT_DECLARATION.ref);
-  const [name, setName] = useState(DEFAULT_DECLARATION.name);
+  const [selectedCategory, setSelectedCategory] = useState(location.state?.category || 'faith');
+  const [name, setName] = useState(initialName);
+  const [text, setText] = useState(location.state?.text || todayDeclaration.text);
+  const [ref, setRef] = useState(location.state?.ref || todayDeclaration.ref);
 
   // Background System States
   const [bgMode, setBgMode] = useState('image'); // 'image' | 'gradient' | 'custom'
@@ -212,11 +227,11 @@ export default function Declare() {
   const [fontStyle, setFontStyle] = useState('cormorant');
   const [showParticles, setShowParticles] = useState(false);
   const [showLightAura, setShowLightAura] = useState(true);
-  
+
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [celebrationData, setCelebrationData] = useState(null);
-  
+
   // 3D Tilt State
   const [tiltStyle, setTiltStyle] = useState({});
 
@@ -255,7 +270,7 @@ export default function Declare() {
   useEffect(() => {
     drawCard();
   }, [
-    text, ref, name, bgMode, selectedImageBgId, customImageUrl, themeId, 
+    text, ref, name, bgMode, selectedImageBgId, customImageUrl, themeId,
     overlayDarkness, aspectRatio, fontStyle, showParticles, showLightAura, selectedCategory
   ]);
 
@@ -297,7 +312,7 @@ export default function Declare() {
     const randomCategory = DECLARATION_CATEGORIES[Math.floor(Math.random() * DECLARATION_CATEGORIES.length)];
     const matchingDecls = declarations.filter(d => d.category === randomCategory.id);
     const chosenDecl = matchingDecls[Math.floor(Math.random() * matchingDecls.length)] || declarations[Math.floor(Math.random() * declarations.length)];
-    
+
     setSelectedCategory(chosenDecl.category || randomCategory.id);
     setText(chosenDecl.text);
     setRef(chosenDecl.ref);
@@ -330,10 +345,10 @@ export default function Declare() {
     const rect = cardContainerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    
+
     const rotateX = ((y - centerY) / centerY) * -8;
     const rotateY = ((x - centerX) / centerX) * 8;
 
@@ -376,7 +391,7 @@ export default function Declare() {
 
       try {
         const img = await loadImage(imageSrc);
-        
+
         // Draw image covering the entire canvas (aspect fill / cover)
         const imgRatio = img.width / img.height;
         const canvasRatio = W / H;
@@ -509,7 +524,7 @@ export default function Declare() {
     ctx.save();
     ctx.font = '64px "Cormorant Garamond", Georgia, serif';
     ctx.fillStyle = 'rgba(212, 160, 23, 0.65)';
-    
+
     // Top-left quote
     ctx.textAlign = 'left';
     ctx.fillText('“', cardMarginX + 35, cardTop + 75);
@@ -522,22 +537,7 @@ export default function Declare() {
     // 6. FORMAT PERSONALIZED DECLARATION TEXT
     let processedText = text.trim() || DEFAULT_DECLARATION.text;
     if (name.trim()) {
-      const pName = name.trim();
-      // Natural pronoun replacements ONLY when declarant inserts His/Her name
-      processedText = processedText
-        .replace(/\bmy life\b/gi, `${pName}'s life`)
-        .replace(/\bmy steps\b/gi, `${pName}'s steps`)
-        .replace(/\bmy body\b/gi, `${pName}'s body`)
-        .replace(/\bmy hands\b/gi, `${pName}'s hands`)
-        .replace(/\bmy needs\b/gi, `${pName}'s needs`)
-        .replace(/\bmy\b/gi, `${pName}'s`)
-        .replace(/\bI am always\b/gi, `${pName} is always`)
-        .replace(/\bI am\b/gi, `${pName} is`)
-        .replace(/\bI have\b/gi, `${pName} has`)
-        .replace(/\bI walk\b/gi, `${pName} walks`)
-        .replace(/\bI prosper\b/gi, `${pName} prospers`)
-        .replace(/\bempower me\b/gi, `empower ${pName}`)
-        .replace(/\bguides me\b/gi, `guides ${pName}`);
+      processedText = personalizeDeclarationText(processedText, name.trim());
     }
 
     // 7. RENDER CENTER DECLARATION TEXT (AUTO-FILL DYNAMIC DENSITY)
@@ -616,7 +616,7 @@ export default function Declare() {
 
     ctx.save();
     ctx.textAlign = 'center';
-    
+
     // Top Footer Title: SLAP BIBLE PATTERN CHALLENGE
     ctx.font = '700 20px "Plus Jakarta Sans", "Outfit", sans-serif';
     ctx.fillStyle = '#f0eeeb';
@@ -733,7 +733,7 @@ export default function Declare() {
   const handleShareToWhatsApp = () => {
     const pName = name.trim() ? `\n— *Declarant:* ${name.trim()}` : '';
     const shareMessage = `✦ *ISPEAK & IDECLARE* (${selectedCategory.toUpperCase()}) ✦\n\n“${text}”\n\n📖 *Scripture:* ${ref}${pName}\n\n*SLAP BIBLE PATTERN CHALLENGE*\nDaily Scripture Declaration & Faith Formation\n👉 ${window.location.origin}/declare`;
-    
+
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
@@ -777,7 +777,7 @@ export default function Declare() {
 
   return (
     <div className="section-container" style={{ maxWidth: '1380px', margin: '0 auto', padding: '0 24px 70px' }}>
-      
+
       {/* Page Title & Mission Banner */}
       <AnimateOnScroll animation="fadeUp">
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
@@ -806,7 +806,7 @@ export default function Declare() {
 
       {/* Category Tabs & Quick Shuffle Button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '28px' }}>
-        
+
         {/* 6 Category Tabs */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           {DECLARATION_CATEGORIES.map(cat => (
@@ -858,7 +858,7 @@ export default function Declare() {
       </div>
 
       <div className="grid-2" style={{ alignItems: 'flex-start', gap: '32px' }}>
-        
+
         {/* ════════ LEFT COLUMN: STUDIO CONTROLS & BACKGROUND PICKERS ════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
 
@@ -954,10 +954,10 @@ export default function Declare() {
                       textAlign: 'left'
                     }}
                   >
-                    <img 
-                      src={bg.url} 
+                    <img
+                      src={bg.url}
                       alt={bg.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                     />
                     <div style={{
                       position: 'absolute',
@@ -1042,13 +1042,13 @@ export default function Declare() {
                   accept="image/*"
                   style={{ display: 'none' }}
                 />
-                
+
                 {customImageUrl ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-secondary)', padding: '12px', borderRadius: '10px' }}>
-                    <img 
-                      src={customImageUrl} 
-                      alt="Custom Backdrop" 
-                      style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} 
+                    <img
+                      src={customImageUrl}
+                      alt="Custom Backdrop"
+                      style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }}
                     />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>Custom Backdrop Active</div>
@@ -1182,18 +1182,51 @@ export default function Declare() {
             <h3 style={{ margin: '0 0 4px', fontSize: '16px' }}>Declarant Name &amp; Proclamation</h3>
 
             <div className="form-group" style={{ margin: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                <User size={14} style={{ color: 'var(--accent-gold)' }} /> Declarant Name
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', margin: 0 }}>
+                  <User size={14} style={{ color: 'var(--accent-gold)' }} /> Declarant Name
+                </label>
+                {name.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const q = getDailyDeclaration(new Date(), name.trim());
+                      setText(q.text);
+                      setRef(q.ref);
+                      setToastMessage(`Loaded today's unique scripture for ${name.trim()}!`);
+                      setTimeout(() => setToastMessage(''), 2500);
+                    }}
+                    style={{
+                      background: 'rgba(212, 160, 23, 0.12)',
+                      border: '1px solid rgba(212, 160, 23, 0.35)',
+                      color: 'var(--accent-gold)',
+                      borderRadius: '6px',
+                      padding: '3px 8px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Load today's unique scripture tailored specifically for this name"
+                  >
+                    <Sparkles size={11} /> Load Quote for {name.trim()}
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
-                placeholder="Enter declarant name (optional)"
+                placeholder="Enter declarant name (e.g. Kezia, David)"
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={e => {
+                  setName(e.target.value);
+                  localStorage.setItem('slap_declarant_name', e.target.value);
+                }}
                 style={{ fontSize: '14px' }}
               />
               <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', display: 'block' }}>
-                💡 Personalizes declaration pronouns when entered (e.g. "my life" → "Grace's life")
+                💡 Every name receives a unique personal scripture quote each day!
               </span>
             </div>
 
@@ -1260,7 +1293,7 @@ export default function Declare() {
         {/* ════════ RIGHT COLUMN: LIVE CARD PREVIEW & EXPORT ACTIONS ════════ */}
         <div style={{ position: 'sticky', top: '90px' }}>
           <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
-            
+
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="animate-spin" style={{ color: 'var(--accent-gold)', fontSize: '14px' }}>✦</span>

@@ -11,7 +11,7 @@ const TIERS = [
     icon: <DollarSign size={28} />,
     title: 'Financial Sponsor',
     value: 'financial',
-    tag: 'Most Impactful',
+    tag: 'Financial Role',
     tagColor: 'var(--brand-crimson)',
     desc: 'Fund infrastructure, server costs, language translation, and physical journal production to keep SLAP free for believers everywhere.',
     perks: [
@@ -184,7 +184,7 @@ export default function Partner() {
       }}>
         <div style={{
           maxWidth: '1000px', margin: '0 auto', padding: '0 24px',
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
         }}>
           {STATS.map((s, i) => (
             <AnimateOnScroll key={i} animation="fadeUp" delay={i * 80}>
@@ -223,7 +223,7 @@ export default function Partner() {
             </div>
           </AnimateOnScroll>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '24px' }}>
             {TIERS.map((tier, i) => (
               <AnimateOnScroll key={i} animation="fadeUp" delay={i * 120}>
                 <div
@@ -332,7 +332,7 @@ export default function Partner() {
             </div>
           </AnimateOnScroll>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: '24px' }}>
             {BENEFITS.map((b, i) => (
               <AnimateOnScroll key={i} animation="fadeUp" delay={i * 100}>
                 <div className="glass-card" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
@@ -391,12 +391,12 @@ export default function Partner() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
               <img
                 src="/david-anibe.jpg"
-                alt="Pastor David Anibe"
+                alt="David Anibe"
                 style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(178,13,48,0.5)' }}
                 onError={e => { e.target.style.display = 'none'; }}
               />
               <div style={{ textAlign: 'left' }}>
-                <div style={{ color: '#ffffff', fontWeight: '700', fontSize: '14px' }}>Pastor David Anibe</div>
+                <div style={{ color: '#ffffff', fontWeight: '700', fontSize: '14px' }}>David Anibe</div>
                 <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '12px' }}>SLAP Bible Challenge Founder</div>
               </div>
             </div>

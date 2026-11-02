@@ -1,15 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Flame, ShieldCheck, Share2, Award, Users, TrendingUp, Heart, Layers, Zap, ArrowRight } from 'lucide-react';
+import { BookOpen, Flame, ShieldCheck, Share2, Award, Users, TrendingUp, Heart, Layers, Zap, ArrowRight, Calendar, ChevronLeft, ChevronRight, Sparkles, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { dbService } from '../services/db';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { getDeclarationByOffset } from '../services/dailyDeclarations';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CountUp from '../components/CountUp';
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [stats, setStats] = useState({ activeBelievers: 0, totalParticipants: 0, nationsReached: 0, totalReports: 0 });
+  const [dailyOffset, setDailyOffset] = useState(0);
+  const [declarantName, setDeclarantName] = useState(() => {
+    return localStorage.getItem('slap_declarant_name') || '';
+  });
+
+  // Pre-fill user's name if logged in and not already set
+  useEffect(() => {
+    if (user && !declarantName) {
+      const uName = user.fullName || user.user_metadata?.full_name || '';
+      if (uName) {
+        setDeclarantName(uName);
+        localStorage.setItem('slap_declarant_name', uName);
+      }
+    }
+  }, [user]);
+
+  const dailyDecl = getDeclarationByOffset(dailyOffset, declarantName);
 
   useEffect(() => {
     let isMounted = true;
@@ -76,7 +94,7 @@ export default function Home() {
           HERO SECTION — Full-width with image background
           ═══════════════════════════════════════════════════════════ */}
       <section className="hero-section">
-        <img src="/hero-bible.jpg" alt="" className="hero-bg" />
+        <img src="/home-hero-bible.jpg" alt="Open Bible with Divine Light" className="hero-bg" />
         <div className="hero-overlay" />
 
         {/* Floating animated orbs */}
@@ -124,7 +142,7 @@ export default function Home() {
           {/* Card 1: SLAP Daily */}
           <AnimateOnScroll animation="fadeUp" delay={0}>
             <div className="program-card dark">
-              <img src="/slap-men.png" alt="SLAP Daily Devotion" />
+              <img src="/home-daily-study.jpg" alt="SLAP Daily Devotion" />
               <div className="program-card-overlay" />
               <div className="program-card-content">
                 <h3 style={{ fontFamily: 'var(--font-display)', letterSpacing: '1px' }}>SLAP DAILY</h3>
@@ -145,7 +163,7 @@ export default function Home() {
           {/* Card 2: iSPEAK & iDECLARE */}
           <AnimateOnScroll animation="fadeUp" delay={150}>
             <div className="program-card dark">
-              <img src="/slap-women.png" alt="iSPEAK & iDECLARE" />
+              <img src="/home-ispeak-ideclare.jpg" alt="iSPEAK & iDECLARE" />
               <div className="program-card-overlay" />
               <div className="program-card-content">
                 <h3 style={{ fontFamily: 'var(--font-display)', letterSpacing: '1px' }}>
@@ -168,7 +186,7 @@ export default function Home() {
           {/* Card 3: SLAP Journal */}
           <AnimateOnScroll animation="fadeUp" delay={300}>
             <div className="program-card dark">
-              <img src="/slap-journal.png" alt="SLAP Journal" />
+              <img src="/home-slap-journal.jpg" alt="SLAP Journal" />
               <div className="program-card-overlay" />
               <div className="program-card-content">
                 <h3 style={{ fontFamily: 'var(--font-display)', letterSpacing: '1px' }}>SLAP JOURNAL</h3>
@@ -304,46 +322,226 @@ export default function Home() {
                   </li>
                 </ul>
                 <div>
-                  <Link to="/declare" className="btn-outline-gold" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <Link
+                    to="/declare"
+                    state={{
+                      text: dailyDecl.text,
+                      ref: dailyDecl.ref,
+                      theme: dailyDecl.theme,
+                      name: declarantName
+                    }}
+                    className="btn-outline-gold"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                  >
                     CREATE AN <span style={{ textTransform: 'none' }}>i</span>SPEAK &amp; <span style={{ textTransform: 'none' }}>i</span>DECLARE CARD <ArrowRight size={14} />
                   </Link>
                 </div>
               </div>
             </AnimateOnScroll>
 
-            {/* Decorative Preview Card */}
+            {/* Decorative Preview Card — Changes Daily & Unique per Name */}
             <AnimateOnScroll animation="fadeRight" delay={200}>
               <div style={{
-                background: 'linear-gradient(135deg, var(--accent-gold), var(--accent-warm))',
+                position: 'relative',
                 borderRadius: '20px',
-                minHeight: '380px',
+                minHeight: '430px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: 'var(--card-shadow)',
-                position: 'relative',
                 overflow: 'hidden',
-                padding: '40px'
+                padding: '36px 20px'
               }}>
+                <img
+                  src="/home-ispeak-ideclare.jpg"
+                  alt="iSpeak & iDeclare Scripture"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(135deg, rgba(16, 31, 85, 0.45) 0%, rgba(10, 17, 50, 0.65) 100%)'
+                }} />
                 <div className="float" style={{
-                  background: 'var(--bg-secondary)',
-                  padding: '32px',
-                  borderRadius: '16px',
+                  position: 'relative',
+                  zIndex: 2,
+                  background: 'rgba(255, 255, 255, 0.96)',
+                  backdropFilter: 'blur(14px)',
+                  padding: '24px 22px',
+                  borderRadius: '18px',
                   width: '100%',
-                  maxWidth: '300px',
-                  border: '1px solid var(--border-color)',
+                  maxWidth: '330px',
+                  border: '1px solid rgba(255,255,255,0.7)',
                   textAlign: 'center',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-                  transform: 'rotate(-2deg)'
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                  transform: 'rotate(-1.5deg)',
+                  transition: 'all 0.3s ease'
                 }}>
-                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                  {/* Daily Date Badge & Navigator */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: '800',
+                      color: 'var(--brand-crimson)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1.2px',
+                      background: 'rgba(178,13,48,0.08)',
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}>
+                      <Calendar size={11} />
+                      {dailyOffset === 0 ? `Today • ${dailyDecl.dateString}` : dailyDecl.dateString}
+                    </span>
+
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => setDailyOffset(prev => prev - 1)}
+                        title="Previous Daily Scripture"
+                        style={{
+                          background: 'rgba(16,31,85,0.07)',
+                          border: 'none',
+                          borderRadius: '6px',
+                          width: '26px',
+                          height: '26px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          color: '#101F55',
+                          transition: 'background 0.2s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,31,85,0.15)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,31,85,0.07)'}
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDailyOffset(prev => prev + 1)}
+                        title="Next Daily Scripture"
+                        style={{
+                          background: 'rgba(16,31,85,0.07)',
+                          border: 'none',
+                          borderRadius: '6px',
+                          width: '26px',
+                          height: '26px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          color: '#101F55',
+                          transition: 'background 0.2s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,31,85,0.15)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,31,85,0.07)'}
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Header Title & Theme */}
+                  <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '2px' }}>
                     I SPEAK &amp; I DECLARE
-                  </span>
-                  <p style={{ margin: '16px 0', fontSize: '16px', fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.7, fontFamily: 'var(--font-serif)' }}>
-                    "The steps of my life are ordered by the Lord. I am always at the right place at the right time."
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#101F55', marginBottom: '8px' }}>
+                    {dailyDecl.theme}
+                  </div>
+
+                  {/* Declarant Name Input for Unique Quotes per Name */}
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: 'rgba(16, 31, 85, 0.04)',
+                      border: '1px solid rgba(16, 31, 85, 0.12)',
+                      borderRadius: '8px',
+                      padding: '4px 8px',
+                      gap: '6px'
+                    }}>
+                      <User size={13} style={{ color: 'var(--brand-crimson)', flexShrink: 0 }} />
+                      <input
+                        type="text"
+                        value={declarantName}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDeclarantName(val);
+                          localStorage.setItem('slap_declarant_name', val);
+                        }}
+                        placeholder="Your name for personal quote..."
+                        style={{
+                          border: 'none',
+                          outline: 'none',
+                          background: 'transparent',
+                          fontSize: '11px',
+                          color: '#101F55',
+                          width: '100%',
+                          fontWeight: '600'
+                        }}
+                      />
+                      {declarantName && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeclarantName('');
+                            localStorage.removeItem('slap_declarant_name');
+                          }}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            lineHeight: 1,
+                            padding: '0 2px'
+                          }}
+                          title="Reset to general quote"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px', textAlign: 'left', paddingLeft: '2px' }}>
+                      {declarantName.trim()
+                        ? `✨ Unique daily scripture for ${declarantName.trim()}`
+                        : '💡 Enter name for a personalized daily quote'}
+                    </div>
+                  </div>
+
+                  {/* Scripture Declaration text */}
+                  <p style={{
+                    margin: '6px 0 10px',
+                    fontSize: '14px',
+                    fontStyle: 'italic',
+                    color: '#101F55',
+                    lineHeight: 1.6,
+                    fontFamily: 'var(--font-serif)',
+                    minHeight: '75px'
+                  }}>
+                    "{dailyDecl.text}"
                   </p>
-                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px', fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                    — Psalm 37:23
+
+                  {/* Scripture Reference & Declarant */}
+                  <div style={{ borderTop: '1px solid rgba(16,31,85,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--brand-crimson)' }}>
+                      — {dailyDecl.ref}
+                    </span>
+                    {declarantName.trim() && (
+                      <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                        Declarant: {declarantName.trim()}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -425,7 +623,11 @@ export default function Home() {
                 boxShadow: 'var(--card-shadow)',
                 aspectRatio: '4/3'
               }}>
-                <img src="/slap-community.png" alt="SLAP Bible Community" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <img
+                  src="/home-community-reading.jpg"
+                  alt="Devotional Bible Study"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 75%', display: 'block' }}
+                />
               </div>
             </AnimateOnScroll>
             <AnimateOnScroll animation="fadeRight" delay={200}>
@@ -476,34 +678,49 @@ export default function Home() {
           FINAL CTA BANNER
           ═══════════════════════════════════════════════════════════ */}
       <AnimateOnScroll animation="fadeUp">
-        <section className="cta-banner">
-          <h2>Begin Your Journey Today</h2>
-          <p>
-            Join thousands of believers building a daily habit of God's Word.
-            It starts with a single SLAP report.
-          </p>
-          <Link
-            to={isAuthenticated ? '/dashboard' : '/auth'}
+        <section className="cta-banner" style={{ position: 'relative' }}>
+          <img
+            src="/home-daily-study.jpg"
+            alt=""
             style={{
-              background: 'white',
-              color: '#b8860b',
-              fontWeight: '800',
-              fontSize: '12px',
-              padding: '14px 32px',
-              borderRadius: '4px',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              textTransform: 'uppercase',
-              letterSpacing: '1.5px',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: 0.14,
+              pointerEvents: 'none'
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
-          >
-            {isAuthenticated ? 'GO TO DASHBOARD' : 'CREATE FREE ACCOUNT'} <ArrowRight size={14} />
-          </Link>
+          />
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <h2>Begin Your Journey Today</h2>
+            <p>
+              Join thousands of believers building a daily habit of God's Word.
+              It starts with a single SLAP report.
+            </p>
+            <Link
+              to={isAuthenticated ? '/dashboard' : '/auth'}
+              style={{
+                background: 'white',
+                color: '#101F55',
+                fontWeight: '800',
+                fontSize: '12px',
+                padding: '14px 32px',
+                borderRadius: '4px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+            >
+              {isAuthenticated ? 'GO TO DASHBOARD' : 'CREATE FREE ACCOUNT'} <ArrowRight size={14} />
+            </Link>
+          </div>
         </section>
       </AnimateOnScroll>
     </div>

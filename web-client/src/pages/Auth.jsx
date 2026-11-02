@@ -182,8 +182,7 @@ export default function Auth() {
         subtitle: `Google Authentication successful! You are connected to the SLAP Bible Challenge.`,
         details: [
           { label: '📧 Google Account', value: gUser?.email || 'google.user@gmail.com' },
-          { label: '🛡️ Access Level', value: portalMode === 'admin' ? 'Super Administrator' : 'Devotional Participant' },
-          { label: '🔑 Provider', value: 'Google Single Sign-On' }
+          ...(portalMode === 'admin' ? [{ label: '🛡️ Access Level', value: 'Super Administrator' }] : []),
         ],
         targetPath: portalMode === 'admin' ? '/admin' : '/dashboard'
       });

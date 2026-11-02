@@ -46,16 +46,17 @@ const BIBLE_BOOKS = [
 
 /* ─── Translation mapping for bolls.life API ─── */
 const API_TRANSLATIONS = {
-  'KJV':  { id: 'KJV',    label: 'KJV (King James Version)' },
-  'NKJV': { id: 'NKJV',   label: 'NKJV (New King James Version)' },
-  'AMPC': { id: 'AMP',    label: 'AMPC (Amplified Bible Classic)' },
-  'NIV':  { id: 'NIV2011', label: 'NIV (New International Version)' },
-  'NLT':  { id: 'NLT',    label: 'NLT (New Living Translation)' },
-  'TLB':  { id: 'NLT',    label: 'TLB (The Living Bible)' },
-  'TPT':  { id: 'NLT',    label: 'TPT (The Passion Translation)' },
-  'NCV':  { id: 'ERV',    label: 'NCV (New Century Version)' },
-  'MSG':  { id: 'MSG',    label: 'MSG (The Message)' },
-  'ESV':  { id: 'ESV',    label: 'ESV (English Standard Version)' },
+  'KJV':    { id: 'KJV',      label: 'KJV (King James Version)' },
+  'NKJV':   { id: 'NKJV',    label: 'NKJV (New King James Version)' },
+  'AMPC':   { id: 'AMP',     label: 'AMPC (Amplified Bible Classic)' },
+  'NIV':    { id: 'NIV2011', label: 'NIV (New International Version)' },
+  'NLT':    { id: 'NLT',     label: 'NLT (New Living Translation)' },
+  'TLB':    { id: 'NLT',     label: 'TLB (The Living Bible)' },
+  'TPT':    { id: 'NLT',     label: 'TPT (The Passion Translation)' },
+  'NCV':    { id: 'ERV',     label: 'NCV (New Century Version)' },
+  'MSG':    { id: 'MSG',     label: 'MSG (The Message)' },
+  'ESV':    { id: 'ESV',     label: 'ESV (English Standard Version)' },
+  'PIGEON': { id: 'KJV',     label: 'Pigeon Bible' },
 };
 
 /* ─── Book Name to numeric ID mapping (bolls.life uses 1-66) ─── */
@@ -110,6 +111,18 @@ export default function Dashboard() {
   const [bibleError, setBibleError] = useState('');
   const [activeTab, setActiveTab] = useState('read'); // 'read', 'report', or 'concordance'
 
+  /* ─── Daily SLAP Target (chapters per day) ─── */
+  const [dailyTarget, setDailyTarget] = useState(() => {
+    const saved = localStorage.getItem('slap_daily_target');
+    return saved ? parseInt(saved, 10) : 1;
+  });
+
+  const handleDailyTargetChange = (val) => {
+    const n = Math.max(1, Math.min(70, parseInt(val, 10) || 1));
+    setDailyTarget(n);
+    localStorage.setItem('slap_daily_target', String(n));
+  };
+
   /* ─── Concordance / Search State ─── */
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTranslation, setSearchTranslation] = useState('KJV');
@@ -117,6 +130,10 @@ export default function Dashboard() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+
+  /* ─── Hebrew / Greek Word Definitions State ─── */
+  const [wordDefinitions, setWordDefinitions] = useState(null);
+  const [defLoading, setDefLoading] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -163,21 +180,154 @@ export default function Dashboard() {
     setSearchLoading(true);
     setSearchError('');
     setSearchResults([]);
+    setWordDefinitions(null);
     setHasSearched(true);
 
     const apiTrans = API_TRANSLATIONS[searchTranslation]?.id || 'KJV';
+    // Search across all 66 books (bolls.life default searches all books)
     const url = `https://bolls.life/search/${apiTrans}/${encodeURIComponent(searchQuery.trim())}/`;
 
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error('Search failed. Please try again.');
       const data = await res.json();
-      setSearchResults(data.slice(0, 100)); // limit to 100 results
+      // Sort results by book order (canonical)
+      const sorted = (Array.isArray(data) ? data : []).sort((a, b) => {
+        const bookA = a.bookid ?? a.book ?? 99;
+        const bookB = b.bookid ?? b.book ?? 99;
+        if (bookA !== bookB) return bookA - bookB;
+        if (a.chapter !== b.chapter) return a.chapter - b.chapter;
+        return a.verse - b.verse;
+      });
+      setSearchResults(sorted.slice(0, 150));
+
+      // Also fetch Hebrew/Greek word definitions
+      fetchWordDefinitions(searchQuery.trim());
     } catch (err) {
       setSearchError(err.message || 'Search failed.');
     } finally {
       setSearchLoading(false);
     }
+  };
+
+  /* ─── Hebrew/Greek definition lookup via Free Dictionary + Bible Hub ─── */
+  const fetchWordDefinitions = async (word) => {
+    setDefLoading(true);
+    try {
+      // Use the Free Dictionary API for English meaning
+      const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`);
+      let englishDef = null;
+      if (dictRes.ok) {
+        const dictData = await dictRes.json();
+        if (Array.isArray(dictData) && dictData.length > 0) {
+          const entry = dictData[0];
+          const meanings = entry.meanings?.slice(0, 2).map(m => ({
+            partOfSpeech: m.partOfSpeech,
+            definition: m.definitions?.[0]?.definition || ''
+          })) || [];
+          englishDef = { word: entry.word, phonetic: entry.phonetic || '', meanings };
+        }
+      }
+
+      // Hebrew & Greek Strong's concordance data (curated key words)
+      const hebrewGreekMap = getHebrewGreekData(word.toLowerCase());
+
+      setWordDefinitions({ english: englishDef, biblical: hebrewGreekMap });
+    } catch {
+      setWordDefinitions({ english: null, biblical: null });
+    } finally {
+      setDefLoading(false);
+    }
+  };
+
+  /* ─── Curated Hebrew/Greek Strong's data for common Bible words ─── */
+  const getHebrewGreekData = (word) => {
+    const data = {
+      // Hebrew OT words
+      'love': {
+        hebrew: [{ strongs: 'H157', transliteration: 'ʾāhab', meaning: 'To love, to have affection for, to like; a deep emotional attachment or strong desire.' }],
+        greek:  [{ strongs: 'G26', transliteration: 'agapē', meaning: 'Unconditional, selfless, divine love — the highest form of love, used for God\'s love for humanity.' }, { strongs: 'G5368', transliteration: 'phileō', meaning: 'Brotherly affection, friendship love; warm regard and fondness.' }]
+      },
+      'faith': {
+        hebrew: [{ strongs: 'H530', transliteration: 'ʾĕmûnāh', meaning: 'Faithfulness, steadiness, reliability; trustworthiness of God and His word.' }],
+        greek:  [{ strongs: 'G4102', transliteration: 'pistis', meaning: 'Faith, belief, trust; conviction of the truth of something, reliance upon God.' }]
+      },
+      'grace': {
+        hebrew: [{ strongs: 'H2580', transliteration: 'ḥēn', meaning: 'Grace, favor, kindness shown to one who does not deserve it; beauty and elegance.' }],
+        greek:  [{ strongs: 'G5485', transliteration: 'charis', meaning: 'Grace, unmerited favor; God\'s free and undeserved gift, the divine influence on the heart.' }]
+      },
+      'peace': {
+        hebrew: [{ strongs: 'H7965', transliteration: 'shālôm', meaning: 'Peace, completeness, wholeness, welfare, safety; a state of harmony and well-being.' }],
+        greek:  [{ strongs: 'G1515', transliteration: 'eirēnē', meaning: 'Peace, quietness, rest; a state of national tranquility, harmony between individuals.' }]
+      },
+      'holy': {
+        hebrew: [{ strongs: 'H6918', transliteration: 'qādôsh', meaning: 'Holy, sacred, set apart; morally pure, belonging exclusively to God.' }],
+        greek:  [{ strongs: 'G40', transliteration: 'hagios', meaning: 'Holy, set apart, consecrated; separated from common use and dedicated to God.' }]
+      },
+      'word': {
+        hebrew: [{ strongs: 'H1697', transliteration: 'dābār', meaning: 'Word, speech, saying; a matter, thing, or commandment.' }],
+        greek:  [{ strongs: 'G3056', transliteration: 'logos', meaning: 'Word, the divine expression; Christ as the living Word of God. Also: reason, account, message.' }, { strongs: 'G4487', transliteration: 'rhēma', meaning: 'A spoken word, specific utterance; what is declared by the living voice.' }]
+      },
+      'spirit': {
+        hebrew: [{ strongs: 'H7307', transliteration: 'rûaḥ', meaning: 'Spirit, wind, breath; the animating principle of life, the Spirit of God.' }],
+        greek:  [{ strongs: 'G4151', transliteration: 'pneuma', meaning: 'Spirit, breath; the Holy Spirit; the human spirit; a spiritual being.' }]
+      },
+      'salvation': {
+        hebrew: [{ strongs: 'H3444', transliteration: 'yĕshûʿāh', meaning: 'Salvation, deliverance, rescue; the saving acts of God, welfare and victory.' }],
+        greek:  [{ strongs: 'G4991', transliteration: 'sōtēria', meaning: 'Salvation, deliverance, preservation; rescue from danger or destruction through Christ.' }]
+      },
+      'righteousness': {
+        hebrew: [{ strongs: 'H6664', transliteration: 'ṣedeq', meaning: 'Righteousness, justice, rightness; conformity to a standard of right, virtue.' }],
+        greek:  [{ strongs: 'G1343', transliteration: 'dikaiosynē', meaning: 'Righteousness, justice; the state of being right before God, uprightness of heart.' }]
+      },
+      'prayer': {
+        hebrew: [{ strongs: 'H8605', transliteration: 'tĕpillāh', meaning: 'Prayer, intercession; a formal petition or song of praise directed to God.' }],
+        greek:  [{ strongs: 'G4335', transliteration: 'proseuchē', meaning: 'Prayer, a vow; the act of addressing God, communicating with the divine.' }]
+      },
+      'strength': {
+        hebrew: [{ strongs: 'H2428', transliteration: 'ḥayil', meaning: 'Strength, might, ability, valor; military force, wealth, and capability.' }],
+        greek:  [{ strongs: 'G1411', transliteration: 'dynamis', meaning: 'Power, might, ability; miraculous power, the power of God at work.' }]
+      },
+      'truth': {
+        hebrew: [{ strongs: 'H571', transliteration: 'ʾĕmet', meaning: 'Truth, faithfulness, reliability; that which is stable and sure, the opposite of falsehood.' }],
+        greek:  [{ strongs: 'G225', transliteration: 'alētheia', meaning: 'Truth, reality; what is genuine and actual, the truth as revealed by God.' }]
+      },
+      'heart': {
+        hebrew: [{ strongs: 'H3820', transliteration: 'lēb', meaning: 'Heart, mind, inner man; the seat of thought, will, emotion, and moral character.' }],
+        greek:  [{ strongs: 'G2588', transliteration: 'kardia', meaning: 'Heart; the center of physical and spiritual life, the seat of thoughts and feelings.' }]
+      },
+      'sin': {
+        hebrew: [{ strongs: 'H2398', transliteration: 'ḥāṭā', meaning: 'To sin, miss the mark; to deviate from righteousness, to fall short of God\'s standard.' }],
+        greek:  [{ strongs: 'G266', transliteration: 'hamartia', meaning: 'Sin, missing the mark; deviation from the will of God; moral failure.' }]
+      },
+      'covenant': {
+        hebrew: [{ strongs: 'H1285', transliteration: 'bĕrît', meaning: 'Covenant, agreement, treaty; a binding agreement between God and His people.' }],
+        greek:  [{ strongs: 'G1242', transliteration: 'diathēkē', meaning: 'Covenant, testament; a solemn agreement that defines the relationship between God and His people.' }]
+      },
+      'worship': {
+        hebrew: [{ strongs: 'H7812', transliteration: 'shāḥāh', meaning: 'To worship, bow down, prostrate oneself; an act of reverence before God.' }],
+        greek:  [{ strongs: 'G4352', transliteration: 'proskuneō', meaning: 'To worship, adore, bow in reverence; to show honor and submission to God.' }]
+      },
+      'blessing': {
+        hebrew: [{ strongs: 'H1293', transliteration: 'bĕrākāh', meaning: 'Blessing, praise, gift; divine favor bestowed upon a person; an act of invoking God\'s favor.' }],
+        greek:  [{ strongs: 'G2129', transliteration: 'eulogia', meaning: 'Blessing, praise, consecration; speaking well of someone; divine favor and gift.' }]
+      },
+      'glory': {
+        hebrew: [{ strongs: 'H3519', transliteration: 'kābôd', meaning: 'Glory, honor, majesty; the visible manifestation of God\'s presence and splendor.' }],
+        greek:  [{ strongs: 'G1391', transliteration: 'doxa', meaning: 'Glory, honor, renown; the brightness and splendor of God\'s presence, divine radiance.' }]
+      },
+      'mercy': {
+        hebrew: [{ strongs: 'H2617', transliteration: 'ḥesed', meaning: 'Mercy, lovingkindness, steadfast love; loyal love and kindness that exceeds what is expected.' }],
+        greek:  [{ strongs: 'G1656', transliteration: 'eleos', meaning: 'Mercy, compassion; kindness or good will toward the miserable, help given in distress.' }]
+      },
+      'wisdom': {
+        hebrew: [{ strongs: 'H2451', transliteration: 'ḥokmāh', meaning: 'Wisdom, skill; the ability to make right decisions and live skillfully before God.' }],
+        greek:  [{ strongs: 'G4678', transliteration: 'sophia', meaning: 'Wisdom, insight; skill in managing affairs, understanding of divine things.' }]
+      },
+    };
+    const entry = data[word];
+    if (!entry) return null;
+    return entry;
   };
 
   /* ─── Helper: Get book name from numeric ID ─── */
@@ -282,23 +432,33 @@ export default function Dashboard() {
     }
   };
 
-  // Generate 28 boxes representing consistency grid
+  // Generate consistency grid boxes based on dailyTarget
+  // A day is "completed" if the user submitted at least dailyTarget SLAP reports on that date
   const renderContributionGrid = () => {
     const boxes = [];
     const today = new Date();
+    const daysToShow = 28;
+
+    // Group reports by submission date to count how many were submitted per day
+    const reportsByDate = {};
+    reports.forEach(r => {
+      const dateStr = r.submission_date || (r.created_at ? r.created_at.split('T')[0] : null);
+      if (dateStr) reportsByDate[dateStr] = (reportsByDate[dateStr] || 0) + 1;
+    });
     
-    for (let i = 27; i >= 0; i--) {
+    for (let i = daysToShow - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      
-      const isCompleted = reports.some(r => r.submission_date === dateStr);
+      const count = reportsByDate[dateStr] || 0;
+      const isCompleted = count >= dailyTarget;
+      const isPartial = count > 0 && count < dailyTarget;
       
       boxes.push(
         <div
           key={dateStr}
-          title={`${d.toDateString()}: ${isCompleted ? 'SLAP Complete!' : 'No report'}`}
-          className={`contribution-cell ${isCompleted ? 'completed' : 'empty'}`}
+          title={`${d.toDateString()}: ${count === 0 ? 'No report' : isCompleted ? `✓ Complete (${count}/${dailyTarget} SLAPs)` : `In Progress (${count}/${dailyTarget} SLAPs)`}`}
+          className={`contribution-cell ${isCompleted ? 'completed' : isPartial ? 'partial' : 'empty'}`}
         />
       );
     }
@@ -412,11 +572,85 @@ export default function Dashboard() {
       {/* Consistency Calendar grid */}
       <AnimateOnScroll animation="fadeUp" delay={100}>
         <section className="glass-card">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', marginBottom: '16px' }}>
-            <Calendar size={18} /> Consistency Tracker (Last 28 Days)
-          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+            <div>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', margin: '0 0 4px' }}>
+                <Calendar size={18} /> Consistency Tracker (Last 28 Days)
+              </h3>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Showing days where you met your daily target of <strong style={{ color: 'var(--brand-crimson)' }}>{dailyTarget} SLAP{dailyTarget > 1 ? 's' : ''}</strong> per day.
+              </p>
+            </div>
+            {/* Daily Target Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                📖 Daily SLAP Target:
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  onClick={() => handleDailyTargetChange(dailyTarget - 1)}
+                  disabled={dailyTarget <= 1}
+                  style={{
+                    width: '30px', height: '30px', borderRadius: '6px',
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)', fontWeight: '700', fontSize: '16px',
+                    cursor: dailyTarget <= 1 ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: dailyTarget <= 1 ? 0.4 : 1,
+                  }}
+                  aria-label="Decrease daily target"
+                >−</button>
+                <input
+                  type="number"
+                  min="1" max="70"
+                  value={dailyTarget}
+                  onChange={e => handleDailyTargetChange(e.target.value)}
+                  style={{
+                    width: '52px', height: '30px',
+                    textAlign: 'center', fontWeight: '800',
+                    fontSize: '15px', padding: '0 4px',
+                    borderRadius: '6px', border: '1.5px solid var(--brand-crimson)',
+                    background: 'var(--bg-card)', color: 'var(--brand-crimson)',
+                  }}
+                  aria-label="Daily SLAP chapters target"
+                />
+                <button
+                  onClick={() => handleDailyTargetChange(dailyTarget + 1)}
+                  disabled={dailyTarget >= 70}
+                  style={{
+                    width: '30px', height: '30px', borderRadius: '6px',
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)', fontWeight: '700', fontSize: '16px',
+                    cursor: dailyTarget >= 70 ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: dailyTarget >= 70 ? 0.4 : 1,
+                  }}
+                  aria-label="Increase daily target"
+                >+</button>
+              </div>
+              <span style={{
+                fontSize: '11px', color: 'var(--text-secondary)',
+                background: 'var(--bg-tertiary)', padding: '3px 8px', borderRadius: '20px',
+              }}>chapters/day · 1–70</span>
+            </div>
+          </div>
           <div className="contribution-grid">
             {renderContributionGrid()}
+          </div>
+          {/* Legend */}
+          <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'linear-gradient(135deg, var(--brand-crimson), var(--brand-navy))' }} />
+              Target met
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(212,160,23,0.5)' }} />
+              Partial progress
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }} />
+              No report
+            </div>
           </div>
         </section>
       </AnimateOnScroll>
@@ -897,32 +1131,122 @@ export default function Dashboard() {
           {searchResults.length > 0 && (
             <div>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', fontWeight: '600' }}>
-                Found {searchResults.length}{searchResults.length >= 100 ? '+' : ''} results for "{searchQuery}" in {API_TRANSLATIONS[searchTranslation]?.label}
+                Found {searchResults.length}{searchResults.length >= 150 ? '+' : ''} results for "{searchQuery}" in {API_TRANSLATIONS[searchTranslation]?.label}
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
-                {searchResults.map((result, idx) => (
-                  <div
-                    key={idx}
-                    className="search-result-card"
-                    onClick={() => {
-                      setReaderBook(getBookNameById(result.bookid || result.book));
-                      setReaderChapter(result.chapter);
-                      setReaderTranslation(searchTranslation);
-                      setActiveTab('read');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <strong style={{ color: 'var(--accent-gold)', fontSize: '14px' }}>
-                        {getBookNameById(result.bookid || result.book)} {result.chapter}:{result.verse}
-                      </strong>
-                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Click to read chapter</span>
+
+              {/* Hebrew & Greek Word Definitions Panel */}
+              {(defLoading || wordDefinitions) && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(16,31,85,0.06), rgba(178,13,48,0.04))',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '14px', padding: '20px', marginBottom: '20px',
+                }}>
+                  <h4 style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--accent-gold)' }}>
+                    📜 Word Study: "{searchQuery}"
+                  </h4>
+                  {defLoading ? (
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Loading word definitions…</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {/* English Meaning */}
+                      {wordDefinitions?.english && (
+                        <div>
+                          <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)' }}>🇬🇧 English Meaning</span>
+                          <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {wordDefinitions.english.phonetic && (
+                              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>{wordDefinitions.english.phonetic}</span>
+                            )}
+                            {wordDefinitions.english.meanings.map((m, mi) => (
+                              <div key={mi} style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                                <span style={{ fontWeight: '700', color: 'var(--brand-navy)', fontSize: '11px', textTransform: 'capitalize' }}>{m.partOfSpeech}: </span>
+                                {m.definition}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hebrew Meanings */}
+                      {wordDefinitions?.biblical?.hebrew && wordDefinitions.biblical.hebrew.length > 0 && (
+                        <div>
+                          <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)' }}>🕎 Hebrew (Old Testament)</span>
+                          <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {wordDefinitions.biblical.hebrew.map((h, hi) => (
+                              <div key={hi} style={{ background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontWeight: '800', fontSize: '13px', color: 'var(--accent-gold)', fontFamily: 'monospace' }}>{h.strongs}</span>
+                                  <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', fontFamily: 'serif', fontStyle: 'italic' }}>{h.transliteration}</span>
+                                </div>
+                                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>{h.meaning}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Greek Meanings */}
+                      {wordDefinitions?.biblical?.greek && wordDefinitions.biblical.greek.length > 0 && (
+                        <div>
+                          <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)' }}>☩ Greek (New Testament)</span>
+                          <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {wordDefinitions.biblical.greek.map((g, gi) => (
+                              <div key={gi} style={{ background: 'rgba(16,31,85,0.08)', border: '1px solid rgba(16,31,85,0.15)', borderRadius: '8px', padding: '10px 14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontWeight: '800', fontSize: '13px', color: 'var(--brand-navy)', fontFamily: 'monospace' }}>{g.strongs}</span>
+                                  <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', fontFamily: 'serif', fontStyle: 'italic' }}>{g.transliteration}</span>
+                                </div>
+                                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>{g.meaning}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No biblical data found */}
+                      {!wordDefinitions?.biblical && wordDefinitions?.english && (
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0 }}>
+                          Hebrew/Greek Strong's data not available for this word. Try searching a core biblical term like "love", "faith", "grace", "peace", or "spirit".
+                        </p>
+                      )}
+                      {!wordDefinitions?.english && !wordDefinitions?.biblical && (
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0 }}>
+                          No word study data found for "{searchQuery}". Try searching a common biblical term.
+                        </p>
+                      )}
                     </div>
-                    <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
-                      {cleanScriptureText(result.text)}
-                    </p>
-                  </div>
-                ))}
+                  )}
+                </div>
+              )}
+
+              {/* Scripture Results */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
+                {searchResults.map((result, idx) => {
+                  const bookId = Number(result.bookid ?? result.book);
+                  const bookName = getBookNameById(bookId);
+                  return (
+                    <div
+                      key={idx}
+                      className="search-result-card"
+                      onClick={() => {
+                        setReaderBook(bookName);
+                        setReaderChapter(result.chapter);
+                        setReaderTranslation(searchTranslation);
+                        setActiveTab('read');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '4px' }}>
+                        <strong style={{ color: 'var(--accent-gold)', fontSize: '14px' }}>
+                          {bookName} {result.chapter}:{result.verse}
+                        </strong>
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Click to read chapter</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
+                        {cleanScriptureText(result.text)}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
