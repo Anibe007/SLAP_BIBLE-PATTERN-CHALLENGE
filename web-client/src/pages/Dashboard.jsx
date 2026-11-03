@@ -44,7 +44,7 @@ const BIBLE_BOOKS = [
   { name: 'Revelation', chapters: 22, testament: 'NT' }
 ];
 
-/* ─── Translation mapping for bolls.life API ─── */
+/* ─── Translation mapping for bolls.life API & Local Pidgin ─── */
 const API_TRANSLATIONS = {
   'KJV':    { id: 'KJV',      label: 'KJV (King James Version)' },
   'NKJV':   { id: 'NKJV',    label: 'NKJV (New King James Version)' },
@@ -56,7 +56,8 @@ const API_TRANSLATIONS = {
   'NCV':    { id: 'ERV',     label: 'NCV (New Century Version)' },
   'MSG':    { id: 'MSG',     label: 'MSG (The Message)' },
   'ESV':    { id: 'ESV',     label: 'ESV (English Standard Version)' },
-  'PIGEON': { id: 'KJV',     label: 'Pigeon Bible' },
+  'PIDGIN': { id: 'PIDGIN',  label: 'Pidgin Bible (Original Nigerian Pidgin)' },
+  'PIGEON': { id: 'PIDGIN',  label: 'Pidgin Bible (Original Nigerian Pidgin)', alias: true },
 };
 
 /* ─── Book Name to numeric ID mapping (bolls.life uses 1-66) ─── */
@@ -78,6 +79,7 @@ export function cleanScriptureText(rawText) {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/©.*$/gi, '')
     .replace(/\s+/g, ' ')
     .replace(/\s+([,.:;?!])/g, '$1')
     .trim();
@@ -150,11 +152,33 @@ export default function Dashboard() {
     fetchDashboardData();
   }, []);
 
-  /* ─── Bible Reader: Fetch scripture text from bolls.life ─── */
+  /* ─── Bible Reader: Fetch scripture text ─── */
   const fetchBibleText = useCallback(async (bk, ch, trans) => {
     setBibleLoading(true);
     setBibleError('');
     setBibleText(null);
+
+    const transKey = trans || 'KJV';
+    const isPidgin = transKey === 'PIDGIN' || transKey === 'PIGEON';
+
+    if (isPidgin) {
+      try {
+        // Load original Nigerian Pidgin Bible
+        const res = await fetch(`/bible/pcm/${encodeURIComponent(bk)}.json`);
+        if (!res.ok) throw new Error('Pidgin scripture not found for this book.');
+        const bookData = await res.json();
+        const chapterVerses = bookData[String(ch)] || [];
+        if (!chapterVerses || chapterVerses.length === 0) {
+          throw new Error(`Chapter ${ch} not found in Pidgin Bible for ${bk}.`);
+        }
+        setBibleText({ verses: chapterVerses, reference: `${bk} ${ch}` });
+      } catch (err) {
+        setBibleError(err.message || 'Failed to load Pidgin scripture.');
+      } finally {
+        setBibleLoading(false);
+      }
+      return;
+    }
 
     const apiTrans = API_TRANSLATIONS[trans]?.id || 'KJV';
     const bookId = BOOK_ID_MAP[bk] || 43; // default to John
@@ -182,6 +206,51 @@ export default function Dashboard() {
     setSearchResults([]);
     setWordDefinitions(null);
     setHasSearched(true);
+
+    const isPidgin = searchTranslation === 'PIDGIN' || searchTranslation === 'PIGEON';
+
+    if (isPidgin) {
+      try {
+        const q = searchQuery.trim().toLowerCase();
+        const results = [];
+        // Priority books for instant search
+        const priorityBooks = [readerBook, 'John', 'Romans', 'Genesis', 'Psalms', 'Matthew', 'Proverbs', 'Acts', 'Ephesians', 'Hebrews', 'James'];
+        const uniqueBooks = Array.from(new Set(priorityBooks));
+
+        for (const bk of uniqueBooks) {
+          try {
+            const res = await fetch(`/bible/pcm/${encodeURIComponent(bk)}.json`);
+            if (res.ok) {
+              const bookData = await res.json();
+              for (const [chNum, vList] of Object.entries(bookData)) {
+                for (const v of vList) {
+                  if (v.text && v.text.toLowerCase().includes(q)) {
+                    results.push({
+                      book: bk,
+                      bookname: bk,
+                      chapter: Number(chNum),
+                      verse: v.verse,
+                      text: v.text
+                    });
+                    if (results.length >= 100) break;
+                  }
+                }
+                if (results.length >= 100) break;
+              }
+            }
+          } catch (_) {}
+          if (results.length >= 100) break;
+        }
+
+        setSearchResults(results);
+        fetchWordDefinitions(searchQuery.trim());
+      } catch (err) {
+        setSearchError('Search failed in Pidgin Bible.');
+      } finally {
+        setSearchLoading(false);
+      }
+      return;
+    }
 
     const apiTrans = API_TRANSLATIONS[searchTranslation]?.id || 'KJV';
     // Search across all 66 books (bolls.life default searches all books)
@@ -705,7 +774,7 @@ export default function Dashboard() {
             <div className="form-group translation-select">
               <label className="text-label-sm">Translation</label>
               <select value={readerTranslation} onChange={e => setReaderTranslation(e.target.value)}>
-                {Object.entries(API_TRANSLATIONS).map(([key, val]) => (
+                {Object.entries(API_TRANSLATIONS).filter(([_, val]) => !val.alias).map(([key, val]) => (
                   <option key={key} value={key}>{val.label}</option>
                 ))}
               </select>
@@ -843,7 +912,7 @@ export default function Dashboard() {
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>Translation</label>
                   <select value={translation} onChange={e => setTranslation(e.target.value)}>
-                    {Object.entries(API_TRANSLATIONS).map(([key, val]) => (
+                    {Object.entries(API_TRANSLATIONS).filter(([_, val]) => !val.alias).map(([key, val]) => (
                       <option key={key} value={key}>{val.label}</option>
                     ))}
                   </select>
@@ -1095,7 +1164,7 @@ export default function Dashboard() {
             <div className="form-group" style={{ margin: 0, flex: '1.5', minWidth: '180px' }}>
               <label className="text-label-sm">Translation</label>
               <select value={searchTranslation} onChange={e => setSearchTranslation(e.target.value)}>
-                {Object.entries(API_TRANSLATIONS).map(([key, val]) => (
+                {Object.entries(API_TRANSLATIONS).filter(([_, val]) => !val.alias).map(([key, val]) => (
                   <option key={key} value={key}>{val.label}</option>
                 ))}
               </select>

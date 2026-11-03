@@ -51,6 +51,7 @@ export default function DailyDevotion() {
 
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(0);
   const [translation, setTranslation] = useState('KJV');
+  const [pidginText, setPidginText] = useState(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [streakData, setStreakData] = useState({ current_streak: 1, longest_streak: 1 });
   const [userLogs, setUserLogs] = useState([]);
@@ -72,6 +73,23 @@ export default function DailyDevotion() {
     }
     loadDevotionalData();
   }, [selectedPassageIndex, user]);
+
+  useEffect(() => {
+    if (translation === 'PIDGIN' && activePassage) {
+      fetch(`/bible/pcm/${encodeURIComponent(activePassage.book)}.json`)
+        .then(r => r.json())
+        .then(bookData => {
+          const chVerses = bookData[String(activePassage.chapter)] || [];
+          if (chVerses.length > 0) {
+            const formatted = chVerses.map(v => `${v.verse} ${v.text}`).join('\n\n');
+            setPidginText(formatted);
+          }
+        })
+        .catch(() => setPidginText(null));
+    } else {
+      setPidginText(null);
+    }
+  }, [translation, activePassage]);
 
   const loadDevotionalData = async () => {
     if (!user) return;
@@ -292,6 +310,7 @@ export default function DailyDevotion() {
                   <option value="NIV">NIV</option>
                   <option value="AMP">AMP</option>
                   <option value="NLT">NLT</option>
+                  <option value="PIDGIN">Pidgin</option>
                 </select>
               </div>
             </div>
@@ -311,7 +330,7 @@ export default function DailyDevotion() {
               color: 'rgba(255, 255, 255, 0.9)',
               whiteSpace: 'pre-line'
             }}>
-              {activePassage.text}
+              {translation === 'PIDGIN' && pidginText ? pidginText : activePassage.text}
             </div>
 
             {/* Key Verse Highlight Box */}

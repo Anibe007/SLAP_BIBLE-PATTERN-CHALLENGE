@@ -1,62 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, BookOpen, Flame, ShieldCheck, ShieldAlert, Eye, EyeOff, Globe, Key, UserCheck, Shield, Search } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, BookOpen, Flame, ShieldCheck, ShieldAlert, Eye, EyeOff, Globe, Key, UserCheck, Shield, Search, Check, ChevronDown, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
 
-const COUNTRIES = [
-  // ── Africa (Primary Audience First) ──
-  "Nigeria", "Ghana", "Kenya", "South Africa", "Uganda", "Tanzania", "Rwanda",
-  "Cameroon", "Liberia", "Sierra Leone", "Zambia", "Zimbabwe", "Ethiopia",
-  "Senegal", "Ivory Coast", "Benin", "Togo", "Mali", "Burkina Faso", "Niger",
-  "Guinea", "Guinea-Bissau", "Gambia", "Cape Verde", "São Tomé and Príncipe",
-  "Mauritania", "Morocco", "Algeria", "Tunisia", "Libya", "Egypt", "Sudan",
-  "South Sudan", "Chad", "Central African Republic", "Democratic Republic of Congo",
-  "Republic of Congo", "Gabon", "Equatorial Guinea", "Angola", "Namibia",
-  "Botswana", "Lesotho", "Eswatini", "Mozambique", "Malawi", "Madagascar",
-  "Comoros", "Mauritius", "Seychelles", "Djibouti", "Eritrea", "Somalia",
-  "Burundi", "Sao Tome and Principe",
-
-  // ── Americas ──
-  "United States", "Canada", "Brazil", "Jamaica", "Trinidad and Tobago",
-  "Barbados", "Bahamas", "Antigua and Barbuda", "Saint Lucia", "Saint Vincent and the Grenadines",
-  "Grenada", "Dominica", "Saint Kitts and Nevis", "Haiti", "Dominican Republic",
-  "Cuba", "Puerto Rico", "Mexico", "Guatemala", "Belize", "Honduras",
-  "El Salvador", "Nicaragua", "Costa Rica", "Panama", "Colombia", "Venezuela",
-  "Guyana", "Suriname", "Ecuador", "Peru", "Bolivia", "Paraguay",
-  "Uruguay", "Argentina", "Chile",
-
-  // ── Europe ──
-  "United Kingdom", "Ireland", "France", "Germany", "Italy", "Spain",
-  "Portugal", "Netherlands", "Belgium", "Luxembourg", "Switzerland", "Austria",
-  "Denmark", "Sweden", "Norway", "Finland", "Iceland", "Poland", "Czech Republic",
-  "Slovakia", "Hungary", "Romania", "Bulgaria", "Greece", "Croatia",
-  "Slovenia", "Serbia", "Bosnia and Herzegovina", "Montenegro", "North Macedonia",
-  "Albania", "Kosovo", "Moldova", "Ukraine", "Belarus", "Russia",
-  "Estonia", "Latvia", "Lithuania", "Malta", "Cyprus", "Andorra",
-  "Monaco", "Liechtenstein", "San Marino", "Vatican City",
-
-  // ── Asia ──
-  "India", "Philippines", "China", "Japan", "South Korea", "North Korea",
-  "Indonesia", "Malaysia", "Singapore", "Thailand", "Vietnam", "Cambodia",
-  "Laos", "Myanmar", "Bangladesh", "Sri Lanka", "Nepal", "Pakistan",
-  "Afghanistan", "Maldives", "Bhutan", "Mongolia", "Taiwan", "Hong Kong",
-  "Macau", "Brunei", "East Timor", "Papua New Guinea",
-
-  // ── Middle East ──
-  "Saudi Arabia", "United Arab Emirates", "Israel", "Palestine", "Jordan",
-  "Lebanon", "Syria", "Iraq", "Iran", "Kuwait", "Qatar", "Bahrain",
-  "Oman", "Yemen", "Turkey", "Azerbaijan", "Armenia", "Georgia",
-  "Kazakhstan", "Uzbekistan", "Turkmenistan", "Tajikistan", "Kyrgyzstan",
-
-  // ── Oceania ──
-  "Australia", "New Zealand", "Fiji", "Papua New Guinea", "Solomon Islands",
-  "Vanuatu", "Samoa", "Tonga", "Kiribati", "Micronesia", "Palau",
-  "Marshall Islands", "Nauru", "Tuvalu",
-
-  "Other"
+// Complete & Comprehensive Canonical List of all Nations & Territories of the World
+const ALL_WORLD_COUNTRIES = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda",
+  "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain",
+  "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+  "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria",
+  "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada",
+  "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros",
+  "Congo (Republic of)", "Congo (DRC)", "Costa Rica", "Croatia", "Cuba", "Cyprus",
+  "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+  "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia",
+  "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia",
+  "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau",
+  "Guyana", "Haiti", "Honduras", "Hong Kong", "Hungary", "Iceland", "India",
+  "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Ivory Coast (Côte d'Ivoire)",
+  "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait",
+  "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya",
+  "Liechtenstein", "Lithuania", "Luxembourg", "Macau", "Madagascar", "Malawi",
+  "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania",
+  "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro",
+  "Morocco", "Mozambique", "Myanmar (Burma)", "Namibia", "Nauru", "Nepal",
+  "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea",
+  "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama",
+  "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+  "Puerto Rico", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis",
+  "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino",
+  "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles",
+  "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia",
+  "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan",
+  "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania",
+  "Thailand", "Timor-Leste (East Timor)", "Togo", "Tonga", "Trinidad and Tobago",
+  "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine",
+  "United Arab Emirates", "United Kingdom", "United States", "Uruguay",
+  "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen",
+  "Zambia", "Zimbabwe", "Other"
 ];
+
+// Helper to match countries including common abbreviations/aliases
+function matchCountry(countryName, searchTerm) {
+  if (!searchTerm || !searchTerm.trim()) return true;
+  const term = searchTerm.trim().toLowerCase();
+  const c = countryName.toLowerCase();
+
+  if (c.includes(term)) return true;
+
+  // Aliases & Popular Abbreviations
+  if ((term === 'usa' || term === 'us' || term === 'america' || term === 'u.s.' || term === 'u.s.a.') && c.includes('united states')) return true;
+  if ((term === 'uk' || term === 'gb' || term === 'britain' || term === 'england' || term === 'scotland' || term === 'wales' || term === 'u.k.') && c.includes('united kingdom')) return true;
+  if ((term === 'uae' || term === 'dubai' || term === 'abu dhabi' || term === 'u.a.e.') && c.includes('united arab emirates')) return true;
+  if ((term === 'drc' || term === 'dr congo' || term === 'democratic congo' || term === 'kinshasa') && c.includes('congo (drc)')) return true;
+  if ((term === 'roc' || term === 'congo brazzaville' || term === 'brazzaville') && c.includes('congo (republic of)')) return true;
+  if (term === 'korea' && (c.includes('south korea') || c.includes('north korea'))) return true;
+  if (term === 'holland' && c.includes('netherlands')) return true;
+  if ((term === 'burma' || term === 'myanmar') && c.includes('myanmar')) return true;
+  if ((term === 'cote' || term === "côte" || term === 'ivory' || term === "cote d'ivoire") && c.includes('ivory coast')) return true;
+  if (term === 'timor' && c.includes('timor')) return true;
+  if (term === 'cape verde' && c.includes('cabo verde')) return true;
+  if (term === 'vatican' && c.includes('vatican')) return true;
+  if (term.startsWith('st ') && c.startsWith('saint ')) {
+    if (c.includes(term.slice(3))) return true;
+  }
+
+  return false;
+}
 
 
 export default function Auth() {
@@ -69,13 +81,31 @@ export default function Auth() {
   const [country, setCountry] = useState('Nigeria');
   const [countrySearch, setCountrySearch] = useState('');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const countryPickerRef = useRef(null);
+
+  // Close country dropdown on outside click or tap
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (countryPickerRef.current && !countryPickerRef.current.contains(event.target)) {
+        setShowCountryDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  const filteredCountries = ALL_WORLD_COUNTRIES.filter(c => matchCountry(c, countrySearch));
   const [adminPasskey, setAdminPasskey] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [celebrationData, setCelebrationData] = useState(null);
 
-  const { login, register, loginAdmin, registerAdmin, loginWithGoogle, simulateTestLogin, isAuthenticated, isAdmin } = useAuth();
+  const { login, register, loginAdmin, registerAdmin, simulateTestLogin, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -83,7 +113,9 @@ export default function Auth() {
   useEffect(() => {
     if (isAuthenticated) {
       const from = location.state?.from;
-      navigate(from || (isAdmin ? '/admin' : '/dashboard'), { replace: true });
+      // Disallow non-admins from being redirected to /admin
+      const target = (from && (from !== '/admin' || isAdmin)) ? from : (isAdmin ? '/admin' : '/dashboard');
+      navigate(target, { replace: true });
     }
   }, [isAuthenticated, isAdmin, navigate, location.state]);
 
@@ -165,29 +197,6 @@ export default function Auth() {
       }
     } catch (err) {
       setError(err.message || 'Authentication failed. Please verify your credentials.');
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleAuth = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const gUser = await loginWithGoogle(portalMode);
-      setLoading(false);
-      setCelebrationData({
-        isOpen: true,
-        type: 'signin',
-        title: `🎉 Welcome, ${gUser?.fullName || gUser?.user_metadata?.full_name || 'Believer'}!`,
-        subtitle: `Google Authentication successful! You are connected to the SLAP Bible Challenge.`,
-        details: [
-          { label: '📧 Google Account', value: gUser?.email || 'google.user@gmail.com' },
-          ...(portalMode === 'admin' ? [{ label: '🛡️ Access Level', value: 'Super Administrator' }] : []),
-        ],
-        targetPath: portalMode === 'admin' ? '/admin' : '/dashboard'
-      });
-    } catch (err) {
-      setError(err.message || 'Google Sign-In failed. Please try again.');
       setLoading(false);
     }
   };
@@ -351,96 +360,247 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: '13px' }}>Nationality / Country</label>
+                  <div className="form-group" style={{ margin: 0 }} ref={countryPickerRef}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+                        Nationality / Country of Residence <span style={{ color: 'var(--brand-crimson)' }}>*</span>
+                      </label>
+                      {country && (
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          color: 'var(--accent-gold)',
+                          background: 'rgba(212, 160, 23, 0.12)',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(212, 160, 23, 0.3)'
+                        }}>
+                          Selected: {country}
+                        </span>
+                      )}
+                    </div>
+
                     <div style={{ position: 'relative' }}>
-                      {/* Search Input */}
-                      <Search size={16} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--accent-gold)', zIndex: 2, pointerEvents: 'none' }} />
+                      {/* Left Globe/Search Icon */}
+                      <Globe
+                        size={17}
+                        style={{
+                          position: 'absolute',
+                          left: '14px',
+                          top: '15px',
+                          color: showCountryDropdown ? 'var(--brand-crimson)' : 'var(--text-secondary)',
+                          zIndex: 2,
+                          pointerEvents: 'none',
+                          transition: 'color 0.2s ease'
+                        }}
+                      />
+
+                      {/* Interactive Search Input */}
                       <input
                         type="text"
-                        placeholder={country || 'Search your country...'}
+                        aria-label="Country or Nationality"
+                        placeholder={country ? `Selected: ${country} (Type to search...)` : "Search your country..."}
                         value={countrySearch}
-                        onChange={e => { setCountrySearch(e.target.value); setShowCountryDropdown(true); }}
+                        onChange={e => {
+                          setCountrySearch(e.target.value);
+                          if (!showCountryDropdown) setShowCountryDropdown(true);
+                        }}
                         onFocus={() => setShowCountryDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowCountryDropdown(false), 180)}
+                        onClick={() => setShowCountryDropdown(true)}
                         style={{
                           paddingLeft: '44px',
-                          paddingRight: '36px',
+                          paddingRight: countrySearch ? '66px' : '38px',
                           cursor: 'text',
-                          background: 'var(--bg-card)'
+                          background: 'var(--bg-secondary)',
+                          borderColor: showCountryDropdown ? 'var(--brand-crimson)' : undefined,
+                          boxShadow: showCountryDropdown ? '0 0 0 3px rgba(178, 13, 48, 0.15)' : undefined
                         }}
                         autoComplete="off"
                       />
-                      {/* Globe icon right side showing selected */}
-                      <Globe size={15} style={{ position: 'absolute', right: '12px', top: '15px', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
 
-                      {/* Dropdown List */}
+                      {/* Right icons: Clear button + Dropdown Chevron */}
+                      <div style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        zIndex: 2
+                      }}>
+                        {countrySearch && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCountrySearch('');
+                            }}
+                            title="Clear search"
+                            style={{
+                              background: 'rgba(178, 13, 48, 0.12)',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '22px',
+                              height: '22px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              color: 'var(--brand-crimson)',
+                              padding: 0
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowCountryDropdown(prev => !prev);
+                          }}
+                          aria-label="Toggle country list"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            color: 'var(--text-secondary)',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <ChevronDown
+                            size={16}
+                            style={{
+                              transform: showCountryDropdown ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s ease',
+                              color: showCountryDropdown ? 'var(--brand-crimson)' : 'var(--text-secondary)'
+                            }}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Dropdown Menu */}
                       {showCountryDropdown && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          zIndex: 999,
-                          background: 'var(--bg-card)',
-                          border: '1px solid var(--accent-gold)',
-                          borderRadius: '8px',
-                          maxHeight: '220px',
-                          overflowY: 'auto',
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                          marginTop: '4px'
-                        }}>
-                          {COUNTRIES.filter(c =>
-                            c.toLowerCase().includes(countrySearch.toLowerCase())
-                          ).length === 0 ? (
-                            <div style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                              No country found for "{countrySearch}"
+                        <div className="country-dropdown-menu">
+                          {/* Dropdown header counter */}
+                          <div style={{
+                            padding: '8px 14px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            color: 'var(--text-secondary)',
+                            background: 'var(--bg-tertiary)',
+                            borderBottom: '1px solid var(--border-color)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 3
+                          }}>
+                            <span>
+                              {countrySearch
+                                ? `Matching Nations (${filteredCountries.length})`
+                                : `All Nations of the World (${ALL_WORLD_COUNTRIES.length})`}
+                            </span>
+                            {countrySearch && (
+                              <button
+                                type="button"
+                                onClick={() => setCountrySearch('')}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--brand-crimson)',
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  padding: 0
+                                }}
+                              >
+                                Show All
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Country list items */}
+                          {filteredCountries.length === 0 ? (
+                            <div style={{ padding: '20px 16px', textAlign: 'center' }}>
+                              <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                No nation found matching "<strong>{countrySearch}</strong>"
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setCountrySearch('')}
+                                className="btn btn-secondary"
+                                style={{
+                                  fontSize: '12px',
+                                  padding: '6px 14px',
+                                  borderRadius: '8px'
+                                }}
+                              >
+                                Show all {ALL_WORLD_COUNTRIES.length} nations
+                              </button>
                             </div>
                           ) : (
-                            COUNTRIES.filter(c =>
-                              c.toLowerCase().includes(countrySearch.toLowerCase())
-                            ).map(c => (
-                              <div
-                                key={c}
-                                onMouseDown={() => {
-                                  setCountry(c);
-                                  setCountrySearch('');
-                                  setShowCountryDropdown(false);
-                                }}
-                                style={{
-                                  padding: '10px 16px',
-                                  fontSize: '14px',
-                                  cursor: 'pointer',
-                                  color: c === country ? 'var(--brand-crimson)' : 'var(--text-primary)',
-                                  background: c === country ? 'rgba(178,13,48,0.10)' : 'transparent',
-                                  fontWeight: c === country ? '700' : '400',
-                                  borderBottom: '1px solid var(--border-color)',
-                                  transition: 'background 0.15s ease'
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(178,13,48,0.08)'}
-                                onMouseLeave={e => e.currentTarget.style.background = c === country ? 'rgba(178,13,48,0.10)' : 'transparent'}
-                              >
-                                {c === country && <span style={{ marginRight: '6px', fontSize: '11px' }}>✓</span>}
-                                {c}
-                              </div>
-                            ))
+                            filteredCountries.map(c => {
+                              const isSelected = c === country;
+                              return (
+                                <div
+                                  key={c}
+                                  role="button"
+                                  tabIndex={0}
+                                  className={`country-option-item ${isSelected ? 'selected' : ''}`}
+                                  onClick={() => {
+                                    setCountry(c);
+                                    setCountrySearch('');
+                                    setShowCountryDropdown(false);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      setCountry(c);
+                                      setCountrySearch('');
+                                      setShowCountryDropdown(false);
+                                    }
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <Globe
+                                      size={15}
+                                      style={{
+                                        color: isSelected ? 'var(--brand-crimson)' : 'var(--text-secondary)',
+                                        flexShrink: 0
+                                      }}
+                                    />
+                                    <span style={{ color: isSelected ? 'var(--brand-crimson)' : 'var(--text-primary)' }}>
+                                      {c}
+                                    </span>
+                                  </div>
+                                  {isSelected && (
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      fontSize: '11px',
+                                      fontWeight: '700',
+                                      color: 'var(--brand-crimson)',
+                                      background: 'rgba(178, 13, 48, 0.12)',
+                                      padding: '2px 8px',
+                                      borderRadius: '10px'
+                                    }}>
+                                      <Check size={12} strokeWidth={3} /> Selected
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                       )}
                     </div>
-                    {/* Show selected country as a badge */}
-                    {country && !showCountryDropdown && (
-                      <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Selected:</span>
-                        <span style={{
-                          fontSize: '12px', fontWeight: '700',
-                          color: 'var(--accent-gold)',
-                          background: 'rgba(212,160,23,0.12)',
-                          padding: '2px 10px', borderRadius: '20px',
-                          border: '1px solid rgba(178,13,48,0.3)'
-                        }}>{country}</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Required Admin Authorization Passkey for Admin Sign-Up */}
@@ -531,43 +691,7 @@ export default function Auth() {
               </button>
             </form>
 
-            {/* Divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0 12px' }}>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700' }}>OR</span>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
-            </div>
-
-            {/* Google OAuth Login Button */}
-            <button
-              type="button"
-              onClick={handleGoogleAuth}
-              disabled={loading}
-              style={{
-                width: '100%', padding: '13px 16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: '10px', fontSize: '14px', fontWeight: '700',
-                background: 'var(--bg-secondary)',
-                border: '1.5px solid var(--border-color)',
-                borderRadius: '8px', color: 'var(--text-primary)',
-                cursor: 'pointer', transition: 'all 0.2s ease',
-                boxShadow: 'var(--card-shadow)'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(178,13,48,0.3)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(178,13,48,0.1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'var(--card-shadow)'; }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-              </svg>
-              <span>Continue with Google</span>
-            </button>
-
-
-
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
               <button style={{
                 background: 'none', border: 'none',
                 color: 'var(--brand-crimson)',

@@ -25,7 +25,28 @@
     <title>SLAP Bible Challenge | Build People. Build Faith. Build on Christ.</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-preloader" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #070c22; color: #ffffff; font-family: 'DM Sans', -apple-system, sans-serif; gap: 18px; padding: 24px;">
+        <img src="/SLAP LOGO-Picsart-AiImageEnhancer.jpeg" alt="SLAP Bible" style="width: 76px; height: 76px; border-radius: 16px; border: 2px solid rgba(178, 13, 48, 0.4); box-shadow: 0 0 32px rgba(178, 13, 48, 0.35); animation: preloaderPulse 2s ease-in-out infinite;" />
+        <div style="font-size: 13px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255, 255, 255, 0.9);">
+          SLAP Bible Challenge
+        </div>
+        <div style="width: 140px; height: 3px; background: rgba(255, 255, 255, 0.1); border-radius: 999px; overflow: hidden; position: relative;">
+          <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 45%; background: linear-gradient(90deg, #101F55, #B20D30, #f4a261); border-radius: 999px; animation: preloaderBar 1.5s ease-in-out infinite;"></div>
+        </div>
+        <style>
+          @keyframes preloaderPulse {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.04); opacity: 1; }
+          }
+          @keyframes preloaderBar {
+            0% { left: -50%; width: 30%; }
+            50% { width: 60%; }
+            100% { left: 100%; width: 30%; }
+          }
+        </style>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

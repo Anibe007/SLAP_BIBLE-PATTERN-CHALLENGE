@@ -484,10 +484,10 @@ export default function Declare() {
     ctx.shadowOffsetY = 3;
 
     // Header Title
-    ctx.font = '700 44px "Cinzel", "Times New Roman", serif';
+    ctx.font = '700 42px "Plus Jakarta Sans", "Inter", sans-serif';
     ctx.fillStyle = '#e5c07b'; // Warm Radiant Gold
-    ctx.letterSpacing = '2px';
-    ctx.fillText('ISPEAK & IDECLARE', W / 2, headerY);
+    ctx.letterSpacing = '1px';
+    ctx.fillText('iSPEAK & iDECLARE', W / 2, headerY);
 
     // Header Fine Gold Underline Bar
     ctx.strokeStyle = 'rgba(212, 160, 23, 0.55)';

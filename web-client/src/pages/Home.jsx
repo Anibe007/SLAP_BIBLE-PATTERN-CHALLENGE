@@ -103,7 +103,14 @@ export default function Home() {
         <div className="hero-orb hero-orb-3" />
 
         <div className="hero-content">
+          {/* Left Column: Headline, Description & CTAs */}
           <div className="hero-text slide-down">
+            {/* Tagline Badge - Commented out as requested
+            <div className="hero-tagline-badge">
+              <span className="hero-pulse-dot" />
+              <span>Global Discipleship Movement</span>
+            </div>
+            */}
             <h1>
               Build People.<br />
               Build Faith.<br />
@@ -118,17 +125,142 @@ export default function Home() {
               <Link
                 to={isAuthenticated ? '/dashboard' : '/auth'}
                 className="btn-outline-gold"
-                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: '#101F55', border: '2px solid white' }}
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: '#101F55', border: '2px solid white', fontWeight: '800' }}
               >
                 START SLAP <ArrowRight size={14} />
               </Link>
               <Link
                 to="/declare"
-                className="btn-outline-gold"
-                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', borderColor: 'rgba(255,255,255,0.5)', color: 'white' }}
+                className="btn-outline-gold hero-ispeak-btn"
+                style={{
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  borderColor: 'rgba(255,255,255,0.7)',
+                  color: 'white',
+                  fontWeight: '700',
+                  textTransform: 'none',
+                  letterSpacing: '1px'
+                }}
               >
-                iSPEAK &amp; iDECLARE <ArrowRight size={14} />
+                <span style={{ textTransform: 'none' }}>i</span>SPEAK &amp; <span style={{ textTransform: 'none' }}>i</span>DECLARE <ArrowRight size={14} />
               </Link>
+            </div>
+
+            {/* Quick Trust Highlights below buttons */}
+            <div className="hero-trust-row">
+              <div className="hero-trust-item">
+                <Flame size={15} style={{ color: '#f87171' }} />
+                <span>Daily Accountability</span>
+              </div>
+              <div className="hero-trust-divider" />
+              <div className="hero-trust-item">
+                <Users size={15} style={{ color: '#60a5fa' }} />
+                <span>30+ Nations Active</span>
+              </div>
+              <div className="hero-trust-divider" />
+              <div className="hero-trust-item">
+                <ShieldCheck size={15} style={{ color: '#4ade80' }} />
+                <span>100% Free Forever</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Interactive Today's Devotional Spotlight & Live SLAP Hub */}
+          <div className="hero-showcase slide-up">
+            {/* Floating Top Accent Badge */}
+            <div className="hero-floating-badge top-right">
+              <Flame size={13} style={{ color: '#f87171' }} />
+              <span>Live Habit Formation</span>
+            </div>
+
+            <div className="hero-spotlight-card">
+              {/* Card Header */}
+              <div className="hero-card-header">
+                <div className="hero-card-badge">
+                  <span className="live-dot" />
+                  <span>TODAY'S DEVOTIONAL SPOTLIGHT</span>
+                </div>
+                <span className="hero-card-date">
+                  <Calendar size={12} />
+                  {dailyDecl.dateString || 'Today'}
+                </span>
+              </div>
+
+              {/* Devotional Theme */}
+              <div className="hero-devotional-theme">
+                <Sparkles size={14} style={{ color: 'var(--brand-crimson)' }} />
+                <span>{dailyDecl.theme || 'Living Faith & Bold Declarations'}</span>
+              </div>
+
+              {/* Striking Scripture Quote Preview */}
+              <div className="hero-scripture-box">
+                <div className="quote-mark">“</div>
+                <p className="hero-scripture-text">
+                  {dailyDecl.text || "Your word is a lamp to my feet and a light to my path."}
+                </p>
+                <div className="hero-scripture-ref">
+                  — {dailyDecl.ref || "Psalm 119:105"}
+                </div>
+              </div>
+
+              {/* 4 Pillars Interactive Tour */}
+              <div className="hero-pillars-container">
+                <div className="hero-pillars-label">THE 4 PILLARS OF DAILY DEVOTION</div>
+                <div className="hero-pillars-grid">
+                  <div className="hero-pillar-item">
+                    <span className="pillar-letter" style={{ color: '#eab308', background: 'rgba(234, 179, 8, 0.15)' }}>S</span>
+                    <div className="pillar-info">
+                      <div className="pillar-name">Striking Verses</div>
+                      <div className="pillar-desc">Personal Revelation</div>
+                    </div>
+                  </div>
+                  <div className="hero-pillar-item">
+                    <span className="pillar-letter" style={{ color: '#60a5fa', background: 'rgba(96, 165, 250, 0.15)' }}>L</span>
+                    <div className="pillar-info">
+                      <div className="pillar-name">Lessons Learnt</div>
+                      <div className="pillar-desc">Biblical Truths</div>
+                    </div>
+                  </div>
+                  <div className="hero-pillar-item">
+                    <span className="pillar-letter" style={{ color: '#4ade80', background: 'rgba(74, 222, 128, 0.15)' }}>A</span>
+                    <div className="pillar-info">
+                      <div className="pillar-name">Action Plans</div>
+                      <div className="pillar-desc">Practical Works</div>
+                    </div>
+                  </div>
+                  <div className="hero-pillar-item">
+                    <span className="pillar-letter" style={{ color: '#f43f5e', background: 'rgba(244, 63, 94, 0.15)' }}>P</span>
+                    <div className="pillar-info">
+                      <div className="pillar-name">Daily Prayers</div>
+                      <div className="pillar-desc">Spiritual Sealing</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Footer Actions */}
+              <div className="hero-card-actions">
+                <Link
+                  to={isAuthenticated ? '/dashboard' : '/auth'}
+                  className="hero-action-primary"
+                >
+                  <BookOpen size={14} /> Open Study Journal <ArrowRight size={13} />
+                </Link>
+                <Link
+                  to="/singing-bible"
+                  className="hero-action-secondary"
+                >
+                  🎵 Singing Bible
+                </Link>
+              </div>
+            </div>
+
+            {/* Floating Bottom Accent Badge */}
+            <div className="hero-floating-badge bottom-left">
+              <Zap size={13} style={{ color: '#eab308' }} />
+              <span>4 Pillars • 15 Mins Daily Habit</span>
             </div>
           </div>
         </div>
@@ -162,22 +294,23 @@ export default function Home() {
 
           {/* Card 2: iSPEAK & iDECLARE */}
           <AnimateOnScroll animation="fadeUp" delay={150}>
-            <div className="program-card dark">
+            <div className="program-card dark ispeak-card">
               <img src="/home-ispeak-ideclare.jpg" alt="iSPEAK & iDECLARE" />
               <div className="program-card-overlay" />
-              <div className="program-card-content">
-                <h3 style={{ fontFamily: 'var(--font-display)', letterSpacing: '1px' }}>
-                  <span style={{ textTransform: 'none', fontFamily: 'var(--font-sans)', fontWeight: '700' }}>i</span>SPEAK &amp; <span style={{ textTransform: 'none', fontFamily: 'var(--font-sans)', fontWeight: '700' }}>i</span>DECLARE
+              <div className="program-card-content ispeak-card-content">
+                <h3 className="ispeak-card-title">
+                  iSPEAK &amp; iDECLARE
                 </h3>
-                <div className="card-subtitle" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <div className="card-subtitle ispeak-card-subtitle">
                   SCRIPTURE DECLARATIONS
                 </div>
-                <p>
+                <p className="ispeak-card-desc">
                   A declaration program for believers who want to live out
                   their God-given identity, strength, and purpose.
                 </p>
-                <Link to="/declare" className="card-link">
-                  LEARN MORE ABOUT <span style={{ textTransform: 'none' }}>i</span>SPEAK &amp; <span style={{ textTransform: 'none' }}>i</span>DECLARE <ArrowRight size={14} />
+                <Link to="/declare" className="card-link ispeak-card-link">
+                  <span>LEARN MORE ABOUT <span style={{ textTransform: 'none' }}>i</span>SPEAK &amp; <span style={{ textTransform: 'none' }}>i</span>DECLARE</span>
+                  <ArrowRight size={13} style={{ flexShrink: 0 }} />
                 </Link>
               </div>
             </div>
@@ -453,7 +586,7 @@ export default function Home() {
 
                   {/* Header Title & Theme */}
                   <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '2px' }}>
-                    I SPEAK &amp; I DECLARE
+                    DAILY SCRIPTURE PROCLAMATION
                   </div>
                   <div style={{ fontSize: '12px', fontWeight: '700', color: '#101F55', marginBottom: '8px' }}>
                     {dailyDecl.theme}
@@ -529,7 +662,7 @@ export default function Home() {
                     fontFamily: 'var(--font-serif)',
                     minHeight: '75px'
                   }}>
-                    "{dailyDecl.text}"
+                    “<strong style={{ fontStyle: 'normal', fontWeight: '800', color: 'var(--brand-crimson)', marginRight: '6px', fontFamily: 'var(--font-sans)', letterSpacing: '0.3px' }}>iSPEAK &amp; iDECLARE:</strong>{dailyDecl.text}”
                   </p>
 
                   {/* Scripture Reference & Declarant */}

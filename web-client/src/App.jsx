@@ -2,7 +2,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Sun, Moon, Menu, X, LogOut, User, ArrowLeft, Home as HomeIcon, BookOpen, Sparkles, Video as VideoIcon, ShieldCheck, Music } from 'lucide-react';
+import { Sun, Moon, Menu, X, LogOut, User, ArrowLeft, Home as HomeIcon, BookOpen, Sparkles, Video as VideoIcon, ShieldCheck, ShieldAlert, Music } from 'lucide-react';
 import PageTransition from './components/PageTransition';
 import ScrollToTop from './components/ScrollToTop';
 import SkeletonLoader from './components/SkeletonLoader';
@@ -44,6 +44,55 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// Admin Access Denied Gate Component (Role-Based Access Control)
+function AdminAccessDenied() {
+  const navigate = useNavigate();
+  return (
+    <div className="section-container" style={{ maxWidth: '600px', margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
+      <div className="glass-card" style={{ padding: '40px 28px', border: '1.5px solid rgba(178, 13, 48, 0.4)', boxShadow: '0 12px 40px rgba(178, 13, 48, 0.15)' }}>
+        <div style={{
+          width: '72px', height: '72px', borderRadius: '50%',
+          background: 'rgba(178, 13, 48, 0.1)', color: 'var(--brand-crimson)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 20px', border: '2px solid rgba(178, 13, 48, 0.3)'
+        }}>
+          <ShieldAlert size={38} />
+        </div>
+        <span style={{
+          display: 'inline-block', fontSize: '11px', fontWeight: '800',
+          letterSpacing: '1.5px', textTransform: 'uppercase',
+          color: 'var(--brand-crimson)', background: 'rgba(178, 13, 48, 0.08)',
+          padding: '4px 14px', borderRadius: '20px', marginBottom: '16px'
+        }}>
+          Role-Based Access Control • 403 Forbidden
+        </span>
+        <h2 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 12px', color: 'var(--text-primary)' }}>
+          Administrator Privileges Required
+        </h2>
+        <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 28px' }}>
+          This portal is strictly restricted to authorized SLAP administrators. Your participant account does not have permission to access or view administrator oversight tools, member records, or platform analytics.
+        </p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="btn-primary"
+            style={{ padding: '12px 24px', fontSize: '14px', fontWeight: '700' }}
+          >
+            Return to Participant Dashboard
+          </button>
+          <button
+            onClick={() => navigate('/auth?portal=admin')}
+            className="btn-secondary"
+            style={{ padding: '12px 24px', fontSize: '14px', fontWeight: '700' }}
+          >
+            Switch to Admin Sign-In
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Admin Protected Route Component
 function AdminProtectedRoute({ children }) {
   const { isAuthenticated, isAdmin, loading } = useAuth();
@@ -57,9 +106,14 @@ function AdminProtectedRoute({ children }) {
     );
   }
 
-  // If not authenticated or not admin, direct to admin auth portal or render Admin gate
+  // If not authenticated, direct to admin auth portal
   if (!isAuthenticated) {
     return <Navigate to="/auth?portal=admin" state={{ from: location.pathname }} replace />;
+  }
+
+  // Strict Role-Based Access Control: participants cannot access or view the Admin Dashboard
+  if (!isAdmin) {
+    return <AdminAccessDenied />;
   }
 
   return children;
@@ -395,10 +449,12 @@ function MainLayout() {
         <NavLink to="/singing-bible" className="nav-link drawer-link" style={{ color: 'var(--brand-crimson)', fontWeight: '700' }}>
           <Music size={15} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />🎵 Singing Bible
         </NavLink>
-        <NavLink to="/videos" className="nav-link drawer-link">Video Library</NavLink>
-        <NavLink to="/admin" className="nav-link drawer-link" style={{ color: 'var(--brand-crimson)', fontWeight: '700' }}>
-          <ShieldCheck size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} /> Admin Dashboard
-        </NavLink>
+        <NavLink to="/videos" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Video Library</NavLink>
+        {isAdmin && (
+          <NavLink to="/admin" className="nav-link drawer-link" style={{ color: 'var(--brand-crimson)', fontWeight: '700' }} onClick={() => setMobileMenuOpen(false)}>
+            <ShieldCheck size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} /> Admin Dashboard
+          </NavLink>
+        )}
 
         <div className="drawer-auth-section">
           {isAuthenticated ? (
