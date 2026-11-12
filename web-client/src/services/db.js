@@ -177,7 +177,7 @@ function calculateUpdatedStreak(lastActivityDateStr, currentStreak, longestStrea
 
   const lastDate = new Date(lastActivityDateStr);
   const today = new Date(todayStr);
-  
+
   const diffTime = Math.abs(today - lastDate);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -566,12 +566,12 @@ export const dbService = {
     // 1. Seeded Master Administrator Authentication (Initial seeded password: admin)
     if (isAdminLookup) {
       const storedAdminPassword = (typeof window !== 'undefined' ? localStorage.getItem('slap_admin_password') : null) || 'admin';
-      
+
       // Match current admin password (default: admin, or updated by the admin)
       if (password === storedAdminPassword) {
         const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
         let adminUser = users.find(u => u.email === 'admin@slapbible.org' || u.id === 'admin-seeded-master');
-        
+
         if (!adminUser) {
           adminUser = {
             id: 'admin-seeded-master',
@@ -611,8 +611,8 @@ export const dbService = {
             await supabase.auth.signInWithPassword({
               email: 'admin@slapbible.org',
               password: storedAdminPassword
-            }).catch(() => {});
-          } catch (e) {}
+            }).catch(() => { });
+          } catch (e) { }
         }
 
         return adminUser;
@@ -638,7 +638,7 @@ export const dbService = {
           data.user.is_admin = !!profile.data.is_admin;
           data.user.role = profile.data.role || 'user';
         }
-      } catch (e) {}
+      } catch (e) { }
       return data.user;
     } else {
       const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
@@ -887,9 +887,9 @@ export const dbService = {
     if (isSupabaseConfigured) {
       const { error } = await supabase
         .from('profiles')
-        .upsert({ 
-          id: user.id, 
-          full_name: fullName, 
+        .upsert({
+          id: user.id,
+          full_name: fullName,
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString()
         });
@@ -1010,7 +1010,7 @@ export const dbService = {
       return data;
     } else {
       const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-      return reports.filter(r => r.user_id === user.id).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+      return reports.filter(r => r.user_id === user.id).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
   },
 
@@ -1024,7 +1024,7 @@ export const dbService = {
         .select('*')
         .eq('user_id', user.id)
         .single();
-      
+
       if (error && error.code !== 'PGRST116') throw error;
       return data || { current_streak: 0, longest_streak: 0, last_activity_date: null };
     } else {
@@ -1100,7 +1100,7 @@ export const dbService = {
       return data;
     } else {
       const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
-      return declarations.filter(d => d.user_id === user.id).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+      return declarations.filter(d => d.user_id === user.id).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
   },
 
@@ -1460,7 +1460,7 @@ export const dbService = {
       return data;
     } else {
       const videos = JSON.parse(localStorage.getItem('slap_videos') || '[]');
-      return videos.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+      return videos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
   },
 
