@@ -551,6 +551,87 @@ export const dbService = {
     }
   },
 
+  /**
+   * Request a password reset link to be sent to user's registered email
+   */
+  async requestPasswordReset(email) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      throw new Error("Please enter your registered email address.");
+    }
+
+    if (isSupabaseConfigured) {
+      const redirectTo = `${window.location.origin}/auth?mode=update-password`;
+      const { data, error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo
+      });
+      if (error) throw error;
+      return {
+        success: true,
+        message: `Password reset instructions have been sent to ${cleanEmail}. Please check your inbox and spam folder.`
+      };
+    } else {
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const user = users.find(u => u.email.toLowerCase() === cleanEmail);
+      if (!user) {
+        throw new Error("No account found with this email address. Please check your spelling or sign up.");
+      }
+      return {
+        success: true,
+        message: `Password reset instructions have been sent to ${cleanEmail}.`,
+        user
+      };
+    }
+  },
+
+  /**
+   * Update password for an authenticated or recovery-mode user
+   */
+  async updateUserPassword(newPassword) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error("Password must be at least 6 characters.");
+    }
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (error) throw error;
+      return data.user;
+    } else {
+      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      const currentUser = JSON.parse(localStorage.getItem('slap_current_user') || 'null');
+      if (currentUser) {
+        currentUser.password = newPassword;
+        const idx = users.findIndex(u => u.id === currentUser.id);
+        if (idx !== -1) users[idx].password = newPassword;
+        localStorage.setItem('slap_users', JSON.stringify(users));
+        localStorage.setItem('slap_current_user', JSON.stringify(currentUser));
+        return currentUser;
+      }
+      throw new Error("No active password recovery session found.");
+    }
+  },
+
+  /**
+   * Direct password reset helper for local fallback mode
+   */
+  async resetLocalUserPassword(email, newPassword) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error("Password must be at least 6 characters.");
+    }
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const idx = users.findIndex(u => u.email.toLowerCase() === cleanEmail);
+    if (idx === -1) {
+      throw new Error("Account not found for this email address.");
+    }
+    users[idx].password = newPassword;
+    localStorage.setItem('slap_users', JSON.stringify(users));
+    localStorage.setItem('slap_current_user', JSON.stringify(users[idx]));
+    return users[idx];
+  },
+
 
   async getGlobalStats() {
     if (isSupabaseConfigured) {

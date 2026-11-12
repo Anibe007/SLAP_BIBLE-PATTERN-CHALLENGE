@@ -146,6 +146,22 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
+  const requestPasswordReset = async (email) => {
+    return await dbService.requestPasswordReset(email);
+  };
+
+  const updateUserPassword = async (newPassword) => {
+    const updated = await dbService.updateUserPassword(newPassword);
+    await checkUser();
+    return updated;
+  };
+
+  const resetLocalUserPassword = async (email, newPassword) => {
+    const updated = await dbService.resetLocalUserPassword(email, newPassword);
+    setUser(updated);
+    return updated;
+  };
+
   const isAdmin = !!(user && (user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org'));
 
   return (
@@ -161,6 +177,9 @@ export const AuthProvider = ({ children }) => {
       updateProfile,
       refreshUser,
       verifyAdminPasskey,
+      requestPasswordReset,
+      updateUserPassword,
+      resetLocalUserPassword,
       isAuthenticated: !!user,
       isAdmin
     }}>
@@ -184,6 +203,9 @@ export const useAuth = () => {
       updateProfile: async () => {},
       refreshUser: async () => {},
       verifyAdminPasskey: async () => {},
+      requestPasswordReset: async () => {},
+      updateUserPassword: async () => {},
+      resetLocalUserPassword: async () => {},
       isAuthenticated: false,
       isAdmin: false
     };

@@ -409,10 +409,11 @@ function MainLayout() {
                 <button
                   onClick={logout}
                   className="logout-btn"
-                  title="Sign Out"
-                  aria-label="Sign Out"
+                  title="Logout"
+                  aria-label="Logout"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={15} />
+                  <span>Logout</span>
                 </button>
               </>
             ) : (
@@ -460,7 +461,9 @@ function MainLayout() {
           {isAuthenticated ? (
             <>
               <NavLink to="/dashboard" className="nav-link" style={{ color: 'var(--brand-crimson)', fontWeight: 'bold', fontSize: '16px', padding: '14px 0', display: 'block' }}>Dashboard</NavLink>
-              <button className="btn-secondary" onClick={() => { logout(); setMobileMenuOpen(false); }} style={{ marginTop: '16px', width: '100%' }}>Sign Out</button>
+              <button className="btn-secondary" onClick={() => { logout(); setMobileMenuOpen(false); }} style={{ marginTop: '16px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <LogOut size={16} /> Logout
+              </button>
             </>
           ) : (
             <NavLink to="/auth" className="drawer-cta">
