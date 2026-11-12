@@ -97,20 +97,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const simulateTestLogin = async (portalMode = 'participant') => {
-    setLoading(true);
-    try {
-      const res = await dbService.simulateTestLoginAndReport(portalMode);
-      setUser(res.user);
-      return res;
-    } catch (err) {
-      setLoading(false);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const logout = async () => {
     setLoading(true);
     try {
@@ -162,6 +148,12 @@ export const AuthProvider = ({ children }) => {
     return updated;
   };
 
+  const changeAdminPassword = async (currentPassword, newPassword) => {
+    const res = await dbService.changeAdminPassword(currentPassword, newPassword);
+    await checkUser();
+    return res;
+  };
+
   const isAdmin = !!(user && (user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org'));
 
   return (
@@ -172,7 +164,6 @@ export const AuthProvider = ({ children }) => {
       register,
       loginAdmin,
       registerAdmin,
-      simulateTestLogin,
       logout,
       updateProfile,
       refreshUser,
@@ -180,6 +171,7 @@ export const AuthProvider = ({ children }) => {
       requestPasswordReset,
       updateUserPassword,
       resetLocalUserPassword,
+      changeAdminPassword,
       isAuthenticated: !!user,
       isAdmin
     }}>
@@ -198,7 +190,6 @@ export const useAuth = () => {
       register: async () => {},
       loginAdmin: async () => {},
       registerAdmin: async () => {},
-      simulateTestLogin: async () => {},
       logout: async () => {},
       updateProfile: async () => {},
       refreshUser: async () => {},
@@ -206,6 +197,7 @@ export const useAuth = () => {
       requestPasswordReset: async () => {},
       updateUserPassword: async () => {},
       resetLocalUserPassword: async () => {},
+      changeAdminPassword: async () => {},
       isAuthenticated: false,
       isAdmin: false
     };

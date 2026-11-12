@@ -11,7 +11,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import {
   Users, BookOpen, Flame, Globe, Shield, ShieldCheck, ShieldAlert,
-  Search, Download, Trash2, CheckCircle, AlertCircle, Eye,
+  Search, Download, Trash2, CheckCircle, AlertCircle, Eye, EyeOff,
   Lock, Key, RefreshCw, Filter, Calendar, FileText, ChevronRight, X, Printer,
   TrendingUp, Activity, Award, Clock, Zap, Cloud, Settings, ExternalLink, Copy, Check
 } from 'lucide-react';
@@ -43,6 +43,54 @@ export default function Admin() {
   const [cloudTesting, setCloudTesting] = useState(false);
   const [hideBanner, setHideBanner] = useState(() => localStorage.getItem('slap_hide_cloud_banner') === 'true');
   const [copiedSchema, setCopiedSchema] = useState(false);
+
+  // Admin Password Change State
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [passError, setPassError] = useState('');
+  const [passSuccess, setPassSuccess] = useState('');
+  const [passUpdating, setPassUpdating] = useState(false);
+  const [isDefaultAdminPassword, setIsDefaultAdminPassword] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('slap_admin_password') === 'admin');
+  });
+
+  const handleAdminChangePassword = async (e) => {
+    e.preventDefault();
+    setPassError('');
+    setPassSuccess('');
+
+    if (newPass !== confirmPass) {
+      setPassError("New passwords do not match. Please re-enter.");
+      return;
+    }
+    if (newPass.length < 6) {
+      setPassError("New password must be at least 6 characters.");
+      return;
+    }
+    if (newPass === 'admin') {
+      setPassError("Please choose a secure new password different from the default 'admin'.");
+      return;
+    }
+
+    setPassUpdating(true);
+    try {
+      const res = await dbService.changeAdminPassword(currentPass, newPass);
+      setPassSuccess(res.message || "Admin password changed successfully!");
+      setCurrentPass('');
+      setNewPass('');
+      setConfirmPass('');
+      setIsDefaultAdminPassword(false);
+      setActionMessage("Admin password updated successfully! Please remember your new password.");
+      setTimeout(() => setActionMessage(''), 4000);
+    } catch (err) {
+      setPassError(err.message || "Failed to update admin password.");
+    } finally {
+      setPassUpdating(false);
+    }
+  };
 
   const handleTestCloud = async () => {
     setCloudTesting(true);
@@ -392,6 +440,53 @@ export default function Admin() {
         </div>
       )}
 
+      {/* Default Password Security Warning */}
+      {isDefaultAdminPassword && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(178, 13, 48, 0.08))',
+          border: '1.5px solid rgba(234, 179, 8, 0.45)',
+          borderRadius: '16px',
+          padding: '16px 22px',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '14px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '10px',
+              background: 'rgba(234, 179, 8, 0.25)', color: '#eab308',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+              <ShieldAlert size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#fbbf24', marginBottom: '2px' }}>
+                Default Seeded Password Active (admin)
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Your account is currently using the initial default password <code style={{ color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '2px 6px', borderRadius: '4px' }}>admin</code>. For security, please set your custom administrator password.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab('security')}
+            className="btn-primary"
+            style={{
+              padding: '9px 18px', fontSize: '13px', fontWeight: '700',
+              background: 'var(--brand-crimson)', color: '#fff',
+              border: 'none', borderRadius: '8px', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: '6px'
+            }}
+          >
+            <Lock size={14} /> Change Password Now
+          </button>
+        </div>
+      )}
+
       {/* Database Mode Status Banner */}
       {!isSupabaseConfigured ? (
         !hideBanner && (
@@ -563,6 +658,12 @@ export default function Admin() {
           onClick={() => setActiveTab('consistency')}
         >
           <TrendingUp size={16} /> Consistency Tracker
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
+          onClick={() => setActiveTab('security')}
+        >
+          <Lock size={16} /> Admin Security & Password
         </button>
       </div>
 
@@ -1101,6 +1202,169 @@ export default function Admin() {
           </div>
         );
       })()}
+
+      {/* ═══════════ TAB: ADMIN SECURITY & PASSWORD ═══════════ */}
+      {activeTab === 'security' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px', margin: '0 auto' }}>
+          <div className="glass-card" style={{ padding: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+              <div style={{
+                width: '46px', height: '46px', borderRadius: '12px',
+                background: 'rgba(178, 13, 48, 0.15)', color: 'var(--brand-crimson)',
+                border: '1px solid rgba(178, 13, 48, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <h2 style={{ margin: '0 0 4px', fontSize: '20px', color: 'var(--text-primary)' }}>
+                  Administrator Security &amp; Password Management
+                </h2>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  Update your Lead Administrator password to protect participant records and platform controls.
+                </p>
+              </div>
+            </div>
+
+            {/* Account Info Box */}
+            <div style={{
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                  Current Admin Account
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
+                  {user?.email || 'admin@slapbible.org'}
+                </div>
+              </div>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#10b981', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700'
+              }}>
+                <Shield size={13} /> Super Administrator
+              </div>
+            </div>
+
+            {passError && (
+              <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{passError}</span>
+              </div>
+            )}
+
+            {passSuccess && (
+              <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                <CheckCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{passSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ fontSize: '13px', fontWeight: '600' }}>
+                  Current Admin Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Key size={17} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-secondary)' }} />
+                  <input
+                    type={showCurrentPass ? 'text' : 'password'}
+                    required
+                    placeholder="Enter current password (initial: admin)"
+                    value={currentPass}
+                    onChange={e => setCurrentPass(e.target.value)}
+                    style={{ paddingLeft: '44px', paddingRight: '44px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPass(!showCurrentPass)}
+                    style={{
+                      position: 'absolute', right: '12px', top: '12px',
+                      background: 'none', border: 'none', padding: '4px',
+                      color: 'var(--text-secondary)', cursor: 'pointer'
+                    }}
+                    aria-label={showCurrentPass ? 'Hide password' : 'Show password'}
+                  >
+                    {showCurrentPass ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ fontSize: '13px', fontWeight: '600' }}>
+                  New Admin Password (Minimum 6 characters)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={17} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-secondary)' }} />
+                  <input
+                    type={showNewPass ? 'text' : 'password'}
+                    required
+                    placeholder="Enter your new secure password"
+                    value={newPass}
+                    onChange={e => setNewPass(e.target.value)}
+                    style={{ paddingLeft: '44px', paddingRight: '44px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    style={{
+                      position: 'absolute', right: '12px', top: '12px',
+                      background: 'none', border: 'none', padding: '4px',
+                      color: 'var(--text-secondary)', cursor: 'pointer'
+                    }}
+                    aria-label={showNewPass ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPass ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ fontSize: '13px', fontWeight: '600' }}>
+                  Confirm New Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={17} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-secondary)' }} />
+                  <input
+                    type={showNewPass ? 'text' : 'password'}
+                    required
+                    placeholder="Re-enter your new password"
+                    value={confirmPass}
+                    onChange={e => setConfirmPass(e.target.value)}
+                    style={{ paddingLeft: '44px' }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={passUpdating}
+                style={{
+                  padding: '14px', fontSize: '14px', fontWeight: '800',
+                  background: 'var(--brand-crimson)', color: '#fff',
+                  border: 'none', borderRadius: '8px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: '8px', marginTop: '6px', opacity: passUpdating ? 0.7 : 1,
+                  boxShadow: '0 4px 20px rgba(178, 13, 48, 0.4)'
+                }}
+              >
+                {passUpdating ? 'Updating Password...' : 'Save New Admin Password'} <Check size={16} />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ─── Cloud Sync Configuration Modal ─── */}
       {showCloudModal && (

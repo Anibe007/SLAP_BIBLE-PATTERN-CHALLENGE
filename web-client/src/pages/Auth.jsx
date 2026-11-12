@@ -115,7 +115,7 @@ export default function Auth() {
   const [resetLoading, setResetLoading] = useState(false);
   const [demoUserFound, setDemoUserFound] = useState(null);
 
-  const { login, register, loginAdmin, registerAdmin, simulateTestLogin, requestPasswordReset, updateUserPassword, resetLocalUserPassword, isAuthenticated, isAdmin } = useAuth();
+  const { login, register, loginAdmin, registerAdmin, requestPasswordReset, updateUserPassword, resetLocalUserPassword, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -203,9 +203,14 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      let submitEmail = (email || '').trim();
+      if (portalMode === 'admin' && (submitEmail.toLowerCase() === 'admin' || !submitEmail.includes('@'))) {
+        submitEmail = 'admin@slapbible.org';
+      }
+
       if (portalMode === 'admin') {
         if (isRegister) {
-          await registerAdmin(email, password, fullName, country, adminPasskey);
+          await registerAdmin(submitEmail, password, fullName, country, adminPasskey);
           setLoading(false);
           setCelebrationData({
             isOpen: true,
@@ -213,14 +218,14 @@ export default function Auth() {
             title: `🎉 Congratulations & Welcome, ${fullName || 'Administrator'}!`,
             subtitle: `Your Super Administrator account has been successfully created with full platform oversight controls.`,
             details: [
-              { label: '📧 Admin Email', value: email },
+              { label: '📧 Admin Email', value: submitEmail },
               { label: '🛡️ Role', value: 'Super Administrator' },
               { label: '🌍 Nation', value: country || 'Global' }
             ],
             targetPath: '/admin'
           });
         } else {
-          const loggedAdmin = await loginAdmin(email, password);
+          const loggedAdmin = await loginAdmin(submitEmail, password);
           setLoading(false);
           setCelebrationData({
             isOpen: true,
@@ -228,7 +233,7 @@ export default function Auth() {
             title: `🎉 Welcome Back, ${loggedAdmin?.user_metadata?.full_name || loggedAdmin?.fullName || 'Administrator'}!`,
             subtitle: `Successfully authenticated into the SLAP Administrator Portal.`,
             details: [
-              { label: '📧 Admin Account', value: email },
+              { label: '📧 Admin Account', value: submitEmail },
               { label: '🛡️ Access Level', value: 'Full Super-Admin Controls' }
             ],
             targetPath: '/admin'
@@ -236,7 +241,7 @@ export default function Auth() {
         }
       } else {
         if (isRegister) {
-          await register(email, password, fullName, country);
+          await register(submitEmail, password, fullName, country);
           setLoading(false);
           setCelebrationData({
             isOpen: true,
@@ -244,14 +249,14 @@ export default function Auth() {
             title: `🎉 Congratulations & Welcome, ${fullName || 'Believer'}!`,
             subtitle: `You have successfully joined the global SLAP Bible Challenge family! Ready to build consistency in the Word?`,
             details: [
-              { label: '📧 Member Email', value: email },
+              { label: '📧 Member Email', value: submitEmail },
               { label: '🌍 Nation', value: country || 'Global' },
               { label: '🔥 Initial Goal', value: 'Start Day 1 Devotion' }
             ],
             targetPath: location.state?.from || '/dashboard'
           });
         } else {
-          const loggedUser = await login(email, password);
+          const loggedUser = await login(submitEmail, password);
           setLoading(false);
           setCelebrationData({
             isOpen: true,
@@ -259,7 +264,7 @@ export default function Auth() {
             title: `🎉 Welcome Back, ${loggedUser?.user_metadata?.full_name || loggedUser?.fullName || 'Believer'}!`,
             subtitle: `Authentication successful! Let's continue your daily scripture devotion and keep your streak burning.`,
             details: [
-              { label: '📧 Account', value: email },
+              { label: '📧 Account', value: submitEmail },
               { label: '📖 Status', value: "Ready for Today's Devotion" }
             ],
             targetPath: location.state?.from || '/dashboard'
@@ -272,36 +277,12 @@ export default function Auth() {
     }
   };
 
-  const handleSimulateTestLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const res = await simulateTestLogin(portalMode);
-      setLoading(false);
-      setCelebrationData({
-        isOpen: true,
-        type: 'signin',
-        title: `🎉 Test Account Authenticated & Devotion Logged!`,
-        subtitle: `Logged into simulated test account (${res.user.fullName}) and auto-created a sample SLAP study log for testing!`,
-        details: [
-          { label: '📧 Account Email', value: res.user.email },
-          { label: '📖 Auto Journal Log', value: `${res.report.book} ${res.report.chapter}:${res.report.verses}` },
-          { label: '🔥 Updated Streak', value: `${res.streak.current_streak} Days Active` }
-        ],
-        targetPath: portalMode === 'admin' ? '/admin' : '/dashboard'
-      });
-    } catch (err) {
-      setError(err.message || 'Simulated test login failed.');
-      setLoading(false);
-    }
-  };
-
 
   return (
     <div className="auth-wrapper" style={{ minHeight: '85vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '30px 16px' }}>
       <AnimateOnScroll animation="scaleIn" className="w-full flex-center">
         <div className="auth-container" style={{ maxWidth: '980px', width: '100%' }}>
-          
+
           {/* Left: Brand Panel */}
           <div className="auth-brand-panel" style={{
             background: portalMode === 'admin'
@@ -311,7 +292,7 @@ export default function Auth() {
             <div className="auth-watermark" style={{ color: portalMode === 'admin' ? 'rgba(178,13,48,0.08)' : 'rgba(178,13,48,0.07)' }}>{portalMode === 'admin' ? 'A' : 'S'}</div>
 
             {/* Logo */}
-            <img src="/SLAP LOGO-Picsart-AiImageEnhancer.jpeg" alt="SLAP Bible" style={{ width: '72px', height: '72px', borderRadius: '12px', objectFit: 'contain', border: '2px solid rgba(178,13,48,0.4)', boxShadow: '0 0 24px rgba(178,13,48,0.25)', marginBottom: '4px' }} onError={e => e.target.style.display='none'} />
+            <img src="/SLAP LOGO-Picsart-AiImageEnhancer.jpeg" alt="SLAP Bible" style={{ width: '72px', height: '72px', borderRadius: '12px', objectFit: 'contain', border: '2px solid rgba(178,13,48,0.4)', boxShadow: '0 0 24px rgba(178,13,48,0.25)', marginBottom: '4px' }} onError={e => e.target.style.display = 'none'} />
 
             <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(178,13,48,0.15)', border: '1px solid rgba(178,13,48,0.3)', borderRadius: '30px', padding: '5px 14px' }}>
@@ -1000,13 +981,15 @@ export default function Auth() {
                   )}
 
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: '13px' }}>Email Address</label>
+                    <label style={{ fontSize: '13px' }}>
+                      {portalMode === 'admin' ? "Admin Email or Username" : "Email Address"}
+                    </label>
                     <div style={{ position: 'relative' }}>
                       <Mail size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-secondary)' }} />
                       <input
-                        type="email"
+                        type={portalMode === 'admin' ? "text" : "email"}
                         required
-                        placeholder={portalMode === 'admin' ? "admin@slapbible.org" : "you@example.com"}
+                        placeholder={portalMode === 'admin' ? "admin@slapbible.org (or admin)" : "you@example.com"}
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         style={{ paddingLeft: '44px' }}
