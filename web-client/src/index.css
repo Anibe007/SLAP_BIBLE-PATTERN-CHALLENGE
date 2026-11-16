@@ -48,13 +48,13 @@
   --card-shadow: 0 4px 24px rgba(16, 31, 85, 0.10), 0 1px 4px rgba(178, 13, 48, 0.06);
   --card-shadow-hover: 0 12px 40px rgba(16, 31, 85, 0.20), 0 4px 16px rgba(178, 13, 48, 0.12);
   --card-glow: 0 0 0 1px rgba(16, 31, 85, 0.10),
-               0 0 20px rgba(16, 31, 85, 0.14),
-               0 0 40px rgba(178, 13, 48, 0.07),
-               inset 0 0 0 1px rgba(178, 13, 48, 0.04);
+    0 0 20px rgba(16, 31, 85, 0.14),
+    0 0 40px rgba(178, 13, 48, 0.07),
+    inset 0 0 0 1px rgba(178, 13, 48, 0.04);
   --card-glow-hover: 0 0 0 1px rgba(178, 13, 48, 0.18),
-                     0 0 28px rgba(16, 31, 85, 0.22),
-                     0 0 56px rgba(178, 13, 48, 0.14),
-                     inset 0 0 0 1px rgba(178, 13, 48, 0.08);
+    0 0 28px rgba(16, 31, 85, 0.22),
+    0 0 56px rgba(178, 13, 48, 0.14),
+    inset 0 0 0 1px rgba(178, 13, 48, 0.08);
   --input-bg: #f4f6fc;
   --glow-shadow: 0 0 20px rgba(178, 13, 48, 0.2), 0 0 40px rgba(16, 31, 85, 0.15);
   --overlay-dark: rgba(10, 21, 56, 0.65);
@@ -99,13 +99,13 @@
   --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(178, 13, 48, 0.08);
   --card-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.60), 0 4px 16px rgba(178, 13, 48, 0.18);
   --card-glow: 0 0 0 1px rgba(74, 108, 199, 0.18),
-               0 0 22px rgba(16, 31, 85, 0.45),
-               0 0 44px rgba(178, 13, 48, 0.10),
-               inset 0 0 0 1px rgba(178, 13, 48, 0.05);
+    0 0 22px rgba(16, 31, 85, 0.45),
+    0 0 44px rgba(178, 13, 48, 0.10),
+    inset 0 0 0 1px rgba(178, 13, 48, 0.05);
   --card-glow-hover: 0 0 0 1px rgba(178, 13, 48, 0.25),
-                     0 0 32px rgba(74, 108, 199, 0.35),
-                     0 0 64px rgba(178, 13, 48, 0.20),
-                     inset 0 0 0 1px rgba(178, 13, 48, 0.10);
+    0 0 32px rgba(74, 108, 199, 0.35),
+    0 0 64px rgba(178, 13, 48, 0.20),
+    inset 0 0 0 1px rgba(178, 13, 48, 0.10);
   --input-bg: #070e25;
   --glow-shadow: 0 0 24px rgba(178, 13, 48, 0.3), 0 0 48px rgba(16, 31, 85, 0.4);
   --overlay-dark: rgba(0, 0, 0, 0.7);
@@ -179,16 +179,41 @@ body {
   flex-wrap: wrap;
 }
 
-.gap-xs { gap: var(--spacing-xs); }
-.gap-sm { gap: var(--spacing-sm); }
-.gap-md { gap: var(--spacing-md); }
-.gap-lg { gap: var(--spacing-lg); }
-.gap-xl { gap: var(--spacing-xl); }
-.gap-2xl { gap: var(--spacing-2xl); }
+.gap-xs {
+  gap: var(--spacing-xs);
+}
 
-.w-full { width: 100%; }
-.text-center { text-align: center; }
-.text-left { text-align: left; }
+.gap-sm {
+  gap: var(--spacing-sm);
+}
+
+.gap-md {
+  gap: var(--spacing-md);
+}
+
+.gap-lg {
+  gap: var(--spacing-lg);
+}
+
+.gap-xl {
+  gap: var(--spacing-xl);
+}
+
+.gap-2xl {
+  gap: var(--spacing-2xl);
+}
+
+.w-full {
+  width: 100%;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
 
 /* ═══════════════════════════════════════════════════════════
    UTILITY CLASSES — Page Structure
@@ -350,7 +375,9 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-.tab-bar::-webkit-scrollbar { display: none; }
+.tab-bar::-webkit-scrollbar {
+  display: none;
+}
 
 .tab-item {
   flex: 1;
@@ -540,18 +567,18 @@ body {
   align-items: center;
   padding: 0 40px;
   box-shadow: 0 2px 24px rgba(10, 21, 56, 0.5),
-              0 1px 0 rgba(178, 13, 48, 0.25),
-              0 0 60px rgba(16, 31, 85, 0.3);
+    0 1px 0 rgba(178, 13, 48, 0.25),
+    0 0 60px rgba(16, 31, 85, 0.3);
   transition: height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              padding 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.35s ease;
+    padding 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s ease;
 }
 
 .header.scrolled {
   height: var(--header-height-scrolled);
   box-shadow: 0 4px 36px rgba(10, 21, 56, 0.65),
-              0 1px 0 rgba(178, 13, 48, 0.3),
-              0 0 40px rgba(178, 13, 48, 0.08);
+    0 1px 0 rgba(178, 13, 48, 0.3),
+    0 0 40px rgba(178, 13, 48, 0.08);
 }
 
 .logo-container {
@@ -591,6 +618,7 @@ body {
   overflow-x: auto;
   scrollbar-width: none;
 }
+
 .nav-menu::-webkit-scrollbar {
   display: none;
 }
@@ -798,7 +826,10 @@ body {
 /* ═══════════════════════════════════════════════════════════
    TYPOGRAPHY
    ═══════════════════════════════════════════════════════════ */
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-family: var(--font-serif);
   font-weight: 700;
   margin-bottom: 12px;
@@ -806,9 +837,17 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
 }
 
-h1 { line-height: 1.1; }
-h2 { line-height: 1.2; }
-h3 { line-height: 1.3; }
+h1 {
+  line-height: 1.1;
+}
+
+h2 {
+  line-height: 1.2;
+}
+
+h3 {
+  line-height: 1.3;
+}
 
 p {
   color: var(--text-secondary);
@@ -864,6 +903,7 @@ button {
   color: white;
   box-shadow: 0 4px 14px rgba(178, 13, 48, 0.3);
 }
+
 .btn-primary:hover {
   background: linear-gradient(135deg, #c91038, var(--brand-crimson));
   transform: translateY(-1px);
@@ -875,6 +915,7 @@ button {
   color: var(--brand-navy);
   border: 2px solid var(--brand-navy);
 }
+
 .btn-secondary:hover {
   background: var(--brand-navy);
   color: white;
@@ -891,6 +932,7 @@ button {
   letter-spacing: 1.5px;
   padding: 12px 28px;
 }
+
 .btn-outline-gold:hover {
   background: var(--brand-crimson);
   color: white;
@@ -913,7 +955,9 @@ label {
   font-family: var(--font-sans);
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   width: 100%;
   padding: 12px 16px;
   border-radius: 8px;
@@ -921,11 +965,14 @@ input, textarea, select {
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 16px; /* Prevents iOS zoom on focus */
+  font-size: 16px;
+  /* Prevents iOS zoom on focus */
   transition: all 0.2s ease;
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--brand-navy);
   box-shadow: 0 0 0 3px rgba(16, 31, 85, 0.12), 0 0 12px rgba(178, 13, 48, 0.08);
@@ -1029,13 +1076,11 @@ input:focus, textarea:focus, select:focus {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    95deg,
-    rgba(7, 12, 38, 0.92) 0%,
-    rgba(10, 21, 56, 0.78) 42%,
-    rgba(10, 21, 56, 0.62) 75%,
-    rgba(7, 12, 38, 0.70) 100%
-  );
+  background: linear-gradient(95deg,
+      rgba(7, 12, 38, 0.92) 0%,
+      rgba(10, 21, 56, 0.78) 42%,
+      rgba(10, 21, 56, 0.62) 75%,
+      rgba(7, 12, 38, 0.70) 100%);
   z-index: 1;
 }
 
@@ -1089,7 +1134,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .hero-text p {
-  color: rgba(255,255,255,0.92);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 17px;
   line-height: 1.7;
   margin-bottom: 28px;
@@ -1170,19 +1215,17 @@ input:focus, textarea:focus, select:focus {
 }
 
 .hero-spotlight-card {
-  background: linear-gradient(
-    145deg,
-    rgba(13, 24, 64, 0.90) 0%,
-    rgba(7, 14, 38, 0.96) 100%
-  );
+  background: linear-gradient(145deg,
+      rgba(13, 24, 64, 0.90) 0%,
+      rgba(7, 14, 38, 0.96) 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1.5px solid rgba(178, 13, 48, 0.35);
   border-radius: 24px;
   padding: 26px 28px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45),
-              0 0 0 1px rgba(255, 255, 255, 0.08),
-              0 0 40px rgba(178, 13, 48, 0.18);
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 40px rgba(178, 13, 48, 0.18);
   position: relative;
   z-index: 2;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -1191,8 +1234,8 @@ input:focus, textarea:focus, select:focus {
 .hero-spotlight-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55),
-              0 0 0 1px rgba(178, 13, 48, 0.5),
-              0 0 50px rgba(178, 13, 48, 0.25);
+    0 0 0 1px rgba(178, 13, 48, 0.5),
+    0 0 50px rgba(178, 13, 48, 0.25);
 }
 
 .hero-card-header {
@@ -1440,7 +1483,7 @@ input:focus, textarea:focus, select:focus {
   background: linear-gradient(145deg, #ffffff, #f4f6fc);
   border-radius: 16px;
   padding: 32px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2), var(--card-glow);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2), var(--card-glow);
   max-width: 340px;
   margin-left: auto;
   border: 1px solid rgba(16, 31, 85, 0.1);
@@ -1495,7 +1538,7 @@ input:focus, textarea:focus, select:focus {
 
 .program-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 48px rgba(0,0,0,0.15);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.15);
 }
 
 .program-card img {
@@ -1518,11 +1561,11 @@ input:focus, textarea:focus, select:focus {
 }
 
 .program-card.dark .program-card-overlay {
-  background: linear-gradient(180deg, rgba(10,17,50,0.3) 0%, rgba(10,17,50,0.88) 100%);
+  background: linear-gradient(180deg, rgba(10, 17, 50, 0.3) 0%, rgba(10, 17, 50, 0.88) 100%);
 }
 
 .program-card.light .program-card-overlay {
-  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.92) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.92) 100%);
 }
 
 .program-card-content {
@@ -1543,9 +1586,11 @@ input:focus, textarea:focus, select:focus {
 .program-card.light .program-card-content h3 {
   color: var(--brand-navy);
 }
+
 .program-card.light .program-card-content p {
   color: var(--text-secondary);
 }
+
 .program-card.light .program-card-content .card-link {
   color: var(--brand-crimson);
 }
@@ -1669,15 +1714,18 @@ input:focus, textarea:focus, select:focus {
   .program-card.ispeak-card {
     min-height: 360px;
   }
+
   .program-card.ispeak-card .program-card-content.ispeak-card-content {
     top: 23%;
     bottom: 23%;
     left: 13%;
     right: 13%;
   }
+
   .program-card.ispeak-card .ispeak-card-title {
     font-size: 19px;
   }
+
   .program-card.ispeak-card .ispeak-card-desc {
     font-size: 12px;
     line-height: 1.4;
@@ -1762,7 +1810,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .section-dark p {
-  color: rgba(255,255,255,0.75);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1795,7 +1843,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .cta-banner p {
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 17px;
   max-width: 550px;
   margin: 0 auto 28px;
@@ -1846,7 +1894,7 @@ input:focus, textarea:focus, select:focus {
   font-family: var(--font-display);
   font-size: clamp(8rem, 20vw, 14rem);
   font-weight: 800;
-  color: rgba(255,255,255,0.06);
+  color: rgba(255, 255, 255, 0.06);
   pointer-events: none;
   user-select: none;
   letter-spacing: -0.05em;
@@ -1938,7 +1986,7 @@ input:focus, textarea:focus, select:focus {
   align-items: center;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
-  background: linear-gradient(135deg, rgba(16,31,85,0.06), rgba(178,13,48,0.04));
+  background: linear-gradient(135deg, rgba(16, 31, 85, 0.06), rgba(178, 13, 48, 0.04));
   border-radius: 16px;
   border: 1px solid rgba(16, 31, 85, 0.1);
   box-shadow: var(--card-glow);
@@ -2020,7 +2068,7 @@ input:focus, textarea:focus, select:focus {
   padding: 20px 24px;
   border-bottom: 1px solid var(--border-color);
   align-items: flex-end;
-  background: linear-gradient(135deg, rgba(16,31,85,0.04), transparent);
+  background: linear-gradient(135deg, rgba(16, 31, 85, 0.04), transparent);
 }
 
 .reader-toolbar .form-group {
@@ -2028,9 +2076,19 @@ input:focus, textarea:focus, select:focus {
   min-width: 100px;
 }
 
-.reader-toolbar .form-group.book-select { flex: 2; min-width: 160px; }
-.reader-toolbar .form-group.chapter-select { flex: 1; }
-.reader-toolbar .form-group.translation-select { flex: 1.5; min-width: 180px; }
+.reader-toolbar .form-group.book-select {
+  flex: 2;
+  min-width: 160px;
+}
+
+.reader-toolbar .form-group.chapter-select {
+  flex: 1;
+}
+
+.reader-toolbar .form-group.translation-select {
+  flex: 1.5;
+  min-width: 180px;
+}
 
 .reader-nav {
   display: flex;
@@ -2077,12 +2135,20 @@ input:focus, textarea:focus, select:focus {
 }
 
 .scripture-body {
-  padding: 28px 32px;
+  padding: 24px 28px;
   min-height: 300px;
   font-family: var(--font-serif);
   font-size: 18px;
   line-height: 1.9;
   color: var(--text-primary);
+}
+
+.scripture-body.font-sans {
+  font-family: var(--font-sans);
+}
+
+.scripture-body.font-serif {
+  font-family: var(--font-serif);
 }
 
 .verse-number {
@@ -2094,15 +2160,571 @@ input:focus, textarea:focus, select:focus {
   vertical-align: super;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ENHANCED BIBLE READER LAYOUT & CONTROLS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Reader Experience Bar */
+.reader-controls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.reader-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reader-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.reader-toggle-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--brand-crimson);
+  background: rgba(178, 13, 48, 0.05);
+}
+
+.reader-toggle-btn.active {
+  background: var(--brand-crimson);
+  color: #ffffff;
+  border-color: var(--brand-crimson);
+  box-shadow: 0 2px 10px rgba(178, 13, 48, 0.3);
+}
+
+.reader-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 5px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
+.reader-audio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(16, 31, 85, 0.08), rgba(178, 13, 48, 0.08));
+  border: 1px solid var(--border-color);
+  color: var(--brand-crimson);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reader-audio-btn.playing {
+  background: var(--brand-crimson);
+  color: #ffffff;
+  border-color: var(--brand-crimson);
+  box-shadow: 0 0 16px rgba(178, 13, 48, 0.45);
+}
+
+.reader-font-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reader-font-btn:hover {
+  border-color: var(--brand-crimson);
+  color: var(--brand-crimson);
+}
+
+/* Quick Verse Jumper Bar */
+.reader-jump-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 24px;
+  background: rgba(16, 31, 85, 0.03);
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+}
+
+.reader-jump-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reader-jump-pill:hover {
+  background: var(--brand-crimson);
+  color: #ffffff;
+  border-color: var(--brand-crimson);
+}
+
+/* Scripture Reading Container */
+.scripture-container {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Verse-by-Verse Layout */
+.bible-verse-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bible-verse-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+.bible-verse-card:hover {
+  border-color: rgba(178, 13, 48, 0.35);
+  background: rgba(16, 31, 85, 0.02);
+  box-shadow: 0 4px 16px rgba(16, 31, 85, 0.06);
+  transform: translateX(2px);
+}
+
+[data-theme="dark"] .bible-verse-card:hover {
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.bible-verse-card.is-highlighted {
+  background: rgba(178, 13, 48, 0.08);
+  border-color: var(--brand-crimson);
+  border-left: 4px solid var(--brand-crimson);
+  box-shadow: 0 0 16px rgba(178, 13, 48, 0.12);
+}
+
+[data-theme="dark"] .bible-verse-card.is-highlighted {
+  background: rgba(178, 13, 48, 0.16);
+  border-color: #f87171;
+  border-left: 4px solid #f87171;
+}
+
+.verse-gutter {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.verse-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-sans);
+  background: rgba(178, 13, 48, 0.09);
+  color: var(--brand-crimson);
+  border: 1px solid rgba(178, 13, 48, 0.22);
+  transition: all 0.2s ease;
+}
+
+.bible-verse-card:hover .verse-pill-badge,
+.bible-verse-card.is-highlighted .verse-pill-badge {
+  background: var(--brand-crimson);
+  color: #ffffff;
+  border-color: var(--brand-crimson);
+}
+
+.verse-text-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.verse-paragraph {
+  margin: 0;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+  word-break: break-word;
+}
+
+/* Verse Quick Action Toolbar */
+.verse-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.35;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+}
+
+.bible-verse-card:hover .verse-quick-actions {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .bible-verse-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "gutter text"
+      "actions actions";
+    gap: 8px 10px;
+    padding: 12px 14px;
+  }
+
+  .verse-gutter {
+    grid-area: gutter;
+  }
+
+  .verse-text-body {
+    grid-area: text;
+  }
+
+  .verse-quick-actions {
+    grid-area: actions;
+    justify-content: flex-end;
+    opacity: 1;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color);
+    margin-top: 4px;
+    gap: 6px;
+  }
+
+  .verse-tool-btn {
+    padding: 6px 10px;
+    font-size: 11.5px;
+    border-radius: 6px;
+  }
+}
+
+.verse-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.verse-tool-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--brand-crimson);
+}
+
+.verse-tool-btn.slap-accent-btn {
+  color: var(--brand-crimson);
+  background: rgba(178, 13, 48, 0.08);
+  border-color: rgba(178, 13, 48, 0.25);
+}
+
+.verse-tool-btn.slap-accent-btn:hover {
+  background: var(--brand-crimson);
+  color: #ffffff;
+  border-color: var(--brand-crimson);
+}
+
+.verse-tool-btn.highlight-active {
+  background: rgba(212, 160, 23, 0.2);
+  color: #d97706;
+  border-color: #d97706;
+}
+
+/* Flowing Paragraph Mode */
+.bible-paragraph-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.bible-paragraph-block {
+  padding: 22px 26px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  line-height: 1.9;
+}
+
+.bible-paragraph-block:hover {
+  border-color: rgba(178, 13, 48, 0.25);
+}
+
+.inline-verse-wrapper {
+  display: inline;
+  margin-right: 6px;
+  transition: background 0.15s ease;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.inline-verse-wrapper.is-highlighted {
+  background: rgba(178, 13, 48, 0.12);
+  border-bottom: 2px solid var(--brand-crimson);
+}
+
+.inline-verse-wrapper:hover {
+  background: rgba(178, 13, 48, 0.07);
+}
+
+.inline-verse-num {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--brand-crimson);
+  margin-right: 4px;
+  display: inline-block;
+  padding: 0 5px;
+  background: rgba(178, 13, 48, 0.08);
+  border-radius: 4px;
+  vertical-align: baseline;
+}
+
+/* Floating Action Feedback Toast */
+.reader-floating-toast {
+  position: fixed;
+  bottom: 84px;
+  right: 28px;
+  z-index: 9999;
+  background: var(--brand-navy-dark);
+  color: #ffffff;
+  border: 1px solid var(--brand-crimson);
+  padding: 10px 18px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .reader-bottom-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
   border-top: 1px solid var(--border-color);
-  background: linear-gradient(135deg, rgba(16,31,85,0.03), transparent);
+  background: linear-gradient(135deg, rgba(16, 31, 85, 0.03), transparent);
   flex-wrap: wrap;
   gap: 12px;
+}
+
+/* ─── Reader Responsive Media Queries for All Devices ─── */
+@media (max-width: 768px) {
+  .reader-controls-bar {
+    padding: 10px 14px;
+    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reader-control-group {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .reader-toggle-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .reader-meta-pill {
+    font-size: 11px;
+    padding: 4px 10px;
+    white-space: nowrap;
+  }
+
+  .reader-audio-btn {
+    flex: 1.2;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .scripture-body {
+    padding: 16px 14px;
+  }
+
+  .bible-paragraph-block {
+    padding: 16px 16px;
+  }
+
+  .reader-floating-toast {
+    bottom: 74px;
+    right: 16px;
+    left: 16px;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 540px) {
+  .reader-toolbar {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .reader-toolbar .form-group.book-select {
+    flex: 1.8;
+    min-width: 120px;
+  }
+
+  .reader-toolbar .form-group.chapter-select {
+    flex: 1;
+    min-width: 70px;
+  }
+
+  .reader-toolbar .form-group.translation-select {
+    flex: 100%;
+    min-width: 100%;
+  }
+
+  .reader-nav {
+    padding: 12px 14px;
+  }
+
+  .reader-chapter-title {
+    font-size: 18px;
+  }
+
+  .reader-chapter-subtitle {
+    font-size: 11px;
+  }
+
+  .reader-nav-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .reader-controls-bar {
+    padding: 8px 10px;
+  }
+
+  .reader-control-group {
+    gap: 5px;
+  }
+
+  .reader-toggle-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .reader-meta-pill {
+    display: none;
+  }
+
+  .reader-audio-btn {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+
+  .reader-font-btn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .scripture-body {
+    padding: 12px 10px;
+  }
+
+  .bible-verse-card {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .verse-pill-badge {
+    min-width: 26px;
+    height: 22px;
+    font-size: 10.5px;
+    padding: 0 6px;
+  }
+
+  .verse-paragraph {
+    font-size: 0.95em;
+    line-height: 1.8;
+  }
+
+  .reader-bottom-bar {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .reader-bottom-bar>div {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .reader-bottom-bar .btn-primary {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+  }
 }
 
 /* Report cards */
@@ -2169,7 +2791,7 @@ input:focus, textarea:focus, select:focus {
   padding: 10px;
   font-size: 12px;
   color: white;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   border-radius: 6px;
   cursor: pointer;
 }
@@ -2190,7 +2812,7 @@ input:focus, textarea:focus, select:focus {
   max-width: 380px;
   aspect-ratio: 8/10;
   border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
 }
@@ -2240,7 +2862,9 @@ input:focus, textarea:focus, select:focus {
   -webkit-overflow-scrolling: touch;
 }
 
-.category-pills::-webkit-scrollbar { display: none; }
+.category-pills::-webkit-scrollbar {
+  display: none;
+}
 
 .category-pill {
   padding: 8px 16px;
@@ -2280,7 +2904,7 @@ input:focus, textarea:focus, select:focus {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background-color: rgba(15,23,42,0.8);
+  background-color: rgba(15, 23, 42, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2397,7 +3021,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .church-promo-card {
-  background: linear-gradient(135deg, rgba(16,31,85,0.04), rgba(178,13,48,0.03));
+  background: linear-gradient(135deg, rgba(16, 31, 85, 0.04), rgba(178, 13, 48, 0.03));
   border: 1px solid rgba(16, 31, 85, 0.1);
   border-radius: 20px;
   padding: 36px;
@@ -2526,24 +3150,30 @@ input:focus, textarea:focus, select:focus {
     gap: 32px;
     padding: 60px 24px;
   }
+
   .program-cards {
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     padding: 40px 20px;
   }
+
   .feature-strip-inner {
     grid-template-columns: 1fr 1fr;
   }
+
   .feature-strip-item:nth-child(2) {
     border-right: none;
   }
+
   .feature-strip-item:nth-child(4) {
     border-right: none;
   }
+
   .footer-inner {
     grid-template-columns: 1fr 1fr;
     gap: 32px;
   }
+
   .grid-3 {
     grid-template-columns: 1fr;
   }
@@ -2554,21 +3184,27 @@ input:focus, textarea:focus, select:focus {
   .main-content {
     padding-top: 88px;
   }
+
   .header {
     height: 64px;
     padding: 0 16px;
   }
+
   .grid-2 {
     grid-template-columns: 1fr;
     gap: 24px;
   }
+
   .grid-4 {
     grid-template-columns: 1fr 1fr;
     gap: 16px;
   }
-  .nav-menu, .desktop-auth-links {
+
+  .nav-menu,
+  .desktop-auth-links {
     display: none !important;
   }
+
   .mobile-menu-btn {
     display: flex;
     align-items: center;
@@ -2588,9 +3224,11 @@ input:focus, textarea:focus, select:focus {
     margin: 0 auto;
     border-radius: 16px;
   }
+
   .auth-brand-panel {
     display: none;
   }
+
   .auth-form-panel {
     padding: 36px 28px;
     border-radius: 16px;
@@ -2600,12 +3238,15 @@ input:focus, textarea:focus, select:focus {
   .form-grid-2 {
     grid-template-columns: 1fr;
   }
+
   .reader-toolbar {
     padding: 16px;
   }
+
   .scripture-body {
     padding: 20px 16px;
   }
+
   .reader-bottom-bar {
     flex-direction: column;
     align-items: stretch;
@@ -2615,6 +3256,7 @@ input:focus, textarea:focus, select:focus {
   .bg-style-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .cta-actions {
     flex-direction: column;
   }
@@ -2630,6 +3272,7 @@ input:focus, textarea:focus, select:focus {
   .main-content {
     padding-top: 80px;
   }
+
   /* ─── Hero: full-screen on mobile, same feel as desktop ─── */
   .hero-section {
     min-height: 100vh;
@@ -2637,18 +3280,19 @@ input:focus, textarea:focus, select:focus {
     display: flex;
     align-items: center;
   }
+
   .hero-bg {
     object-position: center bottom;
   }
+
   .hero-overlay {
-    background: linear-gradient(
-      180deg,
-      rgba(7, 12, 38, 0.85) 0%,
-      rgba(10, 21, 56, 0.6) 45%,
-      rgba(10, 21, 56, 0.12) 75%,
-      transparent 100%
-    );
+    background: linear-gradient(180deg,
+        rgba(7, 12, 38, 0.85) 0%,
+        rgba(10, 21, 56, 0.6) 45%,
+        rgba(10, 21, 56, 0.12) 75%,
+        transparent 100%);
   }
+
   .hero-content {
     grid-template-columns: 1fr;
     padding: 100px 24px 60px;
@@ -2658,69 +3302,88 @@ input:focus, textarea:focus, select:focus {
     justify-content: center;
     gap: 24px;
   }
+
   .program-cards {
     grid-template-columns: 1fr;
   }
+
   .hero-text {
     max-width: 100%;
   }
+
   .hero-text h1 {
     font-size: clamp(2rem, 8vw, 2.8rem);
     line-height: 1.12;
     letter-spacing: -0.5px;
   }
+
   .hero-text p {
     font-size: 15px;
     max-width: 100%;
     margin-left: auto;
     margin-right: auto;
   }
+
   .hero-cta-group {
     flex-direction: column;
     width: 100%;
     align-items: center;
   }
+
   .hero-cta-group a,
   .hero-cta-group button {
     width: 100%;
     text-align: center;
     justify-content: center;
   }
+
   .feature-strip-inner {
     grid-template-columns: 1fr;
   }
+
   .feature-strip-item {
     border-right: none;
     border-bottom: 1px solid var(--border-color);
     padding: 20px 16px;
   }
+
   .feature-strip-item:last-child {
     border-bottom: none;
   }
+
   .grid-4 {
     grid-template-columns: 1fr;
   }
+
   .footer-inner {
     grid-template-columns: 1fr;
     gap: 24px;
   }
+
   .footer-bottom {
     flex-direction: column;
     gap: 12px;
     text-align: center;
   }
+
   .glass-card {
     padding: 20px 16px;
     border-radius: 14px;
   }
+
   .glass-card-static {
     padding: 20px 16px;
     border-radius: 14px;
   }
-  button, .btn-primary, .btn-secondary, .btn-outline-gold {
+
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline-gold {
     padding: 12px 18px;
     font-size: 13px;
   }
+
   /* Responsive Canvas Scaling */
   canvas {
     max-width: 100% !important;
@@ -2731,28 +3394,35 @@ input:focus, textarea:focus, select:focus {
   .dashboard-welcome {
     padding: 16px;
   }
+
   .dashboard-welcome h1 {
     font-size: 22px;
   }
+
   .dashboard-stats {
     width: 100%;
   }
+
   .streak-card {
     flex: 1;
     min-width: 0;
   }
+
   .contribution-cell {
     width: 20px;
     height: 20px;
   }
+
   .tab-item {
     min-width: 100px;
     padding: 12px 10px;
     font-size: 11px;
   }
+
   .reader-nav {
     padding: 12px 16px;
   }
+
   .reader-chapter-title {
     font-size: 18px;
   }
@@ -2762,10 +3432,12 @@ input:focus, textarea:focus, select:focus {
     padding: 12px;
     min-height: auto;
   }
+
   .auth-brand-panel {
     min-height: 200px;
     padding: 32px 20px;
   }
+
   .auth-brand-panel h2 {
     font-size: 24px !important;
   }
@@ -2809,15 +3481,27 @@ input:focus, textarea:focus, select:focus {
     font-size: 17px;
     letter-spacing: 0.8px;
   }
+
   .logo-image {
     height: 38px;
   }
+
   .hero-text h1 {
     font-size: 1.85rem;
   }
-  h1 { font-size: 2rem !important; }
-  h2 { font-size: 1.6rem !important; }
-  h3 { font-size: 1.3rem !important; }
+
+  h1 {
+    font-size: 2rem !important;
+  }
+
+  h2 {
+    font-size: 1.6rem !important;
+  }
+
+  h3 {
+    font-size: 1.3rem !important;
+  }
+
   .section-container {
     padding: 0 16px;
   }
@@ -2837,13 +3521,25 @@ input:focus, textarea:focus, select:focus {
    ANIMATIONS
    ═══════════════════════════════════════════════════════════ */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2993,32 +3689,35 @@ input:focus, textarea:focus, select:focus {
   border: 1px solid rgba(16, 31, 85, 0.12);
   border-radius: 16px;
   box-shadow: var(--card-shadow),
-              0 0 0 1px rgba(16, 31, 85, 0.06),
-              0 0 24px rgba(16, 31, 85, 0.12),
-              0 0 48px rgba(178, 13, 48, 0.07);
+    0 0 0 1px rgba(16, 31, 85, 0.06),
+    0 0 24px rgba(16, 31, 85, 0.12),
+    0 0 48px rgba(178, 13, 48, 0.07);
   transition: all 0.3s ease;
 }
 
 .glow-card-dual:hover {
   border-color: rgba(178, 13, 48, 0.2);
   box-shadow: var(--card-shadow-hover),
-              0 0 0 1px rgba(178, 13, 48, 0.14),
-              0 0 32px rgba(16, 31, 85, 0.22),
-              0 0 64px rgba(178, 13, 48, 0.14);
+    0 0 0 1px rgba(178, 13, 48, 0.14),
+    0 0 32px rgba(16, 31, 85, 0.22),
+    0 0 64px rgba(178, 13, 48, 0.14);
   transform: translateY(-3px);
 }
 
 /* ─── Pulsing Crimson Glow Keyframe ─── */
 @keyframes crimsonPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 1px rgba(178, 13, 48, 0.1),
-                0 0 16px rgba(16, 31, 85, 0.15),
-                0 0 32px rgba(178, 13, 48, 0.06);
+      0 0 16px rgba(16, 31, 85, 0.15),
+      0 0 32px rgba(178, 13, 48, 0.06);
   }
+
   50% {
     box-shadow: 0 0 0 1px rgba(178, 13, 48, 0.2),
-                0 0 28px rgba(16, 31, 85, 0.25),
-                0 0 56px rgba(178, 13, 48, 0.14);
+      0 0 28px rgba(16, 31, 85, 0.25),
+      0 0 56px rgba(178, 13, 48, 0.14);
   }
 }
 

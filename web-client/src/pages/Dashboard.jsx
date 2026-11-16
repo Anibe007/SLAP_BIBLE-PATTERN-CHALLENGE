@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { dbService } from '../services/db';
-import { Flame, CheckCircle, Calendar, Plus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2 } from 'lucide-react';
+import { Flame, CheckCircle, Calendar, Plus, Minus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2, Copy, Check, Bookmark, Volume2, VolumeX, List, AlignLeft, Type } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
@@ -48,6 +48,7 @@ const BIBLE_BOOKS = [
 const API_TRANSLATIONS = {
   'KJV':    { id: 'KJV',      label: 'KJV (King James Version)' },
   'NKJV':   { id: 'NKJV',    label: 'NKJV (New King James Version)' },
+  'AMP':    { id: 'AMP',     label: 'AMP (Amplified Bible)' },
   'AMPC':   { id: 'AMP',     label: 'AMPC (Amplified Bible Classic)' },
   'NIV':    { id: 'NIV2011', label: 'NIV (New International Version)' },
   'NLT':    { id: 'NLT',     label: 'NLT (New Living Translation)' },
@@ -112,6 +113,21 @@ export default function Dashboard() {
   const [bibleLoading, setBibleLoading] = useState(false);
   const [bibleError, setBibleError] = useState('');
   const [activeTab, setActiveTab] = useState('read'); // 'read', 'report', or 'concordance'
+
+  /* ─── Enhanced Bible Reader Experience State ─── */
+  const [readerLayout, setReaderLayout] = useState(() => {
+    return localStorage.getItem('slap_reader_layout') || 'verse'; // 'verse' (Verse-by-Verse) or 'paragraph' (Flowing)
+  });
+  const [readerFontSize, setReaderFontSize] = useState(() => {
+    return parseInt(localStorage.getItem('slap_reader_fontsize') || '18', 10);
+  });
+  const [readerFontFamily, setReaderFontFamily] = useState(() => {
+    return localStorage.getItem('slap_reader_font') || 'serif'; // 'serif' or 'sans'
+  });
+  const [highlightedVerses, setHighlightedVerses] = useState(new Set());
+  const [copiedVerse, setCopiedVerse] = useState(null);
+  const [readerToast, setReaderToast] = useState('');
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
   /* ─── Daily SLAP Target (chapters per day) ─── */
   const [dailyTarget, setDailyTarget] = useState(() => {
@@ -447,6 +463,142 @@ export default function Dashboard() {
     setActiveTab('report');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Stop audio and clear highlights when switching passage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlayingAudio(false);
+    setHighlightedVerses(new Set());
+  }, [readerBook, readerChapter]);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleToggleAudio = () => {
+    if (!('speechSynthesis' in window)) {
+      alert("Text-to-speech audio reader is not supported in your browser.");
+      return;
+    }
+    if (isPlayingAudio) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+    } else {
+      if (!bibleText?.verses?.length) return;
+      window.speechSynthesis.cancel();
+      const textToRead = `${readerBook} chapter ${readerChapter}. ` + bibleText.verses.map(v => `Verse ${v.verse}. ${cleanScriptureText(v.text)}`).join(' ');
+      const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.rate = 0.92;
+      utterance.pitch = 1.0;
+      utterance.onend = () => setIsPlayingAudio(false);
+      utterance.onerror = () => setIsPlayingAudio(false);
+      window.speechSynthesis.speak(utterance);
+      setIsPlayingAudio(true);
+    }
+  };
+
+  const handleCopyVerse = (v) => {
+    const ref = `${readerBook} ${readerChapter}:${v.verse}`;
+    const transName = API_TRANSLATIONS[readerTranslation]?.id || readerTranslation;
+    const txt = cleanScriptureText(v.text);
+    const toCopy = `${ref} (${transName})\n"${txt}"`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(toCopy);
+    }
+    setCopiedVerse(v.verse);
+    setReaderToast(`📋 Copied ${ref} to clipboard`);
+    setTimeout(() => {
+      setCopiedVerse(null);
+      setReaderToast('');
+    }, 2500);
+  };
+
+  const handleSetStrikingVerse = (v) => {
+    const ref = `${readerBook} ${readerChapter}:${v.verse}`;
+    const txt = cleanScriptureText(v.text);
+    const striking = `${ref} — "${txt}"`;
+    setStrikingVerses(striking);
+    setBook(readerBook);
+    setChapter(String(readerChapter));
+    setVerses(String(v.verse));
+    setTranslation(readerTranslation);
+    setReaderToast(`✨ Added ${ref} to SLAP Striking Verses!`);
+    setTimeout(() => setReaderToast(''), 3000);
+  };
+
+  const toggleHighlightVerse = (vNum) => {
+    setHighlightedVerses(prev => {
+      const next = new Set(prev);
+      if (next.has(vNum)) {
+        next.delete(vNum);
+      } else {
+        next.add(vNum);
+      }
+      return next;
+    });
+  };
+
+  const changeFontSize = (delta) => {
+    setReaderFontSize(prev => {
+      const next = Math.max(15, Math.min(26, prev + delta));
+      localStorage.setItem('slap_reader_fontsize', String(next));
+      return next;
+    });
+  };
+
+  const toggleFontFamily = () => {
+    setReaderFontFamily(prev => {
+      const next = prev === 'serif' ? 'sans' : 'serif';
+      localStorage.setItem('slap_reader_font', next);
+      return next;
+    });
+  };
+
+  const setViewLayout = (mode) => {
+    setReaderLayout(mode);
+    localStorage.setItem('slap_reader_layout', mode);
+  };
+
+  const readingStats = useMemo(() => {
+    if (!bibleText?.verses?.length) return { verseCount: 0, wordCount: 0, readMinutes: 1 };
+    let words = 0;
+    bibleText.verses.forEach(v => {
+      words += (v.text || '').split(/\s+/).filter(Boolean).length;
+    });
+    const minutes = Math.max(1, Math.ceil(words / 190));
+    return {
+      verseCount: bibleText.verses.length,
+      wordCount: words,
+      readMinutes: minutes
+    };
+  }, [bibleText]);
+
+  const paragraphGroups = useMemo(() => {
+    if (!bibleText?.verses?.length) return [];
+    const groups = [];
+    const chunkSize = 4;
+    for (let i = 0; i < bibleText.verses.length; i += chunkSize) {
+      groups.push(bibleText.verses.slice(i, i + chunkSize));
+    }
+    return groups;
+  }, [bibleText]);
+
+  const jumpMilestones = useMemo(() => {
+    if (!bibleText?.verses?.length || bibleText.verses.length < 16) return [];
+    const milestones = [];
+    const step = bibleText.verses.length > 50 ? 10 : 5;
+    for (let i = 1; i <= bibleText.verses.length; i += step) {
+      milestones.push(i);
+    }
+    return milestones;
+  }, [bibleText]);
 
   const handleSLAPSubmit = async (e) => {
     e.preventDefault();
@@ -807,8 +959,113 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Scripture Content */}
-          <div className="scripture-body">
+          {/* Enhanced Reader Experience & Controls Bar */}
+          <div className="reader-controls-bar">
+            {/* Left: View Mode Toggle & Chapter Metadata */}
+            <div className="reader-control-group">
+              <button
+                type="button"
+                onClick={() => setViewLayout('verse')}
+                className={`reader-toggle-btn ${readerLayout === 'verse' ? 'active' : ''}`}
+                title="Switch to Verse-by-Verse structured study layout"
+              >
+                <List size={14} />
+                <span>Verse-by-Verse</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewLayout('paragraph')}
+                className={`reader-toggle-btn ${readerLayout === 'paragraph' ? 'active' : ''}`}
+                title="Switch to flowing paragraph reading layout"
+              >
+                <AlignLeft size={14} />
+                <span>Paragraphs</span>
+              </button>
+
+              {readingStats.verseCount > 0 && (
+                <span className="reader-meta-pill">
+                  📖 {readingStats.verseCount} Verses · ⏱ ~{readingStats.readMinutes} min read
+                </span>
+              )}
+            </div>
+
+            {/* Right: Typography, Font Size, Audio Speech Reader */}
+            <div className="reader-control-group">
+              {/* Font Size Adjusters */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <button
+                  type="button"
+                  onClick={() => changeFontSize(-1)}
+                  disabled={readerFontSize <= 15}
+                  className="reader-font-btn"
+                  title="Smaller text"
+                  aria-label="Decrease font size"
+                >
+                  <Minus size={12} />
+                </button>
+                <span style={{ fontSize: '12px', fontWeight: '800', minWidth: '34px', textAlign: 'center', color: 'var(--text-primary)' }}>
+                  {readerFontSize}px
+                </span>
+                <button
+                  type="button"
+                  onClick={() => changeFontSize(1)}
+                  disabled={readerFontSize >= 26}
+                  className="reader-font-btn"
+                  title="Larger text"
+                  aria-label="Increase font size"
+                >
+                  <Plus size={12} />
+                </button>
+              </div>
+
+              {/* Font Style Toggle */}
+              <button
+                type="button"
+                onClick={toggleFontFamily}
+                className="reader-toggle-btn"
+                title="Toggle between Classical Serif and Modern Sans font"
+              >
+                <Type size={13} />
+                <span>{readerFontFamily === 'serif' ? 'Serif' : 'Modern'}</span>
+              </button>
+
+              {/* Audio Listen Aloud Button */}
+              <button
+                type="button"
+                onClick={handleToggleAudio}
+                className={`reader-audio-btn ${isPlayingAudio ? 'playing' : ''}`}
+                title={isPlayingAudio ? "Stop Audio Reader" : "Listen to this chapter read aloud"}
+              >
+                {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                <span>{isPlayingAudio ? "Stop Reading" : "Listen Aloud"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Jump Bar for Long Chapters */}
+          {jumpMilestones.length > 0 && (
+            <div className="reader-jump-bar">
+              <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--brand-crimson)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Jump to:
+              </span>
+              {jumpMilestones.map(vNum => (
+                <button
+                  key={vNum}
+                  type="button"
+                  className="reader-jump-pill"
+                  onClick={() => {
+                    const el = document.getElementById(`verse-${vNum}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                >
+                  v.{vNum}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Scripture Content Container */}
+          <div className={`scripture-body ${readerFontFamily === 'serif' ? 'font-serif' : 'font-sans'}`} style={{ fontSize: `${readerFontSize}px` }}>
             {bibleLoading && (
               <div className="flex-center" style={{ padding: '80px 0', gap: '12px', color: 'var(--text-secondary)' }}>
                 <Loader size={24} className="animate-spin" />
@@ -827,16 +1084,101 @@ export default function Dashboard() {
             )}
 
             {bibleText && bibleText.verses && (
-              <div>
-                {bibleText.verses.map((v, idx) => (
-                  <span key={idx} style={{ marginRight: '4px' }}>
-                    <sup className="verse-number">{v.verse}</sup>
-                    {cleanScriptureText(v.text)}
-                  </span>
-                ))}
+              <div className="scripture-container">
+                {/* ─── Mode 1: Structured Verse-by-Verse ─── */}
+                {readerLayout === 'verse' ? (
+                  <div className="bible-verse-list">
+                    {bibleText.verses.map((v) => {
+                      const isHighlighted = highlightedVerses.has(v.verse);
+                      const cleaned = cleanScriptureText(v.text);
+                      return (
+                        <div
+                          key={v.verse}
+                          id={`verse-${v.verse}`}
+                          className={`bible-verse-card ${isHighlighted ? 'is-highlighted' : ''}`}
+                          onClick={() => toggleHighlightVerse(v.verse)}
+                        >
+                          <div className="verse-gutter">
+                            <span className="verse-pill-badge" title={`Verse ${v.verse}`}>
+                              {v.verse}
+                            </span>
+                          </div>
+
+                          <div className="verse-text-body">
+                            <p className="verse-paragraph">
+                              {cleaned}
+                            </p>
+                          </div>
+
+                          <div className="verse-quick-actions" onClick={e => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="verse-tool-btn"
+                              onClick={() => handleCopyVerse(v)}
+                              title="Copy verse reference & text"
+                            >
+                              {copiedVerse === v.verse ? <Check size={13} style={{ color: '#16a34a' }} /> : <Copy size={13} />}
+                            </button>
+
+                            <button
+                              type="button"
+                              className="verse-tool-btn slap-accent-btn"
+                              onClick={() => handleSetStrikingVerse(v)}
+                              title="Set as Striking Verse in SLAP Devotional Journal"
+                            >
+                              <Sparkles size={12} />
+                              <span>SLAP</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`verse-tool-btn ${isHighlighted ? 'highlight-active' : ''}`}
+                              onClick={() => toggleHighlightVerse(v.verse)}
+                              title={isHighlighted ? "Remove highlight" : "Highlight this verse"}
+                            >
+                              <Bookmark size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* ─── Mode 2: Flowing Structured Paragraphs ─── */
+                  <div className="bible-paragraph-container">
+                    {paragraphGroups.map((chunk, pIdx) => (
+                      <div key={pIdx} className="bible-paragraph-block">
+                        {chunk.map(v => {
+                          const isHighlighted = highlightedVerses.has(v.verse);
+                          const cleaned = cleanScriptureText(v.text);
+                          return (
+                            <span
+                              key={v.verse}
+                              id={`verse-${v.verse}`}
+                              className={`inline-verse-wrapper ${isHighlighted ? 'is-highlighted' : ''}`}
+                              onClick={() => toggleHighlightVerse(v.verse)}
+                              title={`Verse ${v.verse} — Click to highlight. Double click to copy.`}
+                              onDoubleClick={(e) => { e.stopPropagation(); handleCopyVerse(v); }}
+                            >
+                              <span className="inline-verse-num">{v.verse}</span>
+                              <span style={{ marginRight: '6px' }}>{cleaned}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
+
+          {/* Floating Action Feedback Toast */}
+          {readerToast && (
+            <div className="reader-floating-toast">
+              <span>{readerToast}</span>
+            </div>
+          )}
 
           {/* Bottom Navigation + CTA */}
           <div className="reader-bottom-bar">

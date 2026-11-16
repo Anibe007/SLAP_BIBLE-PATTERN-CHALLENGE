@@ -9,6 +9,34 @@ import { dbService } from '../services/db';
 import { useAuth } from '../context/AuthContext';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
+import { cleanScriptureText } from './Dashboard';
+
+const BOOK_ID_MAP = {
+  Genesis: 1, Exodus: 2, Leviticus: 3, Numbers: 4, Deuteronomy: 5, Joshua: 6, Judges: 7, Ruth: 8,
+  '1 Samuel': 9, '2 Samuel': 10, '1 Kings': 11, '2 Kings': 12, '1 Chronicles': 13, '2 Chronicles': 14,
+  Ezra: 15, Nehemiah: 16, Esther: 17, Job: 18, Psalms: 19, Proverbs: 20, Ecclesiastes: 21,
+  'Song of Solomon': 22, Isaiah: 23, Jeremiah: 24, Lamentations: 25, Ezekiel: 26, Daniel: 27,
+  Hosea: 28, Joel: 29, Amos: 30, Obadiah: 31, Jonah: 32, Micah: 33, Nahum: 34, Habakkuk: 35,
+  Zephaniah: 36, Haggai: 37, Zechariah: 38, Malachi: 39, Matthew: 40, Mark: 41, Luke: 42,
+  John: 43, Acts: 44, Romans: 45, '1 Corinthians': 46, '2 Corinthians': 47, Galatians: 48,
+  Ephesians: 49, Philippians: 50, Colossians: 51, '1 Thessalonians': 52, '2 Thessalonians': 53,
+  '1 Timothy': 54, '2 Timothy': 55, Titus: 56, Philemon: 57, Hebrews: 58, James: 59,
+  '1 Peter': 60, '2 Peter': 61, '1 John': 62, '2 John': 63, '3 John': 64, Jude: 65, Revelation: 66
+};
+
+function parseTextVerses(rawText) {
+  if (!rawText) return [];
+  const regex = /(\d+)\s+([^0-9]+)/g;
+  const list = [];
+  let match;
+  while ((match = regex.exec(rawText)) !== null) {
+    list.push({ verse: Number(match[1]), text: match[2].trim() });
+  }
+  if (list.length === 0) {
+    return [{ verse: 1, text: rawText }];
+  }
+  return list;
+}
 
 const FEATURED_PASSAGES = [
   {
@@ -51,7 +79,7 @@ export default function DailyDevotion() {
 
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(0);
   const [translation, setTranslation] = useState('KJV');
-  const [pidginText, setPidginText] = useState(null);
+  const [passageVerses, setPassageVerses] = useState([]);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [streakData, setStreakData] = useState({ current_streak: 1, longest_streak: 1 });
   const [userLogs, setUserLogs] = useState([]);
@@ -75,19 +103,36 @@ export default function DailyDevotion() {
   }, [selectedPassageIndex, user]);
 
   useEffect(() => {
-    if (translation === 'PIDGIN' && activePassage) {
+    if (!activePassage) return;
+    if (translation === 'PIDGIN') {
       fetch(`/bible/pcm/${encodeURIComponent(activePassage.book)}.json`)
         .then(r => r.json())
         .then(bookData => {
           const chVerses = bookData[String(activePassage.chapter)] || [];
           if (chVerses.length > 0) {
-            const formatted = chVerses.map(v => `${v.verse} ${v.text}`).join('\n\n');
-            setPidginText(formatted);
+            setPassageVerses(chVerses);
+          } else {
+            setPassageVerses(parseTextVerses(activePassage.text));
           }
         })
-        .catch(() => setPidginText(null));
+        .catch(() => setPassageVerses(parseTextVerses(activePassage.text)));
     } else {
-      setPidginText(null);
+      const bookId = BOOK_ID_MAP[activePassage.book] || 43;
+      const transId = translation === 'AMP' ? 'AMP' : (translation === 'NIV' ? 'NIV2011' : (translation === 'NLT' ? 'NLT' : 'KJV'));
+      fetch(`https://bolls.life/get-text/${transId}/${bookId}/${activePassage.chapter}/`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            const [startV, endV] = (activePassage.verses || '').split('-').map(Number);
+            const filtered = (startV && endV)
+              ? data.filter(v => v.verse >= startV && v.verse <= endV)
+              : data;
+            setPassageVerses(filtered);
+          } else {
+            setPassageVerses(parseTextVerses(activePassage.text));
+          }
+        })
+        .catch(() => setPassageVerses(parseTextVerses(activePassage.text)));
     }
   }, [translation, activePassage]);
 
@@ -109,7 +154,8 @@ export default function DailyDevotion() {
         window.speechSynthesis.cancel();
         setIsPlayingAudio(false);
       } else {
-        const textToRead = `${activePassage.book} chapter ${activePassage.chapter}. ${activePassage.title}. ${activePassage.text}`;
+        const textToRead = `${activePassage.book} chapter ${activePassage.chapter}. ${activePassage.title}. ` +
+          passageVerses.map(v => `Verse ${v.verse}. ${cleanScriptureText(v.text)}`).join(' ');
         const utterance = new SpeechSynthesisUtterance(textToRead);
         utterance.rate = 0.95;
         utterance.pitch = 1.0;
@@ -315,22 +361,38 @@ export default function DailyDevotion() {
               </div>
             </div>
 
-            {/* Scripture Text Box */}
+            {/* Scripture Verses Box */}
             <div style={{
               background: 'rgba(0, 0, 0, 0.25)',
               borderRadius: '12px',
-              padding: '24px',
+              padding: '16px',
               border: '1px solid var(--border-color)',
               flex: 1,
               overflowY: 'auto',
-              maxHeight: '380px',
-              marginBottom: '20px',
-              fontSize: '15px',
-              lineHeight: '1.8',
-              color: 'rgba(255, 255, 255, 0.9)',
-              whiteSpace: 'pre-line'
+              maxHeight: '400px',
+              marginBottom: '20px'
             }}>
-              {translation === 'PIDGIN' && pidginText ? pidginText : activePassage.text}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {passageVerses.map(v => (
+                  <div
+                    key={v.verse}
+                    className="bible-verse-card"
+                    style={{ padding: '12px 16px', borderRadius: '10px', fontSize: '15px' }}
+                    onClick={() => {
+                      const ref = `${activePassage.book} ${activePassage.chapter}:${v.verse}`;
+                      setStrikingVerses(`${ref} — "${cleanScriptureText(v.text)}"`);
+                    }}
+                    title="Click to set as your Striking Verse in the SLAP form below"
+                  >
+                    <div className="verse-gutter">
+                      <span className="verse-pill-badge">{v.verse}</span>
+                    </div>
+                    <div className="verse-text-body">
+                      <p className="verse-paragraph">{cleanScriptureText(v.text)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Key Verse Highlight Box */}

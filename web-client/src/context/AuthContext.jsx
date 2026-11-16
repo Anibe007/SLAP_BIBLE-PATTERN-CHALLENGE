@@ -22,23 +22,40 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkUser();
 
+    // Listen for cross-component auth session updates
+    const handleAuthEvent = async () => {
+      await checkUser();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('slap_auth_updated', handleAuthEvent);
+    }
+
     // Listen to Supabase Auth state changes in real-time
+    let subscription = null;
     if (isSupabaseConfigured && supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const authSub = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             const freshUser = await dbService.getCurrentUser();
             setUser(freshUser);
           }
         } else if (event === 'SIGNED_OUT') {
-          setUser(null);
+          // Only clear user state if the persistent local session was also removed
+          const localStored = typeof window !== 'undefined' ? localStorage.getItem('slap_current_user') : null;
+          if (!localStored) {
+            setUser(null);
+          }
         }
       });
-
-      return () => {
-        subscription?.unsubscribe();
-      };
+      subscription = authSub?.data?.subscription;
     }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('slap_auth_updated', handleAuthEvent);
+      }
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const login = async (email, password) => {

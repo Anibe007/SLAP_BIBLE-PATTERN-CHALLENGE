@@ -408,78 +408,137 @@ export const dbService = {
     }
   },
 
-  // --- AUTH SERVICE (Supabase Auth) ---
+  // --- AUTH SERVICE (Dual-Layer: Supabase Cloud + Persistent Local Storage) ---
 
   async signUp(email, password, fullName, country = '') {
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            country: country,
-            is_admin: false,
-            role: 'user'
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPassword = (password || '');
+    const cleanName = (fullName || '').trim() || 'Participant';
+    const cleanCountry = (country || '').trim() || 'Global';
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error("Please enter a valid email address.");
+    }
+    if (!cleanPassword || cleanPassword.length < 6) {
+      throw new Error("Password must be at least 6 characters long.");
+    }
+
+    // 1. Prevent duplicate sign-up for existing accounts
+    const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const existingUser = localUsers.find(
+      u => (u.email || '').toLowerCase().trim() === cleanEmail
+    );
+    if (existingUser) {
+      throw new Error("An account with this email address already exists. Please sign in instead.");
+    }
+
+    let supabaseUser = null;
+    let userId = 'u-' + Date.now() + '-' + Math.random().toString(36).substr(2, 7);
+
+    // 2. Cloud Registration via Supabase if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: cleanPassword,
+          options: {
+            data: {
+              full_name: cleanName,
+              country: cleanCountry,
+              is_admin: false,
+              role: 'user'
+            }
+          }
+        });
+
+        if (error) {
+          if (error.message?.toLowerCase().includes('already registered')) {
+            throw new Error("An account with this email is already registered. Please sign in instead.");
+          }
+          console.warn("Supabase auth signUp warning:", error.message);
+        }
+
+        if (data?.user) {
+          supabaseUser = data.user;
+          userId = data.user.id;
+
+          try {
+            await supabase
+              .from('profiles')
+              .upsert({
+                id: data.user.id,
+                email: cleanEmail,
+                full_name: cleanName,
+                country: cleanCountry,
+                is_admin: false,
+                role: 'user',
+                updated_at: new Date().toISOString()
+              });
+          } catch (pe) {
+            console.warn("Supabase profiles upsert warning:", pe?.message);
+          }
+
+          try {
+            await supabase
+              .from('user_streaks')
+              .upsert({
+                user_id: data.user.id,
+                current_streak: 0,
+                longest_streak: 0,
+                last_activity_date: null
+              });
+          } catch (se) {
+            console.warn("Supabase user_streaks upsert warning:", se?.message);
           }
         }
-      });
-      if (error) throw error;
-
-      if (data.user) {
-        await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email,
-            full_name: fullName,
-            country: country,
-            is_admin: false,
-            role: 'user',
-            updated_at: new Date().toISOString()
-          });
-
-        await supabase
-          .from('user_streaks')
-          .upsert({
-            user_id: data.user.id,
-            current_streak: 0,
-            longest_streak: 0,
-            last_activity_date: null
-          });
+      } catch (authErr) {
+        if (authErr.message?.includes('already registered')) {
+          throw authErr;
+        }
+        console.warn("Supabase signUp exception:", authErr);
       }
+    }
 
-      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
-      return data.user;
-    } else {
-      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-        throw new Error("User with this email already exists");
-      }
-
-      const newUser = {
-        id: 'u-' + Math.random().toString(36).substr(2, 9),
-        email,
-        password,
-        fullName,
-        country,
+    // 3. Build unified persistent participant record
+    const userRecord = {
+      id: userId,
+      email: cleanEmail,
+      password: cleanPassword, // Preserved for resilient multi-layer authentication
+      fullName: cleanName,
+      country: cleanCountry,
+      is_admin: false,
+      role: 'user',
+      login_count: 1,
+      user_metadata: {
+        full_name: cleanName,
+        country: cleanCountry,
         is_admin: false,
         role: 'user',
-        user_metadata: { full_name: fullName, country, is_admin: false, role: 'user' },
-        created_at: new Date().toISOString()
-      };
+        ...(supabaseUser?.user_metadata || {})
+      },
+      created_at: supabaseUser?.created_at || new Date().toISOString()
+    };
 
-      users.push(newUser);
-      localStorage.setItem('slap_users', JSON.stringify(users));
-      localStorage.setItem('slap_current_user', JSON.stringify(newUser));
+    // 4. Persist in local storage registered users list
+    localUsers.push(userRecord);
+    localStorage.setItem('slap_users', JSON.stringify(localUsers));
 
-      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
-      streaks[newUser.id] = { current_streak: 0, longest_streak: 0, last_activity_date: null };
+    // 5. Establish immediate active session (survives refreshes & restarts)
+    localStorage.setItem('slap_current_user', JSON.stringify(userRecord));
+
+    // 6. Initialize streak record
+    const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+    if (!streaks[userId]) {
+      streaks[userId] = { current_streak: 0, longest_streak: 0, last_activity_date: null };
       localStorage.setItem('slap_streaks', JSON.stringify(streaks));
-
-      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
-      return newUser;
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('slap_stats_updated'));
+      window.dispatchEvent(new Event('slap_auth_updated'));
+    }
+
+    return userRecord;
   },
 
   async signUpAdmin(email, password, fullName, country = '', adminPasskey = '') {
@@ -488,79 +547,130 @@ export const dbService = {
       throw new Error("Invalid admin authorization passkey. Please check with the lead administrator.");
     }
 
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            country: country,
-            is_admin: true,
-            role: 'admin'
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPassword = (password || '');
+    const cleanName = (fullName || '').trim() || 'Administrator';
+    const cleanCountry = (country || '').trim() || 'Global';
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error("Please enter a valid email address.");
+    }
+    if (!cleanPassword || cleanPassword.length < 6) {
+      throw new Error("Password must be at least 6 characters long.");
+    }
+
+    const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const existing = localUsers.find(u => (u.email || '').toLowerCase().trim() === cleanEmail);
+    if (existing) {
+      throw new Error("An account with this email address already exists. Please sign in instead.");
+    }
+
+    let supabaseUser = null;
+    let userId = 'u-adm-' + Date.now() + '-' + Math.random().toString(36).substr(2, 7);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: cleanPassword,
+          options: {
+            data: {
+              full_name: cleanName,
+              country: cleanCountry,
+              is_admin: true,
+              role: 'admin'
+            }
+          }
+        });
+
+        if (error) {
+          if (error.message?.toLowerCase().includes('already registered')) {
+            throw new Error("An account with this email is already registered. Please sign in instead.");
+          }
+          console.warn("Supabase auth signUp admin warning:", error.message);
+        }
+
+        if (data?.user) {
+          supabaseUser = data.user;
+          userId = data.user.id;
+
+          try {
+            await supabase
+              .from('profiles')
+              .upsert({
+                id: data.user.id,
+                email: cleanEmail,
+                full_name: cleanName,
+                country: cleanCountry,
+                is_admin: true,
+                role: 'admin',
+                updated_at: new Date().toISOString()
+              });
+          } catch (pe) {
+            console.warn("Supabase profiles upsert warning:", pe?.message);
+          }
+
+          try {
+            await supabase
+              .from('user_streaks')
+              .upsert({
+                user_id: data.user.id,
+                current_streak: 0,
+                longest_streak: 0,
+                last_activity_date: null
+              });
+          } catch (se) {
+            console.warn("Supabase user_streaks upsert warning:", se?.message);
           }
         }
-      });
-      if (error) throw error;
-
-      if (data.user) {
-        await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email,
-            full_name: fullName,
-            country: country,
-            is_admin: true,
-            role: 'admin',
-            updated_at: new Date().toISOString()
-          });
-
-        await supabase
-          .from('user_streaks')
-          .upsert({
-            user_id: data.user.id,
-            current_streak: 0,
-            longest_streak: 0,
-            last_activity_date: null
-          });
+      } catch (authErr) {
+        if (authErr.message?.includes('already registered')) {
+          throw authErr;
+        }
+        console.warn("Supabase signUp admin exception:", authErr);
       }
+    }
 
-      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
-      return data.user;
-    } else {
-      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-        throw new Error("Account with this email already exists");
-      }
-
-      const newAdmin = {
-        id: 'u-adm-' + Math.random().toString(36).substr(2, 9),
-        email,
-        password,
-        fullName,
-        country,
+    const newAdmin = {
+      id: userId,
+      email: cleanEmail,
+      password: cleanPassword,
+      fullName: cleanName,
+      country: cleanCountry,
+      is_admin: true,
+      role: 'admin',
+      login_count: 1,
+      user_metadata: {
+        full_name: cleanName,
+        country: cleanCountry,
         is_admin: true,
         role: 'admin',
-        user_metadata: { full_name: fullName, country, is_admin: true, role: 'admin' },
-        created_at: new Date().toISOString()
-      };
+        ...(supabaseUser?.user_metadata || {})
+      },
+      created_at: supabaseUser?.created_at || new Date().toISOString()
+    };
 
-      users.push(newAdmin);
-      localStorage.setItem('slap_users', JSON.stringify(users));
-      localStorage.setItem('slap_current_user', JSON.stringify(newAdmin));
+    localUsers.push(newAdmin);
+    localStorage.setItem('slap_users', JSON.stringify(localUsers));
+    localStorage.setItem('slap_current_user', JSON.stringify(newAdmin));
 
-      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
-      streaks[newAdmin.id] = { current_streak: 0, longest_streak: 0, last_activity_date: null };
+    const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+    if (!streaks[userId]) {
+      streaks[userId] = { current_streak: 0, longest_streak: 0, last_activity_date: null };
       localStorage.setItem('slap_streaks', JSON.stringify(streaks));
-
-      if (typeof window !== 'undefined') window.dispatchEvent(new Event('slap_stats_updated'));
-      return newAdmin;
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('slap_stats_updated'));
+      window.dispatchEvent(new Event('slap_auth_updated'));
+    }
+
+    return newAdmin;
   },
 
   async signIn(email, password) {
     const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPassword = (password || '');
     const isAdminLookup = cleanEmail === 'admin@slapbible.org' || cleanEmail === 'admin';
 
     // 1. Seeded Master Administrator Authentication (Initial seeded password: admin)
@@ -568,7 +678,7 @@ export const dbService = {
       const storedAdminPassword = (typeof window !== 'undefined' ? localStorage.getItem('slap_admin_password') : null) || 'admin';
 
       // Match current admin password (default: admin, or updated by the admin)
-      if (password === storedAdminPassword) {
+      if (cleanPassword === storedAdminPassword) {
         const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
         let adminUser = users.find(u => u.email === 'admin@slapbible.org' || u.id === 'admin-seeded-master');
 
@@ -606,7 +716,7 @@ export const dbService = {
         localStorage.setItem('slap_current_user', JSON.stringify(adminUser));
 
         // If Supabase is connected, attempt sync with Supabase Auth
-        if (isSupabaseConfigured) {
+        if (isSupabaseConfigured && supabase) {
           try {
             await supabase.auth.signInWithPassword({
               email: 'admin@slapbible.org',
@@ -621,41 +731,81 @@ export const dbService = {
       }
     }
 
-    // 2. Regular Participant Authentication (Every participant MUST sign up first)
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
-      if (error) {
-        if (error.message?.includes('Invalid login credentials') || error.message?.includes('Email not confirmed')) {
-          throw new Error("No account found with these credentials. Every user must sign up first before signing in.");
-        }
-        throw error;
-      }
+    // 2. Regular Participant & Custom Admin Authentication (Dual-Layer: Cloud + Resilient Local Store)
+    const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const matchingLocalUser = localUsers.find(
+      u => (u.email || '').toLowerCase().trim() === cleanEmail
+    );
 
+    // Layer A: Attempt Supabase Cloud Authentication if configured
+    let authenticatedUser = null;
+
+    if (isSupabaseConfigured && supabase) {
       try {
-        const profile = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
-        if (profile.data) {
-          data.user.user_metadata = { ...data.user.user_metadata, ...profile.data };
-          data.user.is_admin = !!profile.data.is_admin;
-          data.user.role = profile.data.role || 'user';
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword
+        });
+
+        if (!error && data?.user) {
+          authenticatedUser = data.user;
+
+          try {
+            const profile = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+            if (profile?.data) {
+              authenticatedUser.user_metadata = { ...authenticatedUser.user_metadata, ...profile.data };
+              authenticatedUser.is_admin = !!profile.data.is_admin;
+              authenticatedUser.role = profile.data.role || 'user';
+              authenticatedUser.fullName = profile.data.full_name || authenticatedUser.fullName;
+              authenticatedUser.country = profile.data.country || authenticatedUser.country;
+            }
+          } catch (pe) { }
+        } else if (error) {
+          console.warn("Supabase signIn response:", error.message);
         }
-      } catch (e) { }
-      return data.user;
-    } else {
-      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      // Case-insensitive email + exact password match
-      const user = users.find(
-        u => u.email.toLowerCase() === cleanEmail && u.password === password
-      );
-      if (!user) {
-        throw new Error("No account found with this email. Every participant must sign up first before signing in.");
+      } catch (cloudErr) {
+        console.warn("Supabase signIn exception:", cloudErr);
       }
-      user.login_count = (user.login_count || 0) + 1;
-      const userIdx = users.findIndex(u => u.id === user.id);
-      if (userIdx !== -1) users[userIdx].login_count = user.login_count;
-      localStorage.setItem('slap_users', JSON.stringify(users));
-      localStorage.setItem('slap_current_user', JSON.stringify(user));
-      return user;
     }
+
+    // Layer B: If Supabase succeeded, update local storage session & user record
+    if (authenticatedUser) {
+      const existingIdx = localUsers.findIndex(u => (u.email || '').toLowerCase().trim() === cleanEmail || u.id === authenticatedUser.id);
+      const unifiedUser = {
+        ...authenticatedUser,
+        fullName: authenticatedUser.user_metadata?.full_name || authenticatedUser.fullName || cleanEmail.split('@')[0],
+        country: authenticatedUser.user_metadata?.country || authenticatedUser.country || 'Global',
+        password: cleanPassword, // Preserve for resilient offline/refresh fallback
+        login_count: ((existingIdx !== -1 ? localUsers[existingIdx].login_count : 0) || 0) + 1
+      };
+
+      if (existingIdx !== -1) {
+        localUsers[existingIdx] = { ...localUsers[existingIdx], ...unifiedUser };
+      } else {
+        localUsers.push(unifiedUser);
+      }
+      localStorage.setItem('slap_users', JSON.stringify(localUsers));
+      localStorage.setItem('slap_current_user', JSON.stringify(unifiedUser));
+      return unifiedUser;
+    }
+
+    // Layer C: Resilient Local Store Fallback (Handles unconfirmed email, offline, or network timeouts)
+    if (matchingLocalUser) {
+      if (matchingLocalUser.password === cleanPassword) {
+        // Password verified successfully!
+        matchingLocalUser.login_count = (matchingLocalUser.login_count || 0) + 1;
+        const userIdx = localUsers.findIndex(u => u.id === matchingLocalUser.id);
+        if (userIdx !== -1) localUsers[userIdx].login_count = matchingLocalUser.login_count;
+        localStorage.setItem('slap_users', JSON.stringify(localUsers));
+        localStorage.setItem('slap_current_user', JSON.stringify(matchingLocalUser));
+        return matchingLocalUser;
+      } else {
+        throw new Error("Incorrect password. Please verify your password or use 'Forgot Password' to reset it.");
+      }
+    }
+
+    // Layer D: User does not exist anywhere
+    throw new Error("No account found with this email. Every participant must sign up first before signing in.");
   },
 
   /**
@@ -716,28 +866,41 @@ export const dbService = {
       throw new Error("Please enter your registered email address.");
     }
 
-    if (isSupabaseConfigured) {
-      const redirectTo = `${window.location.origin}/auth?mode=update-password`;
-      const { data, error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo
-      });
-      if (error) throw error;
-      return {
-        success: true,
-        message: `Password reset instructions have been sent to ${cleanEmail}. Please check your inbox and spam folder.`
-      };
-    } else {
-      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      const user = users.find(u => u.email.toLowerCase() === cleanEmail);
-      if (!user) {
-        throw new Error("No account found with this email address. Please check your spelling or sign up.");
+    let cloudResetSent = false;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const redirectTo = `${window.location.origin}/auth?mode=update-password`;
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo
+        });
+        if (!error) {
+          cloudResetSent = true;
+        }
+      } catch (e) {
+        console.warn("Supabase resetPasswordForEmail exception:", e);
       }
+    }
+
+    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const user = users.find(u => (u.email || '').toLowerCase().trim() === cleanEmail);
+
+    if (cloudResetSent) {
       return {
         success: true,
-        message: `Password reset instructions have been sent to ${cleanEmail}.`,
+        message: `Password reset instructions have been sent to ${cleanEmail}. Please check your inbox and spam folder.`,
         user
       };
     }
+
+    if (user) {
+      return {
+        success: true,
+        message: `Password reset instructions initiated for ${cleanEmail}. You can now set your new password below.`,
+        user
+      };
+    }
+
+    throw new Error("No account found with this email address. Please check your spelling or sign up first.");
   },
 
   /**
@@ -803,19 +966,25 @@ export const dbService = {
 
 
   async getGlobalStats() {
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data: profiles } = await supabase.from('profiles').select('email, country');
         const { count: reportCount } = await supabase.from('slap_reports').select('*', { count: 'exact', head: true });
 
-        const uniqueEmails = new Set((profiles || []).map(p => (p.email || '').toLowerCase().trim()).filter(Boolean));
-        const uniqueCountries = new Set((profiles || []).map(c => c.country).filter(Boolean));
+        const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+        const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+
+        const allUsers = [...(profiles || []), ...localUsers];
+        const uniqueEmails = new Set(allUsers.map(p => (p.email || '').toLowerCase().trim()).filter(Boolean));
+        const uniqueCountries = new Set(allUsers.map(c => c.country || c.user_metadata?.country).filter(Boolean));
+
+        const effectiveReports = Math.max(reportCount || 0, localReports.length);
 
         return {
-          activeBelievers: uniqueEmails.size || (profiles || []).length,
-          totalParticipants: uniqueEmails.size || (profiles || []).length,
+          activeBelievers: uniqueEmails.size || allUsers.length,
+          totalParticipants: uniqueEmails.size || allUsers.length,
           nationsReached: uniqueCountries.size || 0,
-          totalReports: reportCount || 0
+          totalReports: effectiveReports
         };
       } catch (e) {
         console.warn("Could not fetch global stats from Supabase:", e);
@@ -850,64 +1019,125 @@ export const dbService = {
   },
 
   async signOut() {
-    if (isSupabaseConfigured) {
-      await supabase.auth.signOut();
-    } else {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.warn("Supabase signOut error:", e);
+      }
+    }
+    if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem('slap_current_user');
+      window.dispatchEvent(new Event('slap_stats_updated'));
+      window.dispatchEvent(new Event('slap_auth_updated'));
     }
     return true;
   },
 
   async getCurrentUser() {
-    if (isSupabaseConfigured) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        if (profile) {
-          user.user_metadata = { ...user.user_metadata, ...profile };
-          user.is_admin = !!profile.is_admin;
-          user.role = profile.role || 'user';
+    let user = null;
+
+    // Layer 1: Check Supabase Auth if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user) {
+          user = data.user;
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+            if (profile) {
+              user.user_metadata = { ...user.user_metadata, ...profile };
+              user.is_admin = !!profile.is_admin;
+              user.role = profile.role || 'user';
+              user.fullName = profile.full_name || user.fullName;
+              user.country = profile.country || user.country;
+            }
+          } catch (e) { }
+
+          // Synchronize local session storage with active Supabase session
+          try {
+            const localStored = localStorage.getItem('slap_current_user');
+            const localObj = localStored ? JSON.parse(localStored) : {};
+            const merged = {
+              ...localObj,
+              ...user,
+              fullName: user.fullName || localObj.fullName || user.user_metadata?.full_name,
+              country: user.country || localObj.country || user.user_metadata?.country,
+              user_metadata: { ...(localObj.user_metadata || {}), ...(user.user_metadata || {}) }
+            };
+            localStorage.setItem('slap_current_user', JSON.stringify(merged));
+          } catch (se) { }
+
+          return user;
+        }
+      } catch (err) {
+        console.warn("Supabase getCurrentUser warning, checking persistent local session:", err?.message);
+      }
+    }
+
+    // Layer 2: Persistent Local Storage Session Fallback (Guarantees persistence across page refreshes)
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem('slap_current_user');
+        if (stored) {
+          user = JSON.parse(stored);
+          if (user && (user.id || user.email)) {
+            return user;
+          }
         }
       }
-      return user;
-    } else {
-      const user = localStorage.getItem('slap_current_user');
-      return user ? JSON.parse(user) : null;
+    } catch (e) {
+      console.warn("Error reading local current user session:", e);
     }
+
+    return null;
   },
 
   async updateUserProfile(fullName, avatarUrl) {
     const user = await this.getCurrentUser();
     if (!user) throw new Error("Not authenticated");
 
-    if (isSupabaseConfigured) {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: fullName,
-          avatar_url: avatarUrl,
-          updated_at: new Date().toISOString()
-        });
-      if (error) throw error;
-      return { ...user, user_metadata: { ...user.user_metadata, full_name: fullName, avatar_url: avatarUrl } };
-    } else {
-      const users = JSON.parse(localStorage.getItem('slap_users'));
-      const index = users.findIndex(u => u.id === user.id);
-      if (index !== -1) {
-        users[index].user_metadata = { ...(users[index].user_metadata || {}), full_name: fullName };
-        users[index].fullName = fullName;
-        users[index].avatar_url = avatarUrl;
-        localStorage.setItem('slap_users', JSON.stringify(users));
-        localStorage.setItem('slap_current_user', JSON.stringify(users[index]));
-        return users[index];
+    const cleanName = (fullName || '').trim() || user.fullName || user.user_metadata?.full_name;
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            full_name: cleanName,
+            avatar_url: avatarUrl || user.avatar_url,
+            updated_at: new Date().toISOString()
+          });
+      } catch (err) {
+        console.warn("Supabase profile update warning:", err?.message);
       }
-      throw new Error("User profile not found");
     }
+
+    // Always synchronize local storage users and active session
+    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const index = users.findIndex(u => u.id === user.id || (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()));
+    const updatedUser = {
+      ...user,
+      fullName: cleanName,
+      avatar_url: avatarUrl || user.avatar_url,
+      user_metadata: {
+        ...(user.user_metadata || {}),
+        full_name: cleanName,
+        avatar_url: avatarUrl || user.avatar_url
+      }
+    };
+
+    if (index !== -1) {
+      users[index] = { ...users[index], ...updatedUser };
+      localStorage.setItem('slap_users', JSON.stringify(users));
+    }
+    localStorage.setItem('slap_current_user', JSON.stringify(updatedUser));
+    return updatedUser;
   },
 
   // --- SLAP REPORTS SERVICE (PostgreSQL with RLS) ---
@@ -1155,7 +1385,7 @@ export const dbService = {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       const [profilesRes, reportsRes, streaksRes] = await Promise.all([
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('slap_reports').select('user_id'),
@@ -1164,7 +1394,31 @@ export const dbService = {
 
       if (profilesRes.error) console.error("Error fetching users from Supabase:", profilesRes.error);
 
-      const users = profilesRes.data || [];
+      const supabaseProfiles = profilesRes.data || [];
+      const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+
+      // Harmonize cloud and local participants into a single consolidated roster
+      const combinedUserMap = new Map();
+      supabaseProfiles.forEach(p => {
+        const k = (p.email || p.id).toLowerCase();
+        combinedUserMap.set(k, {
+          ...p,
+          fullName: p.full_name || '',
+          country: p.country || ''
+        });
+      });
+      localUsers.forEach(u => {
+        const k = (u.email || u.id).toLowerCase();
+        if (!combinedUserMap.has(k)) {
+          combinedUserMap.set(k, {
+            ...u,
+            full_name: u.fullName || u.user_metadata?.full_name || '',
+            country: u.country || u.user_metadata?.country || ''
+          });
+        }
+      });
+
+      const users = Array.from(combinedUserMap.values());
       const reports = reportsRes.data || [];
       const streaksArr = streaksRes.data || [];
       const streaksMap = Object.fromEntries(streaksArr.map(s => [s.user_id, s]));

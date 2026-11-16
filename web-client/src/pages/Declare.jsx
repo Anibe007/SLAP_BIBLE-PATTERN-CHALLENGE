@@ -729,45 +729,158 @@ export default function Declare() {
     }
   };
 
-  // ─── SHARE TO WHATSAPP ───
-  const handleShareToWhatsApp = () => {
-    const pName = name.trim() ? `\n— *Declarant:* ${name.trim()}` : '';
-    const shareMessage = `✦ *ISPEAK & IDECLARE* (${selectedCategory.toUpperCase()}) ✦\n\n“${text}”\n\n📖 *Scripture:* ${ref}${pName}\n\n*SLAP BIBLE PATTERN CHALLENGE*\nDaily Scripture Declaration & Faith Formation\n👉 ${window.location.origin}/declare`;
+  // ─── HELPER: EXTRACT HIGH-RESOLUTION PNG IMAGE BLOB & FILE FROM CARD CANVAS ───
+  const getCardImageBlobAndFile = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) throw new Error("Card canvas is not available");
 
-    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    const safeCategory = (selectedCategory || 'faith').toLowerCase();
+    const fileName = `SLAP-iSPEAK-iDECLARE-${safeCategory}-${aspectRatio}-${Date.now()}.png`;
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((b) => {
+        if (b) resolve(b);
+        else reject(new Error("Failed to generate image blob from card canvas"));
+      }, 'image/png', 1.0);
+    });
+
+    const file = new File([blob], fileName, { type: 'image/png' });
+    return { blob, file, fileName };
   };
 
-  // ─── NATIVE SOCIAL SHARE & CLOUD STORAGE SYNC ───
+  // ─── SHARE TO WHATSAPP AS DIRECT IMAGE CARD ───
+  const handleShareToWhatsApp = async () => {
+    setLoading(true);
+    try {
+      const { blob, file, fileName } = await getCardImageBlobAndFile();
+
+      // 1. If device/browser supports Web Share with image files (mobile WhatsApp, iOS, Android):
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `iSPEAK & iDECLARE (${selectedCategory.toUpperCase()})`,
+            text: `“${text}”\n📖 ${ref}${name.trim() ? `\nDeclarant: ${name.trim()}` : ''}`
+          });
+          setToastMessage('✅ Card image shared directly to WhatsApp!');
+          setTimeout(() => setToastMessage(''), 4000);
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return;
+          console.warn("Direct native image share on WhatsApp dismissed:", shareErr);
+        }
+      }
+
+      // 2. Desktop WhatsApp Web Fallback:
+      // Copy actual image to clipboard + download image file + open WhatsApp chat
+      let imageCopied = false;
+      if (navigator.clipboard && window.ClipboardItem) {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          imageCopied = true;
+        } catch (e) {
+          console.warn("Clipboard copy image failed:", e);
+        }
+      }
+
+      // Trigger automatic image download
+      const downloadLink = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
+      downloadLink.download = fileName;
+      downloadLink.href = objectUrl;
+      downloadLink.click();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+
+      const pName = name.trim() ? `\n— *Declarant:* ${name.trim()}` : '';
+      const shareMessage = `✦ *ISPEAK & IDECLARE* (${selectedCategory.toUpperCase()}) ✦\n\n“${text}”\n\n📖 *Scripture:* ${ref}${pName}\n\n*SLAP BIBLE PATTERN CHALLENGE*\nDaily Scripture Declaration & Faith Formation`;
+
+      // Open WhatsApp
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+      if (imageCopied) {
+        setToastMessage('🖼️ Card image copied to clipboard & downloaded! In WhatsApp, select your chat and press Paste (Ctrl+V) to send the card image.');
+      } else {
+        setToastMessage('🖼️ Card image downloaded! Attach the downloaded image to your WhatsApp chat.');
+      }
+      setTimeout(() => setToastMessage(''), 5500);
+
+    } catch (err) {
+      console.error("WhatsApp share failed:", err);
+      setToastMessage('⚠️ Unable to share card image directly. Please use "Download HD Image".');
+      setTimeout(() => setToastMessage(''), 4000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── NATIVE SOCIAL SHARE AS DIRECT IMAGE (Instagram, WhatsApp, Telegram, Files, etc.) ───
   const handleShareCard = async () => {
     setLoading(true);
     try {
       const canvas = canvasRef.current;
-      const cardDataUrl = canvas ? canvas.toDataURL('image/png') : null;
+      const { blob, file, fileName } = await getCardImageBlobAndFile();
 
-      await dbService.saveDeclaration({
+      // Async background save of the declaration to user database
+      dbService.saveDeclaration({
         text,
         ref,
         category: selectedCategory,
         backgroundStyle: bgMode === 'image' ? selectedImageBgId : themeId,
-        cardDataUrl
-      });
+        cardDataUrl: canvas ? canvas.toDataURL('image/png') : null
+      }).catch(e => console.warn("Declaration record background save:", e));
 
-      const shareText = `✦ ISPEAK & IDECLARE (${selectedCategory.toUpperCase()})\n\n"${text}"\n\nScripture: ${ref}\n${name.trim() ? `Declarant: ${name.trim()}\n` : ''}\nJoin the SLAP Bible Challenge: ${window.location.origin}/declare`;
-
-      if (navigator.share) {
-        await navigator.share({
-          title: `SLAP ${selectedCategory.toUpperCase()} Proclamation`,
-          text: shareText,
-          url: window.location.origin
-        });
-      } else {
-        await navigator.clipboard.writeText(shareText);
-        setToastMessage('Declaration saved & copied to clipboard! 📋');
-        setTimeout(() => setToastMessage(''), 3000);
+      // 1. Direct Image Sharing via Native Web Share API Level 2 (Mobile & Desktop with File Support)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `iSPEAK & iDECLARE (${selectedCategory.toUpperCase()})`,
+            text: `“${text}”\n📖 ${ref}${name.trim() ? `\nDeclarant: ${name.trim()}` : ''}`
+          });
+          setToastMessage('✅ Card image shared directly!');
+          setTimeout(() => setToastMessage(''), 4000);
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return;
+          console.warn("Direct file sharing dismissed or failed:", shareErr);
+        }
       }
+
+      // 2. Fallback when browser doesn't support file sharing: Copy image to clipboard + Auto-download
+      let copiedToClipboard = false;
+      if (navigator.clipboard && window.ClipboardItem) {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          copiedToClipboard = true;
+        } catch (e) {
+          console.warn("Image clipboard copy failed:", e);
+        }
+      }
+
+      // Automatically download the card image
+      const downloadLink = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
+      downloadLink.download = fileName;
+      downloadLink.href = objectUrl;
+      downloadLink.click();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+
+      if (copiedToClipboard) {
+        setToastMessage('🖼️ Card image copied to clipboard & downloaded! Ready to paste into any chat or social media.');
+      } else {
+        setToastMessage('🖼️ Card image downloaded! You can now send or upload the image directly.');
+      }
+      setTimeout(() => setToastMessage(''), 5000);
+
     } catch (err) {
-      console.error("Share failed:", err);
+      console.error("Direct image share error:", err);
+      setToastMessage('⚠️ Unable to share card image. Please click "Download HD Image".');
+      setTimeout(() => setToastMessage(''), 4000);
     } finally {
       setLoading(false);
     }
@@ -1383,6 +1496,7 @@ export default function Declare() {
             <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
               <button
                 onClick={handleShareToWhatsApp}
+                disabled={loading}
                 style={{
                   flex: 1,
                   padding: '12px',
@@ -1396,12 +1510,14 @@ export default function Declare() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
-                  cursor: 'pointer',
+                  cursor: loading ? 'wait' : 'pointer',
                   transition: 'all 0.2s ease',
-                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)'
+                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)',
+                  opacity: loading ? 0.75 : 1
                 }}
+                title="Share this generated iSPEAK & iDECLARE card directly as an image on WhatsApp"
               >
-                <MessageCircle size={15} /> WhatsApp Share
+                <MessageCircle size={15} /> {loading ? 'Preparing...' : 'Share on WhatsApp'}
               </button>
 
               <button
@@ -1417,10 +1533,13 @@ export default function Declare() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  cursor: loading ? 'wait' : 'pointer',
+                  opacity: loading ? 0.75 : 1
                 }}
+                title="Share this generated iSPEAK & iDECLARE card directly as an image"
               >
-                <Share2 size={15} /> {loading ? 'Saving...' : 'Social Share'}
+                <Share2 size={15} /> {loading ? 'Preparing Image...' : 'Share Card Image'}
               </button>
             </div>
 
