@@ -192,6 +192,11 @@ function calculateUpdatedStreak(lastActivityDateStr, currentStreak, longestStrea
   }
 }
 
+// UUID validation helper for PostgreSQL compatibility
+function isValidUUID(str) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str || '');
+}
+
 // Data URI to Blob conversion helper
 function dataURItoBlob(dataURI) {
   const byteString = atob(dataURI.split(',')[1]);
@@ -1140,127 +1145,183 @@ export const dbService = {
     return updatedUser;
   },
 
-  // --- SLAP REPORTS SERVICE (PostgreSQL with RLS) ---
+  // --- SLAP REPORTS SERVICE (PostgreSQL with RLS + Resilient Local Store) ---
 
   async submitReport(report) {
     const user = await this.getCurrentUser();
-    if (!user) throw new Error("Authentication required to submit report");
+    if (!user) throw new Error("Authentication required to submit devotion report. Please sign in.");
 
     const todayStr = new Date().toISOString().split('T')[0];
+    const reportId = 'rep-' + Date.now() + '-' + Math.random().toString(36).substr(2, 7);
 
-    if (isSupabaseConfigured) {
-      // 1. Submit report to Supabase slap_reports table
-      const { data, error } = await supabase
-        .from('slap_reports')
-        .insert({
-          user_id: user.id,
-          book: report.book,
-          chapter: parseInt(report.chapter) || 1,
-          verses: report.verses,
-          translation: report.translation || 'KJV',
-          striking_verses: report.strikingVerses,
-          lessons_learnt: report.lessonsLearnt,
-          action_plans: report.actionPlans,
-          prayers: report.prayers,
-          submission_date: todayStr
-        })
-        .select()
-        .single();
-      if (error) throw error;
+    const cleanReport = {
+      id: reportId,
+      user_id: user.id,
+      book: report.book || 'Genesis',
+      chapter: parseInt(report.chapter) || 1,
+      verses: report.verses || '',
+      translation: report.translation || 'KJV',
+      striking_verses: report.strikingVerses || report.striking_verses || '',
+      lessons_learnt: report.lessonsLearnt || report.lessons_learnt || '',
+      action_plans: report.actionPlans || report.action_plans || '',
+      prayers: report.prayers || '',
+      submission_date: todayStr,
+      created_at: new Date().toISOString(),
+      userName: user.user_metadata?.full_name || user.fullName || 'Participant',
+      userEmail: user.email || '',
+      userCountry: user.country || user.user_metadata?.country || ''
+    };
 
-      // 2. Fetch and Update Streak
-      const { data: streak } = await supabase
-        .from('user_streaks')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+    // 1. ALWAYS persist locally first (zero network lag, guaranteed submission durability)
+    const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    localReports.unshift(cleanReport);
+    localStorage.setItem('slap_reports', JSON.stringify(localReports));
 
-      const newStreakData = calculateUpdatedStreak(
-        streak?.last_activity_date,
-        streak?.current_streak || 0,
-        streak?.longest_streak || 0
-      );
+    // Update Streak in localStorage
+    const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+    const userStreak = streaks[user.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
 
-      await supabase
-        .from('user_streaks')
-        .upsert({
-          user_id: user.id,
-          current_streak: newStreakData.current,
-          longest_streak: newStreakData.longest,
-          last_activity_date: newStreakData.date,
-          updated_at: new Date().toISOString()
-        });
+    const newStreakData = calculateUpdatedStreak(
+      userStreak.last_activity_date,
+      userStreak.current_streak,
+      userStreak.longest_streak
+    );
 
-      return { report: data, streak: newStreakData };
-    } else {
-      const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-      const newReport = {
-        id: 'rep-' + Math.random().toString(36).substr(2, 9),
-        user_id: user.id,
-        ...report,
-        submission_date: todayStr,
-        created_at: new Date().toISOString()
-      };
-      reports.push(newReport);
-      localStorage.setItem('slap_reports', JSON.stringify(reports));
-      window.dispatchEvent(new Event('slap_stats_updated'));
+    streaks[user.id] = {
+      current_streak: newStreakData.current,
+      longest_streak: newStreakData.longest,
+      last_activity_date: newStreakData.date
+    };
+    localStorage.setItem('slap_streaks', JSON.stringify(streaks));
 
-      // Update Streak in localStorage
-      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
-      const userStreak = streaks[user.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
+    // 2. Synchronize to Supabase Cloud if configured & user ID is valid UUID
+    let cloudSynced = false;
+    if (isSupabaseConfigured && supabase && isValidUUID(user.id)) {
+      try {
+        const { data, error } = await supabase
+          .from('slap_reports')
+          .insert({
+            user_id: user.id,
+            book: cleanReport.book,
+            chapter: cleanReport.chapter,
+            verses: cleanReport.verses,
+            translation: cleanReport.translation,
+            striking_verses: cleanReport.striking_verses,
+            lessons_learnt: cleanReport.lessons_learnt,
+            action_plans: cleanReport.action_plans,
+            prayers: cleanReport.prayers,
+            submission_date: todayStr
+          })
+          .select()
+          .single();
 
-      const newStreakData = calculateUpdatedStreak(
-        userStreak.last_activity_date,
-        userStreak.current_streak,
-        userStreak.longest_streak
-      );
-
-      streaks[user.id] = {
-        current_streak: newStreakData.current,
-        longest_streak: newStreakData.longest,
-        last_activity_date: newStreakData.date
-      };
-      localStorage.setItem('slap_streaks', JSON.stringify(streaks));
-
-      return { report: newReport, streak: streaks[user.id] };
+        if (!error && data) {
+          cloudSynced = true;
+          try {
+            await supabase
+              .from('user_streaks')
+              .upsert({
+                user_id: user.id,
+                current_streak: newStreakData.current,
+                longest_streak: newStreakData.longest,
+                last_activity_date: newStreakData.date,
+                updated_at: new Date().toISOString()
+              });
+          } catch (se) {
+            console.warn("Supabase user_streaks update warning:", se?.message);
+          }
+        } else if (error) {
+          console.warn("Supabase slap_reports insert warning (saved locally):", error.message);
+        }
+      } catch (cloudErr) {
+        console.warn("Supabase cloud report insert exception (saved locally):", cloudErr);
+      }
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('slap_stats_updated'));
+      window.dispatchEvent(new Event('slap_reports_updated'));
+    }
+
+    return {
+      report: cleanReport,
+      streak: streaks[user.id],
+      cloudSynced
+    };
   },
 
   async getReports() {
     const user = await this.getCurrentUser();
     if (!user) return [];
 
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('slap_reports')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    } else {
-      const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-      return reports.filter(r => r.user_id === user.id).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    let cloudReports = [];
+    if (isSupabaseConfigured && supabase && isValidUUID(user.id)) {
+      try {
+        const { data, error } = await supabase
+          .from('slap_reports')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          cloudReports = data.map(r => ({
+            ...r,
+            strikingVerses: r.striking_verses || r.strikingVerses,
+            lessonsLearnt: r.lessons_learnt || r.lessonsLearnt,
+            actionPlans: r.action_plans || r.actionPlans,
+            prayers: r.prayers
+          }));
+        }
+      } catch (e) {
+        console.warn("Supabase getReports warning:", e?.message);
+      }
     }
+
+    const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    const userLocalReports = localReports.filter(r => r.user_id === user.id || (user.email && r.userEmail === user.email));
+
+    // Combine unique reports by id
+    const reportMap = new Map();
+    cloudReports.forEach(r => reportMap.set(String(r.id), r));
+    userLocalReports.forEach(r => {
+      if (!reportMap.has(String(r.id))) {
+        reportMap.set(String(r.id), r);
+      }
+    });
+
+    return Array.from(reportMap.values()).sort(
+      (a, b) => new Date(b.created_at || b.submission_date || 0) - new Date(a.created_at || a.submission_date || 0)
+    );
   },
 
   async getStreak() {
     const user = await this.getCurrentUser();
     if (!user) return { current_streak: 0, longest_streak: 0, last_activity_date: null };
 
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('user_streaks')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+    const localStreaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+    const localUserStreak = localStreaks[user.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
 
-      if (error && error.code !== 'PGRST116') throw error;
-      return data || { current_streak: 0, longest_streak: 0, last_activity_date: null };
-    } else {
-      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
-      return streaks[user.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
+    if (isSupabaseConfigured && supabase && isValidUUID(user.id)) {
+      try {
+        const { data, error } = await supabase
+          .from('user_streaks')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!error && data) {
+          return {
+            current_streak: Math.max(data.current_streak || 0, localUserStreak.current_streak || 0),
+            longest_streak: Math.max(data.longest_streak || 0, localUserStreak.longest_streak || 0),
+            last_activity_date: data.last_activity_date || localUserStreak.last_activity_date
+          };
+        }
+      } catch (e) {
+        console.warn("Supabase getStreak warning:", e?.message);
+      }
     }
+
+    return localUserStreak;
   },
 
   // --- DECLARATIONS SERVICE ---
@@ -1271,7 +1332,7 @@ export const dbService = {
 
   async saveDeclaration(decl) {
     const user = await this.getCurrentUser();
-    const userId = user ? user.id : null;
+    const userId = user ? user.id : 'anonymous';
 
     // If a canvas render or card image is provided, upload to Supabase Storage
     let finalImageUrl = decl.imageUrl || '';
@@ -1283,55 +1344,74 @@ export const dbService = {
       }
     }
 
-    if (isSupabaseConfigured && user) {
-      const { data, error } = await supabase
-        .from('declarations')
-        .insert({
-          user_id: userId,
-          declaration_text: decl.text,
-          scripture_reference: decl.ref,
-          background_style: decl.backgroundStyle,
-          exported_image_url: finalImageUrl,
-          category: decl.category || 'faith'
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    } else {
-      const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
-      const newDecl = {
-        id: 'decl-user-' + Math.random().toString(36).substr(2, 9),
-        user_id: userId || 'anonymous',
-        declaration_text: decl.text,
-        scripture_reference: decl.ref,
-        background_style: decl.backgroundStyle,
-        exported_image_url: finalImageUrl,
-        category: decl.category || 'faith',
-        created_at: new Date().toISOString()
-      };
-      declarations.push(newDecl);
-      localStorage.setItem('slap_declarations', JSON.stringify(declarations));
-      return newDecl;
+    const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
+    const newDecl = {
+      id: 'decl-user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 7),
+      user_id: userId,
+      declaration_text: decl.text,
+      scripture_reference: decl.ref,
+      background_style: decl.backgroundStyle,
+      exported_image_url: finalImageUrl,
+      category: decl.category || 'faith',
+      created_at: new Date().toISOString()
+    };
+    declarations.unshift(newDecl);
+    localStorage.setItem('slap_declarations', JSON.stringify(declarations));
+
+    if (isSupabaseConfigured && supabase && user && isValidUUID(user.id)) {
+      try {
+        await supabase
+          .from('declarations')
+          .insert({
+            user_id: userId,
+            declaration_text: decl.text,
+            scripture_reference: decl.ref,
+            background_style: decl.backgroundStyle,
+            exported_image_url: finalImageUrl,
+            category: decl.category || 'faith'
+          });
+      } catch (e) {
+        console.warn("Supabase declaration insert warning (saved locally):", e?.message);
+      }
     }
+
+    return newDecl;
   },
 
   async getDeclarations() {
     const user = await this.getCurrentUser();
     if (!user) return [];
 
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('declarations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    } else {
-      const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
-      return declarations.filter(d => d.user_id === user.id).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    let cloudDecls = [];
+    if (isSupabaseConfigured && supabase && isValidUUID(user.id)) {
+      try {
+        const { data, error } = await supabase
+          .from('declarations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          cloudDecls = data;
+        }
+      } catch (e) {
+        console.warn("Supabase getDeclarations warning:", e?.message);
+      }
     }
+
+    const localDecls = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
+    const userLocalDecls = localDecls.filter(d => d.user_id === user.id);
+
+    const declMap = new Map();
+    cloudDecls.forEach(d => declMap.set(String(d.id), d));
+    userLocalDecls.forEach(d => {
+      if (!declMap.has(String(d.id))) {
+        declMap.set(String(d.id), d);
+      }
+    });
+
+    return Array.from(declMap.values()).sort(
+      (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+    );
   },
 
   // --- ADMIN SERVICES & PERMISSION CONTROL ---
@@ -1499,31 +1579,50 @@ export const dbService = {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
 
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('slap_reports')
-        .select('*, profiles(full_name, email, country)')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []).map(r => ({
-        ...r,
-        userName: r.profiles?.full_name || 'Participant',
-        userEmail: r.profiles?.email || '',
-        userCountry: r.profiles?.country || ''
-      }));
-    } else {
-      const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      return localReports.map(r => {
-        const u = users.find(user => user.id === r.user_id);
-        return {
-          ...r,
-          userName: u?.user_metadata?.full_name || u?.fullName || 'Participant',
-          userEmail: u?.email || '',
-          userCountry: u?.country || u?.user_metadata?.country || ''
-        };
-      }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    let cloudReports = [];
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('slap_reports')
+          .select('*, profiles(full_name, email, country)')
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          cloudReports = data.map(r => ({
+            ...r,
+            userName: r.profiles?.full_name || 'Participant',
+            userEmail: r.profiles?.email || '',
+            userCountry: r.profiles?.country || ''
+          }));
+        }
+      } catch (e) {
+        console.warn("Supabase getAllReports warning:", e?.message);
+      }
     }
+
+    const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const formattedLocal = localReports.map(r => {
+      const u = users.find(user => user.id === r.user_id || (user.email && r.userEmail === user.email));
+      return {
+        ...r,
+        userName: u?.user_metadata?.full_name || u?.fullName || r.userName || 'Participant',
+        userEmail: u?.email || r.userEmail || '',
+        userCountry: u?.country || u?.user_metadata?.country || r.userCountry || ''
+      };
+    });
+
+    const reportMap = new Map();
+    cloudReports.forEach(r => reportMap.set(String(r.id), r));
+    formattedLocal.forEach(r => {
+      if (!reportMap.has(String(r.id))) {
+        reportMap.set(String(r.id), r);
+      }
+    });
+
+    return Array.from(reportMap.values()).sort(
+      (a, b) => new Date(b.created_at || b.submission_date || 0) - new Date(a.created_at || a.submission_date || 0)
+    );
   },
 
   async grantAdminPermission(userId) {

@@ -101,6 +101,7 @@ export default function Dashboard() {
   
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedReport, setExpandedReport] = useState(null);
   const [selectedReportModal, setSelectedReportModal] = useState(null);
   const [celebrationData, setCelebrationData] = useState(null);
@@ -605,28 +606,34 @@ export default function Dashboard() {
     setError('');
     setSuccess('');
 
-    if (!strikingVerses || !lessonsLearnt || !actionPlans || !prayers) {
-      setError('Please fill in all four elements of the SLAP report.');
+    const cleanStriking = (strikingVerses || '').trim();
+    const cleanLessons = (lessonsLearnt || '').trim();
+    const cleanActions = (actionPlans || '').trim();
+    const cleanPrayers = (prayers || '').trim();
+
+    if (!cleanStriking || !cleanLessons || !cleanActions || !cleanPrayers) {
+      setError('Please fill in all four elements of the SLAP report (Striking Verses, Lessons Learnt, Action Plans, and Prayers).');
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const response = await dbService.submitReport({
         book,
-        chapter,
-        verses,
+        chapter: parseInt(chapter, 10) || 1,
+        verses: (verses || '').trim(),
         translation,
-        strikingVerses,
-        lessonsLearnt,
-        actionPlans,
-        prayers
+        strikingVerses: cleanStriking,
+        lessonsLearnt: cleanLessons,
+        actionPlans: cleanActions,
+        prayers: cleanPrayers
       });
 
       const updatedStreak = response?.streak?.current_streak || (streak?.current_streak ? streak.current_streak + 1 : 1);
 
       setSuccess('Thank You! Your Report has been submitted Successfully');
       
-      // Fire thank you modal
+      // Fire celebratory thank-you modal
       setCelebrationData({
         isOpen: true,
         type: 'report',
@@ -646,10 +653,13 @@ export default function Dashboard() {
       setPrayers('');
       setVerses('');
 
-      // Reload
-      fetchDashboardData();
+      // Reload dashboard entries
+      await fetchDashboardData();
     } catch (err) {
-      setError(err.message || 'Failed to submit report.');
+      console.error("Submit devotion failed:", err);
+      setError(err.message || 'Failed to submit report. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1281,8 +1291,40 @@ export default function Dashboard() {
                 <textarea rows="3" placeholder="Write a short sealing prayer..." value={prayers} onChange={e => setPrayers(e.target.value)} />
               </div>
 
-              <button type="submit" className="btn-primary" style={{ width: '100%', padding: '14px' }}>
-                Submit SLAP Devotion
+              {error && (
+                <div className="alert alert-error" style={{ margin: '4px 0', fontSize: '13px' }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} /> {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn-primary"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  fontWeight: '800',
+                  fontSize: '15px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  opacity: isSubmitting ? 0.75 : 1,
+                  cursor: isSubmitting ? 'wait' : 'pointer'
+                }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="animate-spin" style={{ display: 'inline-block' }}>✦</span>
+                    Submitting SLAP Devotion...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={18} />
+                    Submit SLAP Devotion
+                  </>
+                )}
               </button>
             </form>
           </section>
