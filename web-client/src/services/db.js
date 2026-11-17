@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, STORAGE_BUCKETS } from '../supabaseClient';
+import { supabase, isSupabaseConfigured, STORAGE_BUCKETS } from '../supabaseClient.js';
 
 // --- CATEGORIZED SEED DECLARATIONS ---
 export const DECLARATION_CATEGORIES = [
@@ -1042,61 +1042,69 @@ export const dbService = {
   async getCurrentUser() {
     let user = null;
 
-    // Layer 1: Check Supabase Auth if configured
+    // Layer 1: Check persistent local session first
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem('slap_current_user');
+        if (stored) {
+          user = JSON.parse(stored);
+        }
+      }
+    } catch (e) {
+      console.warn("Error reading local current user session:", e);
+    }
+
+    // If local session is active as Admin, preserve admin session immediately
+    if (user && (user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org')) {
+      user.is_admin = true;
+      user.role = 'admin';
+      return user;
+    }
+
+    // Layer 2: Check Supabase Auth if configured
     if (isSupabaseConfigured && supabase) {
       try {
         const { data } = await supabase.auth.getUser();
         if (data?.user) {
-          user = data.user;
+          const cloudUser = data.user;
           try {
             const { data: profile } = await supabase
               .from('profiles')
               .select('*')
-              .eq('id', user.id)
+              .eq('id', cloudUser.id)
               .single();
             if (profile) {
-              user.user_metadata = { ...user.user_metadata, ...profile };
-              user.is_admin = !!profile.is_admin;
-              user.role = profile.role || 'user';
-              user.fullName = profile.full_name || user.fullName;
-              user.country = profile.country || user.country;
+              cloudUser.user_metadata = { ...cloudUser.user_metadata, ...profile };
+              cloudUser.is_admin = !!profile.is_admin;
+              cloudUser.role = profile.role || 'user';
+              cloudUser.fullName = profile.full_name || cloudUser.fullName;
+              cloudUser.country = profile.country || cloudUser.country;
             }
           } catch (e) { }
 
-          // Synchronize local session storage with active Supabase session
-          try {
-            const localStored = localStorage.getItem('slap_current_user');
-            const localObj = localStored ? JSON.parse(localStored) : {};
+          // Sync if matching session or no active local user
+          if (!user || user.id === cloudUser.id || (user.email && user.email.toLowerCase() === cloudUser.email?.toLowerCase())) {
             const merged = {
-              ...localObj,
-              ...user,
-              fullName: user.fullName || localObj.fullName || user.user_metadata?.full_name,
-              country: user.country || localObj.country || user.user_metadata?.country,
-              user_metadata: { ...(localObj.user_metadata || {}), ...(user.user_metadata || {}) }
+              ...(user || {}),
+              ...cloudUser,
+              fullName: cloudUser.fullName || user?.fullName || cloudUser.user_metadata?.full_name,
+              country: cloudUser.country || user?.country || cloudUser.user_metadata?.country,
+              user_metadata: { ...(user?.user_metadata || {}), ...(cloudUser.user_metadata || {}) }
             };
-            localStorage.setItem('slap_current_user', JSON.stringify(merged));
-          } catch (se) { }
-
-          return user;
+            try {
+              localStorage.setItem('slap_current_user', JSON.stringify(merged));
+            } catch (se) { }
+            return merged;
+          }
         }
       } catch (err) {
         console.warn("Supabase getCurrentUser warning, checking persistent local session:", err?.message);
       }
     }
 
-    // Layer 2: Persistent Local Storage Session Fallback (Guarantees persistence across page refreshes)
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const stored = localStorage.getItem('slap_current_user');
-        if (stored) {
-          user = JSON.parse(stored);
-          if (user && (user.id || user.email)) {
-            return user;
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Error reading local current user session:", e);
+    // Layer 3: Return verified local user session
+    if (user && (user.id || user.email)) {
+      return user;
     }
 
     return null;
@@ -1147,24 +1155,60 @@ export const dbService = {
 
   // --- SLAP REPORTS SERVICE (PostgreSQL with RLS + Resilient Local Store) ---
 
-  async submitReport(report) {
-    const user = await this.getCurrentUser();
-    if (!user) throw new Error("Authentication required to submit devotion report. Please sign in.");
+  async submitReport(report, activeUser = null) {
+    let user = activeUser;
+    if (!user) {
+      try {
+        user = await this.getCurrentUser();
+      } catch (e) {
+        console.warn("getCurrentUser in submitReport caught:", e);
+      }
+    }
+    if (!user) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('slap_current_user') : null;
+        if (stored) user = JSON.parse(stored);
+      } catch (e) {}
+    }
+    if (!user) {
+      try {
+        const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+        if (localUsers.length > 0) user = localUsers[localUsers.length - 1];
+      } catch (e) {}
+    }
+    if (!user) {
+      throw new Error("Authentication required to submit devotion report. Please sign in or register.");
+    }
+
+    if (!user.id) {
+      user.id = 'u-' + Date.now() + '-' + Math.random().toString(36).substr(2, 7);
+      try {
+        localStorage.setItem('slap_current_user', JSON.stringify(user));
+      } catch (e) {}
+    }
 
     const todayStr = new Date().toISOString().split('T')[0];
     const reportId = 'rep-' + Date.now() + '-' + Math.random().toString(36).substr(2, 7);
+
+    const striking = report.strikingVerses || report.striking_verses || '';
+    const lessons = report.lessonsLearnt || report.lessons_learnt || '';
+    const actions = report.actionPlans || report.action_plans || '';
+    const prayers = report.prayers || '';
 
     const cleanReport = {
       id: reportId,
       user_id: user.id,
       book: report.book || 'Genesis',
-      chapter: parseInt(report.chapter) || 1,
+      chapter: parseInt(report.chapter, 10) || 1,
       verses: report.verses || '',
       translation: report.translation || 'KJV',
-      striking_verses: report.strikingVerses || report.striking_verses || '',
-      lessons_learnt: report.lessonsLearnt || report.lessons_learnt || '',
-      action_plans: report.actionPlans || report.action_plans || '',
-      prayers: report.prayers || '',
+      striking_verses: striking,
+      strikingVerses: striking,
+      lessons_learnt: lessons,
+      lessonsLearnt: lessons,
+      action_plans: actions,
+      actionPlans: actions,
+      prayers: prayers,
       submission_date: todayStr,
       created_at: new Date().toISOString(),
       userName: user.user_metadata?.full_name || user.fullName || 'Participant',
@@ -1175,7 +1219,11 @@ export const dbService = {
     // 1. ALWAYS persist locally first (zero network lag, guaranteed submission durability)
     const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
     localReports.unshift(cleanReport);
-    localStorage.setItem('slap_reports', JSON.stringify(localReports));
+    try {
+      localStorage.setItem('slap_reports', JSON.stringify(localReports));
+    } catch (e) {
+      console.warn("Error saving to localStorage.slap_reports:", e);
+    }
 
     // Update Streak in localStorage
     const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
@@ -1188,11 +1236,13 @@ export const dbService = {
     );
 
     streaks[user.id] = {
-      current_streak: newStreakData.current,
-      longest_streak: newStreakData.longest,
+      current_streak: Math.max(1, newStreakData.current || 1),
+      longest_streak: Math.max(1, newStreakData.longest || 1),
       last_activity_date: newStreakData.date
     };
-    localStorage.setItem('slap_streaks', JSON.stringify(streaks));
+    try {
+      localStorage.setItem('slap_streaks', JSON.stringify(streaks));
+    } catch (e) {}
 
     // 2. Synchronize to Supabase Cloud if configured & user ID is valid UUID
     let cloudSynced = false;
@@ -1222,9 +1272,9 @@ export const dbService = {
               .from('user_streaks')
               .upsert({
                 user_id: user.id,
-                current_streak: newStreakData.current,
-                longest_streak: newStreakData.longest,
-                last_activity_date: newStreakData.date,
+                current_streak: streaks[user.id].current_streak,
+                longest_streak: streaks[user.id].longest_streak,
+                last_activity_date: streaks[user.id].last_activity_date,
                 updated_at: new Date().toISOString()
               });
           } catch (se) {
@@ -1251,7 +1301,16 @@ export const dbService = {
   },
 
   async getReports() {
-    const user = await this.getCurrentUser();
+    let user = null;
+    try {
+      user = await this.getCurrentUser();
+    } catch (e) {}
+    if (!user) {
+      try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('slap_current_user') : null;
+        if (stored) user = JSON.parse(stored);
+      } catch (e) {}
+    }
     if (!user) return [];
 
     let cloudReports = [];
@@ -1266,10 +1325,13 @@ export const dbService = {
         if (!error && data) {
           cloudReports = data.map(r => ({
             ...r,
-            strikingVerses: r.striking_verses || r.strikingVerses,
-            lessonsLearnt: r.lessons_learnt || r.lessonsLearnt,
-            actionPlans: r.action_plans || r.actionPlans,
-            prayers: r.prayers
+            strikingVerses: r.striking_verses || r.strikingVerses || '',
+            striking_verses: r.striking_verses || r.strikingVerses || '',
+            lessonsLearnt: r.lessons_learnt || r.lessonsLearnt || '',
+            lessons_learnt: r.lessons_learnt || r.lessonsLearnt || '',
+            actionPlans: r.action_plans || r.actionPlans || '',
+            action_plans: r.action_plans || r.actionPlans || '',
+            prayers: r.prayers || ''
           }));
         }
       } catch (e) {
@@ -1278,7 +1340,20 @@ export const dbService = {
     }
 
     const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-    const userLocalReports = localReports.filter(r => r.user_id === user.id || (user.email && r.userEmail === user.email));
+    const userEmail = (user.email || '').toLowerCase().trim();
+    const userLocalReports = localReports.filter(r => 
+      (user.id && r.user_id === user.id) || 
+      (userEmail && r.userEmail && r.userEmail.toLowerCase().trim() === userEmail)
+    ).map(r => ({
+      ...r,
+      strikingVerses: r.strikingVerses || r.striking_verses || '',
+      striking_verses: r.striking_verses || r.strikingVerses || '',
+      lessonsLearnt: r.lessonsLearnt || r.lessons_learnt || '',
+      lessons_learnt: r.lessons_learnt || r.lessonsLearnt || '',
+      actionPlans: r.actionPlans || r.action_plans || '',
+      action_plans: r.action_plans || r.actionPlans || '',
+      prayers: r.prayers || ''
+    }));
 
     // Combine unique reports by id
     const reportMap = new Map();
@@ -1430,23 +1505,40 @@ export const dbService = {
     let totalDeclarations = 0;
     let topStreaks = [];
 
-    if (isSupabaseConfigured) {
-      const { count } = await supabase
-        .from('declarations')
-        .select('*', { count: 'exact', head: true });
-      totalDeclarations = count || 0;
+    const localDeclarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
+    const localStreaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
 
-      const { data: streakRows } = await supabase
-        .from('user_streaks')
-        .select('user_id, current_streak, longest_streak, last_activity_date')
-        .order('current_streak', { ascending: false })
-        .limit(5);
-      topStreaks = streakRows || [];
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { count } = await supabase
+          .from('declarations')
+          .select('*', { count: 'exact', head: true });
+        totalDeclarations = Math.max(count || 0, localDeclarations.length);
+      } catch (e) {
+        totalDeclarations = localDeclarations.length;
+      }
+
+      try {
+        const { data: streakRows } = await supabase
+          .from('user_streaks')
+          .select('user_id, current_streak, longest_streak, last_activity_date')
+          .order('current_streak', { ascending: false })
+          .limit(5);
+
+        const streakMap = new Map();
+        (streakRows || []).forEach(s => streakMap.set(s.user_id, s));
+        Object.entries(localStreaks).forEach(([uid, s]) => {
+          if (!streakMap.has(uid) || (s.current_streak > (streakMap.get(uid)?.current_streak || 0))) {
+            streakMap.set(uid, { user_id: uid, ...s });
+          }
+        });
+        topStreaks = Array.from(streakMap.values()).sort((a, b) => (b.current_streak || 0) - (a.current_streak || 0)).slice(0, 5);
+      } catch (e) {
+        topStreaks = Object.values(localStreaks).sort((a, b) => (b.current_streak || 0) - (a.current_streak || 0)).slice(0, 5);
+      }
     } else {
-      const declarations = JSON.parse(localStorage.getItem('slap_declarations') || '[]');
-      totalDeclarations = declarations.length;
-      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
-      topStreaks = Object.values(streaks)
+      totalDeclarations = localDeclarations.length;
+      topStreaks = Object.values(localStreaks)
         .sort((a, b) => (b.current_streak || 0) - (a.current_streak || 0))
         .slice(0, 5);
     }
@@ -1465,17 +1557,27 @@ export const dbService = {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required");
 
+    const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
+    const localStreaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+
     if (isSupabaseConfigured && supabase) {
-      const [profilesRes, reportsRes, streaksRes] = await Promise.all([
-        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('slap_reports').select('user_id'),
-        supabase.from('user_streaks').select('user_id, current_streak, longest_streak, last_activity_date')
-      ]);
+      let supabaseProfiles = [];
+      let cloudReports = [];
+      let streaksArr = [];
 
-      if (profilesRes.error) console.error("Error fetching users from Supabase:", profilesRes.error);
-
-      const supabaseProfiles = profilesRes.data || [];
-      const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+      try {
+        const [profilesRes, reportsRes, streaksRes] = await Promise.all([
+          supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+          supabase.from('slap_reports').select('user_id'),
+          supabase.from('user_streaks').select('user_id, current_streak, longest_streak, last_activity_date')
+        ]);
+        supabaseProfiles = profilesRes?.data || [];
+        cloudReports = reportsRes?.data || [];
+        streaksArr = streaksRes?.data || [];
+      } catch (e) {
+        console.warn("Supabase getAllUsers warning:", e?.message);
+      }
 
       // Harmonize cloud and local participants into a single consolidated roster
       const combinedUserMap = new Map();
@@ -1499,20 +1601,28 @@ export const dbService = {
       });
 
       const users = Array.from(combinedUserMap.values());
-      const reports = reportsRes.data || [];
-      const streaksArr = streaksRes.data || [];
       const streaksMap = Object.fromEntries(streaksArr.map(s => [s.user_id, s]));
+      const allReports = [...cloudReports, ...localReports];
 
       const rawUserList = users.map(u => {
-        const userReports = reports.filter(r => r.user_id === u.id);
-        const userStreak = streaksMap[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
+        const uEmail = (u.email || '').toLowerCase().trim();
+        const userReports = allReports.filter(r => 
+          (r.user_id && r.user_id === u.id) ||
+          (uEmail && r.userEmail && r.userEmail.toLowerCase().trim() === uEmail)
+        );
+        const cloudStreak = streaksMap[u.id] || {};
+        const localStreak = localStreaks[u.id] || {};
+        const curStreak = Math.max(cloudStreak.current_streak || 0, localStreak.current_streak || 0);
+        const longStreak = Math.max(cloudStreak.longest_streak || 0, localStreak.longest_streak || 0);
+        const lastAct = cloudStreak.last_activity_date || localStreak.last_activity_date || null;
+
         return {
           ...u,
           totalSubmissions: userReports.length,
           loginCount: u.login_count || 1,
-          current_streak: userStreak.current_streak || 0,
-          longest_streak: userStreak.longest_streak || 0,
-          last_activity_date: userStreak.last_activity_date,
+          current_streak: curStreak,
+          longest_streak: longStreak,
+          last_activity_date: lastAct,
           isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
         };
       });
@@ -1525,7 +1635,7 @@ export const dbService = {
           emailMap.set(cleanEmail, { ...u, totalLogins: u.loginCount || 1 });
         } else {
           const existing = emailMap.get(cleanEmail);
-          existing.totalSubmissions = (existing.totalSubmissions || 0) + (u.totalSubmissions || 0);
+          existing.totalSubmissions = Math.max(existing.totalSubmissions || 0, u.totalSubmissions || 0);
           existing.totalLogins = (existing.totalLogins || 1) + (u.loginCount || 1);
           existing.current_streak = Math.max(existing.current_streak || 0, u.current_streak || 0);
           existing.longest_streak = Math.max(existing.longest_streak || 0, u.longest_streak || 0);
@@ -1535,13 +1645,15 @@ export const dbService = {
       });
       return Array.from(emailMap.values());
     } else {
-      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      const reports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
-      const streaks = JSON.parse(localStorage.getItem('slap_streaks') || '{}');
+      const allReports = localReports;
 
-      const rawUserList = users.map(u => {
-        const userReports = reports.filter(r => r.user_id === u.id);
-        const userStreak = streaks[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
+      const rawUserList = localUsers.map(u => {
+        const uEmail = (u.email || '').toLowerCase().trim();
+        const userReports = allReports.filter(r => 
+          (r.user_id && r.user_id === u.id) ||
+          (uEmail && r.userEmail && r.userEmail.toLowerCase().trim() === uEmail)
+        );
+        const userStreak = localStreaks[u.id] || { current_streak: 0, longest_streak: 0, last_activity_date: null };
         return {
           ...u,
           totalSubmissions: userReports.length,
@@ -1561,7 +1673,7 @@ export const dbService = {
           emailMap.set(cleanEmail, { ...u, totalLogins: u.loginCount || 1 });
         } else {
           const existing = emailMap.get(cleanEmail);
-          existing.totalSubmissions = (existing.totalSubmissions || 0) + (u.totalSubmissions || 0);
+          existing.totalSubmissions = Math.max(existing.totalSubmissions || 0, u.totalSubmissions || 0);
           existing.totalLogins = (existing.totalLogins || 1) + (u.loginCount || 1);
           existing.current_streak = Math.max(existing.current_streak || 0, u.current_streak || 0);
           existing.longest_streak = Math.max(existing.longest_streak || 0, u.longest_streak || 0);
@@ -1592,7 +1704,14 @@ export const dbService = {
             ...r,
             userName: r.profiles?.full_name || 'Participant',
             userEmail: r.profiles?.email || '',
-            userCountry: r.profiles?.country || ''
+            userCountry: r.profiles?.country || '',
+            strikingVerses: r.striking_verses || r.strikingVerses || '',
+            striking_verses: r.striking_verses || r.strikingVerses || '',
+            lessonsLearnt: r.lessons_learnt || r.lessonsLearnt || '',
+            lessons_learnt: r.lessons_learnt || r.lessonsLearnt || '',
+            actionPlans: r.action_plans || r.actionPlans || '',
+            action_plans: r.action_plans || r.actionPlans || '',
+            prayers: r.prayers || ''
           }));
         }
       } catch (e) {
@@ -1603,12 +1722,23 @@ export const dbService = {
     const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
     const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
     const formattedLocal = localReports.map(r => {
-      const u = users.find(user => user.id === r.user_id || (user.email && r.userEmail === user.email));
+      const rEmail = (r.userEmail || '').toLowerCase().trim();
+      const u = users.find(user => 
+        (user.id && user.id === r.user_id) || 
+        (rEmail && (user.email || '').toLowerCase().trim() === rEmail)
+      );
       return {
         ...r,
-        userName: u?.user_metadata?.full_name || u?.fullName || r.userName || 'Participant',
-        userEmail: u?.email || r.userEmail || '',
-        userCountry: u?.country || u?.user_metadata?.country || r.userCountry || ''
+        userName: r.userName || u?.user_metadata?.full_name || u?.fullName || 'Participant',
+        userEmail: r.userEmail || u?.email || '',
+        userCountry: r.userCountry || u?.country || u?.user_metadata?.country || '',
+        strikingVerses: r.strikingVerses || r.striking_verses || '',
+        striking_verses: r.striking_verses || r.strikingVerses || '',
+        lessonsLearnt: r.lessonsLearnt || r.lessons_learnt || '',
+        lessons_learnt: r.lessons_learnt || r.lessonsLearnt || '',
+        actionPlans: r.actionPlans || r.action_plans || '',
+        action_plans: r.action_plans || r.actionPlans || '',
+        prayers: r.prayers || ''
       };
     });
 

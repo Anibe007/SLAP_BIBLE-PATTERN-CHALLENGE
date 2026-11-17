@@ -611,8 +611,14 @@ export default function Dashboard() {
     const cleanActions = (actionPlans || '').trim();
     const cleanPrayers = (prayers || '').trim();
 
-    if (!cleanStriking || !cleanLessons || !cleanActions || !cleanPrayers) {
-      setError('Please fill in all four elements of the SLAP report (Striking Verses, Lessons Learnt, Action Plans, and Prayers).');
+    const missingFields = [];
+    if (!cleanStriking) missingFields.push('S – Striking Verses');
+    if (!cleanLessons)  missingFields.push('L – Lessons Learnt');
+    if (!cleanActions)  missingFields.push('A – Action Plans');
+    if (!cleanPrayers)  missingFields.push('P – Prayers');
+
+    if (missingFields.length > 0) {
+      setError(`Please complete: ${missingFields.join(', ')} before submitting your devotion.`);
       return;
     }
 
@@ -627,7 +633,7 @@ export default function Dashboard() {
         lessonsLearnt: cleanLessons,
         actionPlans: cleanActions,
         prayers: cleanPrayers
-      });
+      }, user);
 
       const updatedStreak = response?.streak?.current_streak || (streak?.current_streak ? streak.current_streak + 1 : 1);
 

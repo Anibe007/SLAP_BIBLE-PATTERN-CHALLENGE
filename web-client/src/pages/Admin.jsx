@@ -158,6 +158,25 @@ export default function Admin() {
 
   useEffect(() => {
     loadAdminData();
+
+    // Listen for live updates when reports are submitted or stats change
+    const handleLiveUpdate = () => {
+      loadAdminData();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('slap_reports_updated', handleLiveUpdate);
+      window.addEventListener('slap_stats_updated', handleLiveUpdate);
+      window.addEventListener('storage', handleLiveUpdate);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('slap_reports_updated', handleLiveUpdate);
+        window.removeEventListener('slap_stats_updated', handleLiveUpdate);
+        window.removeEventListener('storage', handleLiveUpdate);
+      }
+    };
   }, [isAdmin]);
 
   const handleToggleAdminPermission = async (targetUser) => {
