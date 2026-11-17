@@ -392,7 +392,7 @@ export default function Partner() {
               <img
                 src="/david-anibe.jpg"
                 alt="David Anibe"
-                style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(178,13,48,0.5)' }}
+                style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', border: '2px solid rgba(178,13,48,0.5)' }}
                 onError={e => { e.target.style.display = 'none'; }}
               />
               <div style={{ textAlign: 'left' }}>
