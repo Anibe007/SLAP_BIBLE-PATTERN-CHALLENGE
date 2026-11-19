@@ -78,14 +78,19 @@ export const testSupabaseConnection = async (customUrl = null, customKey = null)
     const testClient = createClient(urlToTest, keyToTest, {
       auth: { persistSession: false }
     });
-    const { error } = await testClient.from('profiles').select('id', { count: 'exact', head: true });
-    if (error && error.code !== 'PGRST116') {
-      // If table doesn't exist yet, connection is still valid
-      if (error.message?.includes('does not exist') || error.code === '42P01') {
+    const { data, error } = await testClient.from('profiles').select('id').limit(1);
+    if (error) {
+      if (
+        error.code === 'PGRST205' ||
+        error.code === '42P01' ||
+        error.message?.includes('schema cache') ||
+        error.message?.includes('does not exist')
+      ) {
         return {
-          connected: true,
-          mode: 'supabase_cloud',
-          message: 'Connected to Supabase! (Note: Run supabase_schema.sql in Supabase SQL editor to create tables).'
+          connected: false,
+          needsSchema: true,
+          mode: 'missing_tables',
+          message: 'Connected to Supabase project, but the database tables (public.profiles) have not been created yet! Please copy and run supabase_schema.sql in your Supabase SQL Editor.'
         };
       }
       throw error;

@@ -460,7 +460,16 @@ export const dbService = {
           if (error.message?.toLowerCase().includes('already registered')) {
             throw new Error("An account with this email is already registered. Please sign in instead.");
           }
-          console.warn("Supabase auth signUp warning:", error.message);
+          if (error.code === 'over_email_send_rate_limit' || error.message?.toLowerCase().includes('rate limit')) {
+            throw new Error("Supabase email rate limit exceeded. In your Supabase Dashboard under Authentication ➔ Providers ➔ Email, please turn OFF 'Confirm email' to allow unlimited instant participant signups.");
+          }
+          if (error.code === 'weak_password') {
+            throw new Error("Password must be at least 6 characters long.");
+          }
+          if (error.code === 'email_address_invalid') {
+            throw new Error("Please enter a valid, deliverable email address.");
+          }
+          throw new Error(error.message || "Registration failed on Supabase Cloud.");
         }
 
         if (data?.user) {
@@ -468,7 +477,7 @@ export const dbService = {
           userId = data.user.id;
 
           try {
-            await supabase
+            const { error: pErr } = await supabase
               .from('profiles')
               .upsert({
                 id: data.user.id,
@@ -479,12 +488,15 @@ export const dbService = {
                 role: 'user',
                 updated_at: new Date().toISOString()
               });
+            if (pErr) {
+              console.warn("Supabase profiles upsert warning:", pErr.message);
+            }
           } catch (pe) {
-            console.warn("Supabase profiles upsert warning:", pe?.message);
+            console.warn("Supabase profiles upsert exception:", pe?.message);
           }
 
           try {
-            await supabase
+            const { error: sErr } = await supabase
               .from('user_streaks')
               .upsert({
                 user_id: data.user.id,
@@ -492,15 +504,15 @@ export const dbService = {
                 longest_streak: 0,
                 last_activity_date: null
               });
+            if (sErr) {
+              console.warn("Supabase user_streaks upsert warning:", sErr.message);
+            }
           } catch (se) {
-            console.warn("Supabase user_streaks upsert warning:", se?.message);
+            console.warn("Supabase user_streaks upsert exception:", se?.message);
           }
         }
       } catch (authErr) {
-        if (authErr.message?.includes('already registered')) {
-          throw authErr;
-        }
-        console.warn("Supabase signUp exception:", authErr);
+        throw authErr;
       }
     }
 
@@ -592,7 +604,16 @@ export const dbService = {
           if (error.message?.toLowerCase().includes('already registered')) {
             throw new Error("An account with this email is already registered. Please sign in instead.");
           }
-          console.warn("Supabase auth signUp admin warning:", error.message);
+          if (error.code === 'over_email_send_rate_limit' || error.message?.toLowerCase().includes('rate limit')) {
+            throw new Error("Supabase email rate limit exceeded. In your Supabase Dashboard under Authentication ➔ Providers ➔ Email, please turn OFF 'Confirm email'.");
+          }
+          if (error.code === 'weak_password') {
+            throw new Error("Password must be at least 6 characters long.");
+          }
+          if (error.code === 'email_address_invalid') {
+            throw new Error("Please enter a valid, deliverable email address.");
+          }
+          throw new Error(error.message || "Admin registration failed on Supabase Cloud.");
         }
 
         if (data?.user) {
@@ -629,10 +650,7 @@ export const dbService = {
           }
         }
       } catch (authErr) {
-        if (authErr.message?.includes('already registered')) {
-          throw authErr;
-        }
-        console.warn("Supabase signUp admin exception:", authErr);
+        throw authErr;
       }
     }
 
@@ -803,6 +821,42 @@ export const dbService = {
         if (userIdx !== -1) localUsers[userIdx].login_count = matchingLocalUser.login_count;
         localStorage.setItem('slap_users', JSON.stringify(localUsers));
         localStorage.setItem('slap_current_user', JSON.stringify(matchingLocalUser));
+
+        // Background automatic sync to Supabase Cloud if account only existed locally
+        if (isSupabaseConfigured && supabase && !matchingLocalUser.synced_to_cloud) {
+          supabase.auth.signUp({
+            email: cleanEmail,
+            password: cleanPassword,
+            options: {
+              data: {
+                full_name: matchingLocalUser.fullName || matchingLocalUser.full_name || 'Participant',
+                country: matchingLocalUser.country || 'Global',
+                is_admin: !!matchingLocalUser.is_admin,
+                role: matchingLocalUser.role || 'user'
+              }
+            }
+          }).then(async ({ data: syncData }) => {
+            if (syncData?.user) {
+              matchingLocalUser.id = syncData.user.id;
+              matchingLocalUser.synced_to_cloud = true;
+              localStorage.setItem('slap_users', JSON.stringify(localUsers));
+              localStorage.setItem('slap_current_user', JSON.stringify(matchingLocalUser));
+
+              await supabase.from('profiles').upsert({
+                id: syncData.user.id,
+                email: cleanEmail,
+                full_name: matchingLocalUser.fullName || 'Participant',
+                country: matchingLocalUser.country || 'Global',
+                is_admin: !!matchingLocalUser.is_admin,
+                role: matchingLocalUser.role || 'user',
+                updated_at: new Date().toISOString()
+              }).catch(() => {});
+            }
+          }).catch(err => {
+            console.warn("Background cloud sync on login:", err?.message);
+          });
+        }
+
         return matchingLocalUser;
       } else {
         throw new Error("Incorrect password. Please verify your password or use 'Forgot Password' to reset it.");
@@ -1572,6 +1626,17 @@ export const dbService = {
           supabase.from('slap_reports').select('user_id'),
           supabase.from('user_streaks').select('user_id, current_streak, longest_streak, last_activity_date')
         ]);
+
+        if (profilesRes?.error && (profilesRes.error.code === 'PGRST205' || profilesRes.error.message?.includes('schema cache'))) {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('slap_cloud_tables_missing', { detail: true }));
+          }
+        } else if (profilesRes?.data) {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('slap_cloud_tables_missing', { detail: false }));
+          }
+        }
+
         supabaseProfiles = profilesRes?.data || [];
         cloudReports = reportsRes?.data || [];
         streaksArr = streaksRes?.data || [];

@@ -43,6 +43,7 @@ export default function Admin() {
   const [cloudTesting, setCloudTesting] = useState(false);
   const [hideBanner, setHideBanner] = useState(() => localStorage.getItem('slap_hide_cloud_banner') === 'true');
   const [copiedSchema, setCopiedSchema] = useState(false);
+  const [cloudTablesMissing, setCloudTablesMissing] = useState(false);
 
   // Admin Password Change State
   const [currentPass, setCurrentPass] = useState('');
@@ -148,6 +149,17 @@ export default function Admin() {
         setMetrics(metricsData);
         setUsers(usersData);
         setReports(reportsData);
+
+        if (isSupabaseConfigured && supabase) {
+          try {
+            const { error: chkErr } = await supabase.from('profiles').select('id').limit(1);
+            if (chkErr && (chkErr.code === 'PGRST205' || chkErr.message?.includes('schema cache') || chkErr.message?.includes('does not exist'))) {
+              setCloudTablesMissing(true);
+            } else {
+              setCloudTablesMissing(false);
+            }
+          } catch (e) { }
+        }
       }
     } catch (err) {
       console.error("Error loading admin data:", err);
@@ -164,9 +176,14 @@ export default function Admin() {
       loadAdminData();
     };
 
+    const handleTablesMissing = (e) => {
+      setCloudTablesMissing(!!e.detail);
+    };
+
     if (typeof window !== 'undefined') {
       window.addEventListener('slap_reports_updated', handleLiveUpdate);
       window.addEventListener('slap_stats_updated', handleLiveUpdate);
+      window.addEventListener('slap_cloud_tables_missing', handleTablesMissing);
       window.addEventListener('storage', handleLiveUpdate);
     }
 
@@ -174,6 +191,7 @@ export default function Admin() {
       if (typeof window !== 'undefined') {
         window.removeEventListener('slap_reports_updated', handleLiveUpdate);
         window.removeEventListener('slap_stats_updated', handleLiveUpdate);
+        window.removeEventListener('slap_cloud_tables_missing', handleTablesMissing);
         window.removeEventListener('storage', handleLiveUpdate);
       }
     };
@@ -503,6 +521,73 @@ export default function Admin() {
           >
             <Lock size={14} /> Change Password Now
           </button>
+        </div>
+      )}
+
+      {/* Supabase Database Tables Missing Banner */}
+      {isSupabaseConfigured && cloudTablesMissing && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(184, 134, 11, 0.08))',
+          border: '1.5px solid rgba(239, 68, 68, 0.4)',
+          borderRadius: '16px',
+          padding: '20px 24px',
+          marginBottom: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '16px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', maxWidth: '780px' }}>
+            <div style={{
+              width: '44px', height: '44px', borderRadius: '12px',
+              background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+              <AlertCircle size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#f87171', marginBottom: '4px' }}>
+                Supabase Tables Not Created Yet (public.profiles table missing)
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                Your project is connected to Supabase, but the required database tables have not been created yet. Because of this, participant registrations from different devices cannot sync to Supabase.
+                <div style={{ marginTop: '8px', padding: '10px 14px', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', borderLeft: '3px solid var(--accent-gold)' }}>
+                  <strong>To enable multi-device sync in 2 quick steps:</strong>
+                  <ol style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
+                    <li>Click <strong>Copy Database SQL</strong> below and paste &amp; run it in your <a href="https://supabase.com/dashboard/project/txtagmgzfhcdbabkakgv/sql/new" target="_blank" rel="noopener noreferrer" style={{ color: '#fbbf24', textDecoration: 'underline', fontWeight: '700' }}>Supabase SQL Editor</a>.</li>
+                    <li>In Supabase Dashboard under <strong>Authentication ➔ Providers ➔ Email</strong>, turn <strong>OFF "Confirm email"</strong> so participant signups don't hit the free email rate limit.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleCopySchemaSQL}
+              className="btn-primary"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px',
+                padding: '11px 18px', background: 'var(--accent-gold)', color: '#1a1409', fontWeight: '800'
+              }}
+            >
+              {copiedSchema ? <Check size={16} /> : <Copy size={16} />}
+              {copiedSchema ? 'SQL Copied to Clipboard!' : 'Copy Database SQL'}
+            </button>
+            <a
+              href="https://supabase.com/dashboard/project/txtagmgzfhcdbabkakgv/sql/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px',
+                padding: '11px 16px', textDecoration: 'none'
+              }}
+            >
+              <ExternalLink size={15} /> Open Supabase SQL Editor
+            </a>
+          </div>
         </div>
       )}
 
