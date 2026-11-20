@@ -1222,13 +1222,13 @@ export const dbService = {
       try {
         const stored = typeof window !== 'undefined' ? localStorage.getItem('slap_current_user') : null;
         if (stored) user = JSON.parse(stored);
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!user) {
       try {
         const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
         if (localUsers.length > 0) user = localUsers[localUsers.length - 1];
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!user) {
       throw new Error("Authentication required to submit devotion report. Please sign in or register.");
@@ -1238,7 +1238,7 @@ export const dbService = {
       user.id = 'u-' + Date.now() + '-' + Math.random().toString(36).substr(2, 7);
       try {
         localStorage.setItem('slap_current_user', JSON.stringify(user));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -1296,7 +1296,7 @@ export const dbService = {
     };
     try {
       localStorage.setItem('slap_streaks', JSON.stringify(streaks));
-    } catch (e) {}
+    } catch (e) { }
 
     // 2. Synchronize to Supabase Cloud if configured & user ID is valid UUID
     let cloudSynced = false;
@@ -1358,12 +1358,12 @@ export const dbService = {
     let user = null;
     try {
       user = await this.getCurrentUser();
-    } catch (e) {}
+    } catch (e) { }
     if (!user) {
       try {
         const stored = typeof window !== 'undefined' ? localStorage.getItem('slap_current_user') : null;
         if (stored) user = JSON.parse(stored);
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!user) return [];
 
@@ -1395,8 +1395,8 @@ export const dbService = {
 
     const localReports = JSON.parse(localStorage.getItem('slap_reports') || '[]');
     const userEmail = (user.email || '').toLowerCase().trim();
-    const userLocalReports = localReports.filter(r => 
-      (user.id && r.user_id === user.id) || 
+    const userLocalReports = localReports.filter(r =>
+      (user.id && r.user_id === user.id) ||
       (userEmail && r.userEmail && r.userEmail.toLowerCase().trim() === userEmail)
     ).map(r => ({
       ...r,
@@ -1671,7 +1671,7 @@ export const dbService = {
 
       const rawUserList = users.map(u => {
         const uEmail = (u.email || '').toLowerCase().trim();
-        const userReports = allReports.filter(r => 
+        const userReports = allReports.filter(r =>
           (r.user_id && r.user_id === u.id) ||
           (uEmail && r.userEmail && r.userEmail.toLowerCase().trim() === uEmail)
         );
@@ -1714,7 +1714,7 @@ export const dbService = {
 
       const rawUserList = localUsers.map(u => {
         const uEmail = (u.email || '').toLowerCase().trim();
-        const userReports = allReports.filter(r => 
+        const userReports = allReports.filter(r =>
           (r.user_id && r.user_id === u.id) ||
           (uEmail && r.userEmail && r.userEmail.toLowerCase().trim() === uEmail)
         );
@@ -1788,8 +1788,8 @@ export const dbService = {
     const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
     const formattedLocal = localReports.map(r => {
       const rEmail = (r.userEmail || '').toLowerCase().trim();
-      const u = users.find(user => 
-        (user.id && user.id === r.user_id) || 
+      const u = users.find(user =>
+        (user.id && user.id === r.user_id) ||
         (rEmail && (user.email || '').toLowerCase().trim() === rEmail)
       );
       return {
