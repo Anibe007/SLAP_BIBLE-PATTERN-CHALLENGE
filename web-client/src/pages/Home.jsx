@@ -472,19 +472,23 @@ export default function Home() {
               </div>
             </AnimateOnScroll>
 
-            {/* Decorative Preview Card — Changes Daily & Unique per Name */}
+            {/* Daily Scripture Proclamation — Seamlessly Integrated into Background Image */}
             <AnimateOnScroll animation="fadeRight" delay={200}>
               <div style={{
                 position: 'relative',
-                borderRadius: '20px',
-                minHeight: '430px',
+                borderRadius: '24px',
+                minHeight: '460px',
                 display: 'flex',
-                alignItems: 'center',
+                flexDirection: 'column',
                 justifyContent: 'center',
-                boxShadow: 'var(--card-shadow)',
+                alignItems: 'center',
+                boxShadow: '0 25px 60px -15px rgba(10, 16, 40, 0.35)',
                 overflow: 'hidden',
-                padding: '36px 20px'
+                padding: 'clamp(28px, 4vw, 42px) clamp(20px, 4vw, 36px)',
+                border: '1px solid rgba(212, 160, 23, 0.25)',
+                textAlign: 'center'
               }}>
+                {/* Existing Background Image */}
                 <img
                   src="/home-ispeak-ideclare.jpg"
                   alt="iSpeak & iDeclare Scripture"
@@ -497,113 +501,156 @@ export default function Home() {
                     objectFit: 'cover'
                   }}
                 />
+                {/* Seamless ambient overlay to ensure perfect contrast directly on the image */}
                 <div style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'linear-gradient(135deg, rgba(16, 31, 85, 0.45) 0%, rgba(10, 17, 50, 0.65) 100%)'
+                  background: 'linear-gradient(180deg, rgba(8, 14, 38, 0.72) 0%, rgba(12, 20, 50, 0.65) 50%, rgba(6, 10, 28, 0.88) 100%)',
+                  boxShadow: 'inset 0 0 100px rgba(0, 0, 0, 0.6)'
                 }} />
-                <div className="float" style={{
+
+                {/* Content Layer directly on background (No white card / container) */}
+                <div style={{
                   position: 'relative',
                   zIndex: 2,
-                  background: 'rgba(255, 255, 255, 0.96)',
-                  backdropFilter: 'blur(14px)',
-                  padding: '24px 22px',
-                  borderRadius: '18px',
                   width: '100%',
-                  maxWidth: '330px',
-                  border: '1px solid rgba(255,255,255,0.7)',
-                  textAlign: 'center',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                  transform: 'rotate(-1.5deg)',
-                  transition: 'all 0.3s ease'
+                  maxWidth: '460px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center'
                 }}>
-                  {/* Daily Date Badge & Navigator */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  {/* Top Bar: Date Badge & Navigation Arrows */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    marginBottom: '14px'
+                  }}>
                     <span style={{
-                      fontSize: '10px',
+                      fontSize: '11px',
                       fontWeight: '800',
-                      color: 'var(--brand-crimson)',
+                      color: '#fbbf24',
                       textTransform: 'uppercase',
                       letterSpacing: '1.2px',
-                      background: 'rgba(178,13,48,0.08)',
-                      padding: '4px 10px',
+                      background: 'rgba(212, 160, 23, 0.15)',
+                      border: '1px solid rgba(212, 160, 23, 0.35)',
+                      padding: '5px 12px',
                       borderRadius: '999px',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '5px'
+                      gap: '6px',
+                      backdropFilter: 'blur(4px)',
+                      textShadow: '0 1px 4px rgba(0,0,0,0.6)'
                     }}>
-                      <Calendar size={11} />
+                      <Calendar size={12} style={{ color: '#fbbf24' }} />
                       {dailyOffset === 0 ? `Today • ${dailyDecl.dateString}` : dailyDecl.dateString}
                     </span>
 
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <button
                         type="button"
                         onClick={() => setDailyOffset(prev => prev - 1)}
                         title="Previous Daily Scripture"
                         style={{
-                          background: 'rgba(16,31,85,0.07)',
-                          border: 'none',
-                          borderRadius: '6px',
-                          width: '26px',
-                          height: '26px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '8px',
+                          width: '28px',
+                          height: '28px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           cursor: 'pointer',
-                          color: '#101F55',
-                          transition: 'background 0.2s ease'
+                          color: '#ffffff',
+                          backdropFilter: 'blur(4px)',
+                          transition: 'all 0.2s ease'
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,31,85,0.15)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,31,85,0.07)'}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = 'rgba(212, 160, 23, 0.25)';
+                          e.currentTarget.style.borderColor = 'rgba(212, 160, 23, 0.5)';
+                          e.currentTarget.style.color = '#fbbf24';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
                       >
-                        <ChevronLeft size={14} />
+                        <ChevronLeft size={15} />
                       </button>
                       <button
                         type="button"
                         onClick={() => setDailyOffset(prev => prev + 1)}
                         title="Next Daily Scripture"
                         style={{
-                          background: 'rgba(16,31,85,0.07)',
-                          border: 'none',
-                          borderRadius: '6px',
-                          width: '26px',
-                          height: '26px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '8px',
+                          width: '28px',
+                          height: '28px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           cursor: 'pointer',
-                          color: '#101F55',
-                          transition: 'background 0.2s ease'
+                          color: '#ffffff',
+                          backdropFilter: 'blur(4px)',
+                          transition: 'all 0.2s ease'
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,31,85,0.15)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,31,85,0.07)'}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = 'rgba(212, 160, 23, 0.25)';
+                          e.currentTarget.style.borderColor = 'rgba(212, 160, 23, 0.5)';
+                          e.currentTarget.style.color = '#fbbf24';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
                       >
-                        <ChevronRight size={14} />
+                        <ChevronRight size={15} />
                       </button>
                     </div>
                   </div>
 
                   {/* Header Title & Theme */}
-                  <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '2px' }}>
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    color: '#fbbf24',
+                    textTransform: 'uppercase',
+                    letterSpacing: '2.5px',
+                    marginBottom: '4px',
+                    textShadow: '0 2px 6px rgba(0,0,0,0.7)'
+                  }}>
                     DAILY SCRIPTURE PROCLAMATION
                   </div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#101F55', marginBottom: '8px' }}>
+                  <div style={{
+                    fontSize: 'clamp(14px, 1.8vw, 17px)',
+                    fontWeight: '700',
+                    color: '#ffffff',
+                    fontFamily: 'var(--font-display)',
+                    letterSpacing: '0.5px',
+                    marginBottom: '10px',
+                    textShadow: '0 2px 10px rgba(0,0,0,0.8)'
+                  }}>
                     {dailyDecl.theme}
                   </div>
 
-                  {/* Declarant Name Input for Unique Quotes per Name */}
-                  <div style={{ marginBottom: '10px' }}>
+                  {/* Name Input for Unique Quotes per Name */}
+                  <div style={{ width: '100%', maxWidth: '340px', marginBottom: '14px' }}>
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      background: 'rgba(16, 31, 85, 0.04)',
-                      border: '1px solid rgba(16, 31, 85, 0.12)',
-                      borderRadius: '8px',
-                      padding: '4px 8px',
-                      gap: '6px'
+                      background: 'rgba(8, 14, 34, 0.6)',
+                      border: '1px solid rgba(212, 160, 23, 0.35)',
+                      borderRadius: '10px',
+                      padding: '5px 10px',
+                      gap: '8px',
+                      backdropFilter: 'blur(8px)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
                     }}>
-                      <User size={13} style={{ color: 'var(--brand-crimson)', flexShrink: 0 }} />
+                      <User size={14} style={{ color: '#fbbf24', flexShrink: 0 }} />
                       <input
                         type="text"
                         value={declarantName}
@@ -617,8 +664,8 @@ export default function Home() {
                           border: 'none',
                           outline: 'none',
                           background: 'transparent',
-                          fontSize: '11px',
-                          color: '#101F55',
+                          fontSize: '12px',
+                          color: '#ffffff',
                           width: '100%',
                           fontWeight: '600'
                         }}
@@ -633,9 +680,9 @@ export default function Home() {
                           style={{
                             border: 'none',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'rgba(255,255,255,0.6)',
                             cursor: 'pointer',
-                            fontSize: '13px',
+                            fontSize: '15px',
                             lineHeight: 1,
                             padding: '0 2px'
                           }}
@@ -645,7 +692,13 @@ export default function Home() {
                         </button>
                       )}
                     </div>
-                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px', textAlign: 'left', paddingLeft: '2px' }}>
+                    <div style={{
+                      fontSize: '11px',
+                      color: 'rgba(255, 255, 255, 0.72)',
+                      marginTop: '5px',
+                      textAlign: 'center',
+                      textShadow: '0 1px 3px rgba(0,0,0,0.8)'
+                    }}>
                       {declarantName.trim()
                         ? `✨ Unique daily scripture for ${declarantName.trim()}`
                         : '💡 Enter name for a personalized daily quote'}
@@ -653,25 +706,60 @@ export default function Home() {
                   </div>
 
                   {/* Scripture Declaration text */}
-                  <p style={{
-                    margin: '6px 0 10px',
-                    fontSize: '14px',
-                    fontStyle: 'italic',
-                    color: '#101F55',
-                    lineHeight: 1.6,
-                    fontFamily: 'var(--font-serif)',
-                    minHeight: '75px'
-                  }}>
-                    “<strong style={{ fontStyle: 'normal', fontWeight: '800', color: 'var(--brand-crimson)', marginRight: '6px', fontFamily: 'var(--font-sans)', letterSpacing: '0.3px' }}>iSPEAK &amp; iDECLARE:</strong>{dailyDecl.text}”
-                  </p>
+                  <div style={{ position: 'relative', margin: '4px 0 16px', width: '100%' }}>
+                    <p style={{
+                      margin: 0,
+                      fontSize: 'clamp(15px, 2vw, 17px)',
+                      fontStyle: 'italic',
+                      color: 'rgba(255, 255, 255, 0.96)',
+                      lineHeight: 1.7,
+                      fontFamily: 'var(--font-serif)',
+                      textShadow: '0 2px 12px rgba(0, 0, 0, 0.9)'
+                    }}>
+                      “<strong style={{
+                        fontStyle: 'normal',
+                        fontWeight: '800',
+                        color: '#fbbf24',
+                        marginRight: '6px',
+                        fontFamily: 'var(--font-sans)',
+                        letterSpacing: '0.4px',
+                        textShadow: '0 2px 8px rgba(0,0,0,0.8)'
+                      }}>iSPEAK &amp; iDECLARE:</strong>{dailyDecl.text}”
+                    </p>
+                  </div>
 
                   {/* Scripture Reference & Declarant */}
-                  <div style={{ borderTop: '1px solid rgba(16,31,85,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--brand-crimson)' }}>
+                  <div style={{
+                    borderTop: '1px solid rgba(212, 160, 23, 0.3)',
+                    paddingTop: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    width: '100%'
+                  }}>
+                    <span style={{
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: '#fbbf24',
+                      textShadow: '0 1px 6px rgba(0,0,0,0.8)'
+                    }}>
                       — {dailyDecl.ref}
                     </span>
                     {declarantName.trim() && (
-                      <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#ffffff',
+                        background: 'rgba(212, 160, 23, 0.22)',
+                        border: '1px solid rgba(212, 160, 23, 0.45)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.8px',
+                        padding: '3px 10px',
+                        borderRadius: '999px',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.7)'
+                      }}>
                         Declarant: {declarantName.trim()}
                       </span>
                     )}
