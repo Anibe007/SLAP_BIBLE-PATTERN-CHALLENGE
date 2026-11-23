@@ -16,6 +16,7 @@ import {
   TrendingUp, Activity, Award, Clock, Zap, Cloud, Settings, ExternalLink, Copy, Check
 } from 'lucide-react';
 import AnimateOnScroll from '../components/AnimateOnScroll';
+import CountUp from '../components/CountUp';
 import { printOrDownloadSingleReport } from './Dashboard';
 
 export default function Admin() {
@@ -708,38 +709,326 @@ export default function Admin() {
         </div>
       )}
 
-      {/* KPI Overview Metrics */}
-      <div className="stats-grid" style={{ marginBottom: '32px' }}>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(212, 160, 23, 0.15)', color: 'var(--accent-gold)' }}>
-            <Users size={24} />
+      {/* ─── Live Data Update Section (Inside Home-style Glowing Card) ─── */}
+      <div
+        className="glass-card glow-card-dual"
+        style={{
+          borderRadius: '20px',
+          padding: 'clamp(22px, 3vw, 32px)',
+          marginBottom: '32px',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--card-shadow), var(--card-glow)',
+          background: 'var(--bg-secondary)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Subtle ambient corner glow consistent with Home Page styling */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '-60px',
+            right: '-60px',
+            width: '180px',
+            height: '180px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(212, 160, 23, 0.12) 0%, transparent 70%)',
+            pointerEvents: 'none',
+            zIndex: 0
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-60px',
+            left: '-60px',
+            width: '180px',
+            height: '180px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(178, 13, 48, 0.08) 0%, transparent 70%)',
+            pointerEvents: 'none',
+            zIndex: 0
+          }}
+        />
+
+        {/* Section Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '14px',
+            marginBottom: '24px',
+            paddingBottom: '16px',
+            borderBottom: '1px solid var(--border-color)',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            {/* Live Data Badge matching Home Page */}
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(34,197,94,0.12)',
+                border: '1px solid rgba(34,197,94,0.35)',
+                color: '#16a34a',
+                fontSize: '11px',
+                fontWeight: '800',
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+                padding: '4px 12px',
+                borderRadius: '999px'
+              }}
+            >
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#22c55e',
+                  display: 'inline-block',
+                  animation: 'wa-pulse 1.8s ease-in-out infinite'
+                }}
+              />
+              Live Data Update
+            </span>
+
+            <div>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: '20px',
+                  fontWeight: '800',
+                  color: 'var(--text-primary)',
+                  letterSpacing: '-0.3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                Live Platform Analytics
+              </h2>
+              <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Metrics update in real time as participants register, read scripture, and submit daily SLAP reports.
+              </p>
+            </div>
           </div>
-          <div className="stat-value">{metrics?.totalParticipants || users.length}</div>
-          <div className="stat-label">Total Participants</div>
+
+          <button
+            type="button"
+            onClick={loadAdminData}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              background: 'rgba(16, 31, 85, 0.04)',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title="Sync latest live updates"
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(16, 31, 85, 0.08)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(16, 31, 85, 0.04)'}
+          >
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+            <span>Sync Live</span>
+          </button>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
-            <BookOpen size={24} />
+        {/* 4 KPI Grid Cards matching Home Page styling */}
+        <div className="grid-4" style={{ position: 'relative', zIndex: 1 }}>
+          {/* Card 1: Total Participants */}
+          <div
+            className="glass-card"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '12px',
+              padding: '24px 16px',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--card-shadow), var(--card-glow)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <div
+              style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '12px',
+                background: 'rgba(212, 160, 23, 0.12)',
+                color: 'var(--accent-gold)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Users size={26} />
+            </div>
+            <CountUp
+              end={metrics?.totalParticipants || users.length}
+              duration={1200}
+              style={{
+                fontSize: '32px',
+                fontWeight: '800',
+                color: 'var(--text-primary)',
+                lineHeight: 1,
+                fontFamily: 'var(--font-serif)'
+              }}
+            />
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+              Total Participants
+            </span>
           </div>
-          <div className="stat-value">{metrics?.todaySubmissions || 0}</div>
-          <div className="stat-label">Today's Daily Entries</div>
-        </div>
 
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e' }}>
-            <Flame size={24} />
+          {/* Card 2: Today's Daily Entries */}
+          <div
+            className="glass-card"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '12px',
+              padding: '24px 16px',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--card-shadow), var(--card-glow)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <div
+              style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '12px',
+                background: 'rgba(16, 185, 129, 0.12)',
+                color: '#10b981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <BookOpen size={26} />
+            </div>
+            <CountUp
+              end={metrics?.todaySubmissions || 0}
+              duration={1200}
+              style={{
+                fontSize: '32px',
+                fontWeight: '800',
+                color: 'var(--text-primary)',
+                lineHeight: 1,
+                fontFamily: 'var(--font-serif)'
+              }}
+            />
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+              Today's Daily Entries
+            </span>
           </div>
-          <div className="stat-value">{metrics?.totalSubmissions || reports.length}</div>
-          <div className="stat-label">Total SLAP Submissions</div>
-        </div>
 
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4' }}>
-            <Globe size={24} />
+          {/* Card 3: Total SLAP Submissions */}
+          <div
+            className="glass-card"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '12px',
+              padding: '24px 16px',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--card-shadow), var(--card-glow)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <div
+              style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '12px',
+                background: 'rgba(244, 63, 94, 0.12)',
+                color: '#f43f5e',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Flame size={26} />
+            </div>
+            <CountUp
+              end={metrics?.totalSubmissions || reports.length}
+              duration={1200}
+              style={{
+                fontSize: '32px',
+                fontWeight: '800',
+                color: 'var(--text-primary)',
+                lineHeight: 1,
+                fontFamily: 'var(--font-serif)'
+              }}
+            />
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+              Total SLAP Submissions
+            </span>
           </div>
-          <div className="stat-value">{metrics?.nationsReached || allCountries.length}</div>
-          <div className="stat-label">Nations Reached</div>
+
+          {/* Card 4: Nations Reached */}
+          <div
+            className="glass-card"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '12px',
+              padding: '24px 16px',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--card-shadow), var(--card-glow)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <div
+              style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '12px',
+                background: 'rgba(6, 182, 212, 0.12)',
+                color: '#06b6d4',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Globe size={26} />
+            </div>
+            <CountUp
+              end={metrics?.nationsReached || allCountries.length}
+              duration={1200}
+              style={{
+                fontSize: '32px',
+                fontWeight: '800',
+                color: 'var(--text-primary)',
+                lineHeight: 1,
+                fontFamily: 'var(--font-serif)'
+              }}
+            />
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+              Nations Reached
+            </span>
+          </div>
         </div>
       </div>
 
