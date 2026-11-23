@@ -280,7 +280,7 @@ export default function DailyDevotion() {
       </AnimateOnScroll>
 
       {/* Main Grid: Left Scripture Reader | Right SLAP Form */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '28px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 'clamp(16px, 3vw, 28px)' }}>
         
         {/* LEFT COLUMN: Scripture Reader & Passage Chooser */}
         <AnimateOnScroll animation="fadeInLeft">

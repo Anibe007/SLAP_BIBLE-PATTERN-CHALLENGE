@@ -608,7 +608,7 @@ export default function Admin() {
             gap: '16px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '280px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: 0, maxWidth: '100%' }}>
               <div style={{
                 width: '42px', height: '42px', borderRadius: '12px',
                 background: 'rgba(234, 179, 8, 0.2)', color: '#eab308',
@@ -630,7 +630,7 @@ export default function Admin() {
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setShowCloudModal(true)}
                 className="btn-primary"
@@ -855,11 +855,13 @@ export default function Admin() {
               alignItems: 'center',
               textAlign: 'center',
               gap: '12px',
-              padding: '24px 16px',
+              padding: 'clamp(18px, 2.5vw, 24px) 16px',
               borderRadius: '16px',
               border: '1px solid var(--border-color)',
               boxShadow: 'var(--card-shadow), var(--card-glow)',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              minWidth: 0,
+              width: '100%'
             }}
           >
             <div
@@ -871,7 +873,8 @@ export default function Admin() {
                 color: 'var(--accent-gold)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}
             >
               <Users size={26} />
@@ -880,7 +883,7 @@ export default function Admin() {
               end={metrics?.totalParticipants || users.length}
               duration={1200}
               style={{
-                fontSize: '32px',
+                fontSize: 'clamp(26px, 3vw, 32px)',
                 fontWeight: '800',
                 color: 'var(--text-primary)',
                 lineHeight: 1,
@@ -901,11 +904,13 @@ export default function Admin() {
               alignItems: 'center',
               textAlign: 'center',
               gap: '12px',
-              padding: '24px 16px',
+              padding: 'clamp(18px, 2.5vw, 24px) 16px',
               borderRadius: '16px',
               border: '1px solid var(--border-color)',
               boxShadow: 'var(--card-shadow), var(--card-glow)',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              minWidth: 0,
+              width: '100%'
             }}
           >
             <div
@@ -917,7 +922,8 @@ export default function Admin() {
                 color: '#10b981',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}
             >
               <BookOpen size={26} />
@@ -926,7 +932,7 @@ export default function Admin() {
               end={metrics?.todaySubmissions || 0}
               duration={1200}
               style={{
-                fontSize: '32px',
+                fontSize: 'clamp(26px, 3vw, 32px)',
                 fontWeight: '800',
                 color: 'var(--text-primary)',
                 lineHeight: 1,
@@ -947,11 +953,13 @@ export default function Admin() {
               alignItems: 'center',
               textAlign: 'center',
               gap: '12px',
-              padding: '24px 16px',
+              padding: 'clamp(18px, 2.5vw, 24px) 16px',
               borderRadius: '16px',
               border: '1px solid var(--border-color)',
               boxShadow: 'var(--card-shadow), var(--card-glow)',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              minWidth: 0,
+              width: '100%'
             }}
           >
             <div
@@ -963,7 +971,8 @@ export default function Admin() {
                 color: '#f43f5e',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}
             >
               <Flame size={26} />
@@ -972,7 +981,7 @@ export default function Admin() {
               end={metrics?.totalSubmissions || reports.length}
               duration={1200}
               style={{
-                fontSize: '32px',
+                fontSize: 'clamp(26px, 3vw, 32px)',
                 fontWeight: '800',
                 color: 'var(--text-primary)',
                 lineHeight: 1,
@@ -993,11 +1002,13 @@ export default function Admin() {
               alignItems: 'center',
               textAlign: 'center',
               gap: '12px',
-              padding: '24px 16px',
+              padding: 'clamp(18px, 2.5vw, 24px) 16px',
               borderRadius: '16px',
               border: '1px solid var(--border-color)',
               boxShadow: 'var(--card-shadow), var(--card-glow)',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              minWidth: 0,
+              width: '100%'
             }}
           >
             <div
@@ -1009,7 +1020,8 @@ export default function Admin() {
                 color: '#06b6d4',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}
             >
               <Globe size={26} />
@@ -1018,7 +1030,7 @@ export default function Admin() {
               end={metrics?.nationsReached || allCountries.length}
               duration={1200}
               style={{
-                fontSize: '32px',
+                fontSize: 'clamp(26px, 3vw, 32px)',
                 fontWeight: '800',
                 color: 'var(--text-primary)',
                 lineHeight: 1,
@@ -1062,9 +1074,9 @@ export default function Admin() {
 
       {/* ═══════════ TAB: PARTICIPANTS MANAGEMENT ═══════════ */}
       {activeTab === 'overview' && (
-        <div className="glass-card" style={{ padding: '24px' }}>
+        <div className="glass-card" style={{ padding: 'clamp(16px, 3vw, 24px)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h2 style={{ margin: 0, fontSize: '20px' }}>Participant Records &amp; Permissions</h2>
               <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                 View details for every registered believer and grant/revoke admin permissions.
@@ -1072,14 +1084,14 @@ export default function Admin() {
             </div>
 
             {/* Search & Country Filter */}
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', width: '240px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: '100%', maxWidth: '440px' }}>
+              <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 0, maxWidth: '100%' }}>
                 <input
                   type="text"
                   placeholder="Search participants..."
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
-                  style={{ paddingLeft: '34px', fontSize: '13px' }}
+                  style={{ width: '100%', paddingLeft: '34px', fontSize: '13px' }}
                 />
                 <Search size={14} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--text-secondary)' }} />
               </div>
@@ -1087,7 +1099,7 @@ export default function Admin() {
               <select
                 value={selectedCountryFilter}
                 onChange={e => setSelectedCountryFilter(e.target.value)}
-                style={{ width: '160px', fontSize: '13px' }}
+                style={{ flex: '0 1 160px', minWidth: '130px', maxWidth: '100%', fontSize: '13px' }}
               >
                 <option value="ALL">All Nations</option>
                 {allCountries.map(c => (
@@ -1098,8 +1110,8 @@ export default function Admin() {
           </div>
 
           {/* Participants Table */}
-          <div style={{ overflowX: 'auto' }}>
-            <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
+            <table className="admin-table" style={{ width: '100%', minWidth: '680px', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   <th style={{ padding: '12px 14px' }}>Participant</th>
@@ -1208,29 +1220,29 @@ export default function Admin() {
 
       {/* ═══════════ TAB: ALL DAILY SUBMISSIONS ═══════════ */}
       {activeTab === 'reports' && (
-        <div className="glass-card" style={{ padding: '24px' }}>
+        <div className="glass-card" style={{ padding: 'clamp(16px, 3vw, 24px)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h2 style={{ margin: 0, fontSize: '20px' }}>All Daily Submissions Stream</h2>
               <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                 Review, inspect, and export daily SLAP study entries submitted across all participants.
               </p>
             </div>
 
-            <div style={{ position: 'relative', width: '280px' }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: '280px', minWidth: 0 }}>
               <input
                 type="text"
                 placeholder="Search scripture or participant..."
                 value={reportSearch}
                 onChange={e => setReportSearch(e.target.value)}
-                style={{ paddingLeft: '34px', fontSize: '13px' }}
+                style={{ width: '100%', paddingLeft: '34px', fontSize: '13px' }}
               />
               <Search size={14} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--text-secondary)' }} />
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
+            <table className="admin-table" style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   <th style={{ padding: '12px 14px' }}>Date</th>
@@ -1308,8 +1320,8 @@ export default function Admin() {
 
       {/* ═══════════ INSPECT REPORT MODAL ═══════════ */}
       {selectedReportModal && (
-        <div className="drawer-backdrop open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 1100 }}>
-          <div className="glass-card" style={{ maxWidth: '680px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative', border: '1px solid var(--accent-gold)', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
+        <div className="drawer-backdrop open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1100 }}>
+          <div className="glass-card" style={{ maxWidth: 'min(680px, 94vw)', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative', border: '1px solid var(--accent-gold)', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', padding: 'clamp(18px, 4vw, 32px)' }}>
             <button
               onClick={() => setSelectedReportModal(null)}
               style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
@@ -1432,10 +1444,10 @@ export default function Admin() {
               </div>
             </div>
 
-            <div className="glass-card" style={{ padding: '24px' }}>
+            <div className="glass-card" style={{ padding: 'clamp(16px, 3vw, 24px)', overflow: 'hidden' }}>
               {/* Header + Sort Controls */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <h2 style={{ margin: 0, fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <TrendingUp size={20} style={{ color: 'var(--accent-gold)' }} /> Participant Consistency Tracker
                   </h2>
@@ -1461,8 +1473,8 @@ export default function Admin() {
               </div>
 
               {/* Consistency Table */}
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
+                <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                       <th style={{ padding: '10px 14px' }}>#</th>
@@ -1772,11 +1784,11 @@ export default function Admin() {
             background: 'var(--bg-secondary)',
             border: '1.5px solid var(--border-color)',
             borderRadius: '20px',
-            maxWidth: '560px',
+            maxWidth: 'min(560px, 94vw)',
             width: '100%',
             maxHeight: '90vh',
             overflowY: 'auto',
-            padding: '32px',
+            padding: 'clamp(18px, 4vw, 32px)',
             boxShadow: '0 25px 70px rgba(0, 0, 0, 0.5)',
             position: 'relative'
           }} onClick={e => e.stopPropagation()}>

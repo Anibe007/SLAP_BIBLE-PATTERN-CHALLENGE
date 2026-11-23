@@ -192,9 +192,9 @@ export default function About() {
       {/* The 4 Pillars Discipleship Framework */}
       <section style={{
         background: 'var(--accent-cream)',
-        margin: '0 -24px',
-        padding: '80px 24px',
-        borderRadius: '32px'
+        margin: '0',
+        padding: 'clamp(40px, 6vw, 80px) clamp(16px, 3vw, 24px)',
+        borderRadius: '24px'
       }}>
         <div style={{ maxWidth: 'var(--max-width)', margin: '0 auto' }}>
           <AnimateOnScroll animation="fadeUp">

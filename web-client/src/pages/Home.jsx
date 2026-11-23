@@ -430,7 +430,7 @@ export default function Home() {
           ═══════════════════════════════════════════════════════════ */}
       <section className="section-warm">
         <div className="section-container">
-          <div className="grid-2" style={{ alignItems: 'center', gap: '64px' }}>
+          <div className="grid-2" style={{ alignItems: 'center', gap: 'clamp(28px, 5vw, 64px)' }}>
             <AnimateOnScroll animation="fadeLeft">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <h2 style={{ fontSize: '38px', lineHeight: '1.15', margin: 0 }}>
@@ -525,7 +525,9 @@ export default function Home() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    marginBottom: '14px'
+                    marginBottom: '14px',
+                    flexWrap: 'wrap',
+                    gap: '8px'
                   }}>
                     <span style={{
                       fontSize: '11px',
@@ -836,7 +838,7 @@ export default function Home() {
           ═══════════════════════════════════════════════════════════ */}
       <section className="section-warm">
         <div className="section-container">
-          <div className="grid-2" style={{ alignItems: 'center', gap: '64px' }}>
+          <div className="grid-2" style={{ alignItems: 'center', gap: 'clamp(28px, 5vw, 64px)' }}>
             <AnimateOnScroll animation="fadeLeft">
               <div style={{
                 borderRadius: '20px',

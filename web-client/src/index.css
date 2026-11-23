@@ -112,7 +112,9 @@
 }
 
 /* ─── Reset & Globals ─── */
-* {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -122,15 +124,55 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  max-width: 100vw;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root,
+.app-container {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+p,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+a,
+label,
+blockquote {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+  max-width: 100%;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1014,19 +1056,19 @@ select:focus {
    ═══════════════════════════════════════════════════════════ */
 .grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 32px;
 }
 
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
 
 .grid-4 {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -3196,7 +3238,7 @@ select:focus {
   }
 
   .grid-4 {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
   }
 
@@ -3352,7 +3394,7 @@ select:focus {
   }
 
   .grid-4 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .footer-inner {
@@ -3575,6 +3617,13 @@ select:focus {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 12px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+
+.tab-switcher::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {

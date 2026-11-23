@@ -1453,7 +1453,7 @@ export default function Declare() {
             </div>
 
             {/* Primary Action Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', width: '100%' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '10px', width: '100%' }}>
               <button
                 onClick={handleDownloadImage}
                 className="btn-primary gold-shine-btn"
