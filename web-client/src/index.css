@@ -2319,6 +2319,7 @@ select:focus {
 .reader-audio-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   background: linear-gradient(135deg, rgba(16, 31, 85, 0.08), rgba(178, 13, 48, 0.08));
   border: 1px solid var(--border-color);
@@ -2329,6 +2330,7 @@ select:focus {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .reader-audio-btn.playing {
@@ -2336,6 +2338,38 @@ select:focus {
   color: #ffffff;
   border-color: var(--brand-crimson);
   box-shadow: 0 0 16px rgba(178, 13, 48, 0.45);
+}
+
+.reader-audio-btn.paused {
+  background: rgba(234, 179, 8, 0.18);
+  color: #d97706;
+  border-color: rgba(234, 179, 8, 0.45);
+}
+
+.reader-audio-btn.stop-btn {
+  background: rgba(244, 63, 94, 0.12);
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.35);
+  padding: 6px 10px;
+}
+
+.reader-audio-btn.stop-btn:hover {
+  background: #f43f5e;
+  color: #ffffff;
+  border-color: #f43f5e;
+}
+
+.bible-verse-card.is-audio-active {
+  border-color: var(--brand-crimson);
+  background: rgba(178, 13, 48, 0.06);
+  box-shadow: 0 0 20px rgba(178, 13, 48, 0.16), inset 3px 0 0 var(--brand-crimson);
+  transition: all 0.25s ease;
+}
+
+.inline-verse-wrapper.is-audio-active {
+  background: rgba(178, 13, 48, 0.15);
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(178, 13, 48, 0.2);
 }
 
 .reader-font-btn {

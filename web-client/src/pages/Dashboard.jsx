@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { dbService } from '../services/db';
-import { Flame, CheckCircle, Calendar, Plus, Minus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2, Copy, Check, Bookmark, Volume2, VolumeX, List, AlignLeft, Type } from 'lucide-react';
+import { Flame, CheckCircle, Calendar, Plus, Minus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2, Copy, Check, Bookmark, Volume2, VolumeX, Play, Pause, Square, List, AlignLeft, Type } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
 import { useAuth } from '../context/AuthContext';
+import { audioReader } from '../services/audioReader';
 
 /* ─── Bible Books Data with chapter counts ─── */
 const BIBLE_BOOKS = [
@@ -128,7 +129,8 @@ export default function Dashboard() {
   const [highlightedVerses, setHighlightedVerses] = useState(new Set());
   const [copiedVerse, setCopiedVerse] = useState(null);
   const [readerToast, setReaderToast] = useState('');
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioState, setAudioState] = useState('IDLE'); // 'IDLE' | 'PLAYING' | 'PAUSED' | 'ERROR'
+  const [activeAudioVerse, setActiveAudioVerse] = useState(null);
 
   /* ─── Daily SLAP Target (chapters per day) ─── */
   const [dailyTarget, setDailyTarget] = useState(() => {
@@ -465,44 +467,65 @@ export default function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Subscribe to Audio Reader updates
+  useEffect(() => {
+    const unsubscribe = audioReader.subscribe(({ state, activeVerse, error }) => {
+      setAudioState(state);
+      setActiveAudioVerse(activeVerse);
+      if (error) {
+        setReaderToast(`⚠️ ${error}`);
+        setTimeout(() => setReaderToast(''), 4000);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // When active audio verse changes, smoothly scroll it into view
+  useEffect(() => {
+    if (activeAudioVerse && (audioState === 'PLAYING' || audioState === 'PAUSED')) {
+      const el = document.getElementById(`verse-${activeAudioVerse}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [activeAudioVerse, audioState]);
+
   // Stop audio and clear highlights when switching passage
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    setIsPlayingAudio(false);
+    audioReader.stop();
     setHighlightedVerses(new Set());
-  }, [readerBook, readerChapter]);
+  }, [readerBook, readerChapter, readerTranslation]);
 
   // Clean up audio on unmount
   useEffect(() => {
     return () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      audioReader.stop();
     };
   }, []);
 
-  const handleToggleAudio = () => {
-    if (!('speechSynthesis' in window)) {
-      alert("Text-to-speech audio reader is not supported in your browser.");
+  const handleAudioPlayPause = () => {
+    if (!audioReader.isSupported) {
+      setReaderToast("⚠️ Text-to-speech audio reader is not supported in this browser.");
+      setTimeout(() => setReaderToast(''), 4000);
       return;
     }
-    if (isPlayingAudio) {
-      window.speechSynthesis.cancel();
-      setIsPlayingAudio(false);
+
+    if (audioState === 'PLAYING') {
+      audioReader.pause();
+    } else if (audioState === 'PAUSED') {
+      audioReader.resume();
     } else {
-      if (!bibleText?.verses?.length) return;
-      window.speechSynthesis.cancel();
-      const textToRead = `${readerBook} chapter ${readerChapter}. ` + bibleText.verses.map(v => `Verse ${v.verse}. ${cleanScriptureText(v.text)}`).join(' ');
-      const utterance = new SpeechSynthesisUtterance(textToRead);
-      utterance.rate = 0.92;
-      utterance.pitch = 1.0;
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-      window.speechSynthesis.speak(utterance);
-      setIsPlayingAudio(true);
+      if (!bibleText?.verses?.length) {
+        setReaderToast("⚠️ No scripture verses available to read.");
+        setTimeout(() => setReaderToast(''), 3000);
+        return;
+      }
+      audioReader.play(readerBook, readerChapter, bibleText.verses, 0);
     }
+  };
+
+  const handleAudioStop = () => {
+    audioReader.stop();
   };
 
   const handleCopyVerse = (v) => {
@@ -1045,16 +1068,52 @@ export default function Dashboard() {
                 <span>{readerFontFamily === 'serif' ? 'Serif' : 'Modern'}</span>
               </button>
 
-              {/* Audio Listen Aloud Button */}
-              <button
-                type="button"
-                onClick={handleToggleAudio}
-                className={`reader-audio-btn ${isPlayingAudio ? 'playing' : ''}`}
-                title={isPlayingAudio ? "Stop Audio Reader" : "Listen to this chapter read aloud"}
-              >
-                {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                <span>{isPlayingAudio ? "Stop Reading" : "Listen Aloud"}</span>
-              </button>
+              {/* Audio Listen Aloud Controls (Play, Pause, Resume, Stop) */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <button
+                  type="button"
+                  onClick={handleAudioPlayPause}
+                  className={`reader-audio-btn ${audioState === 'PLAYING' ? 'playing' : audioState === 'PAUSED' ? 'paused' : ''}`}
+                  title={
+                    audioState === 'PLAYING'
+                      ? "Pause Audio Reader"
+                      : audioState === 'PAUSED'
+                      ? "Resume Audio Reader"
+                      : "Listen to this chapter read aloud"
+                  }
+                  aria-label="Audio Reader Play Pause"
+                >
+                  {audioState === 'PLAYING' ? (
+                    <>
+                      <Pause size={14} />
+                      <span>Pause</span>
+                    </>
+                  ) : audioState === 'PAUSED' ? (
+                    <>
+                      <Play size={14} />
+                      <span>Resume</span>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 size={14} />
+                      <span>Listen Aloud</span>
+                    </>
+                  )}
+                </button>
+
+                {(audioState === 'PLAYING' || audioState === 'PAUSED') && (
+                  <button
+                    type="button"
+                    onClick={handleAudioStop}
+                    className="reader-audio-btn stop-btn"
+                    title="Stop Audio Reader"
+                    aria-label="Stop audio playback"
+                  >
+                    <Square size={12} fill="currentColor" />
+                    <span>Stop</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1111,7 +1170,7 @@ export default function Dashboard() {
                         <div
                           key={v.verse}
                           id={`verse-${v.verse}`}
-                          className={`bible-verse-card ${isHighlighted ? 'is-highlighted' : ''}`}
+                          className={`bible-verse-card ${isHighlighted ? 'is-highlighted' : ''} ${activeAudioVerse === v.verse ? 'is-audio-active' : ''}`}
                           onClick={() => toggleHighlightVerse(v.verse)}
                         >
                           <div className="verse-gutter">
@@ -1171,7 +1230,7 @@ export default function Dashboard() {
                             <span
                               key={v.verse}
                               id={`verse-${v.verse}`}
-                              className={`inline-verse-wrapper ${isHighlighted ? 'is-highlighted' : ''}`}
+                              className={`inline-verse-wrapper ${isHighlighted ? 'is-highlighted' : ''} ${activeAudioVerse === v.verse ? 'is-audio-active' : ''}`}
                               onClick={() => toggleHighlightVerse(v.verse)}
                               title={`Verse ${v.verse} — Click to highlight. Double click to copy.`}
                               onDoubleClick={(e) => { e.stopPropagation(); handleCopyVerse(v); }}

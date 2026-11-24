@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   BookOpen, Flame, Calendar, Sparkles, CheckCircle2, Volume2, VolumeX,
+  Play, Pause, Square,
   Share2, ArrowRight, RefreshCw, Bookmark, Award, Heart, Shield,
   MessageSquare, Feather, Layers, Send
 } from 'lucide-react';
@@ -10,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
 import { cleanScriptureText } from './Dashboard';
+import { audioReader } from '../services/audioReader';
 
 const BOOK_ID_MAP = {
   Genesis: 1, Exodus: 2, Leviticus: 3, Numbers: 4, Deuteronomy: 5, Joshua: 6, Judges: 7, Ruth: 8,
@@ -80,7 +82,8 @@ export default function DailyDevotion() {
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(0);
   const [translation, setTranslation] = useState('KJV');
   const [passageVerses, setPassageVerses] = useState([]);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioState, setAudioState] = useState('IDLE');
+  const [activeAudioVerse, setActiveAudioVerse] = useState(null);
   const [streakData, setStreakData] = useState({ current_streak: 1, longest_streak: 1 });
   const [userLogs, setUserLogs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -93,6 +96,40 @@ export default function DailyDevotion() {
   const [celebrationData, setCelebrationData] = useState(null);
 
   const activePassage = FEATURED_PASSAGES[selectedPassageIndex];
+
+  // Subscribe to Audio Reader updates
+  useEffect(() => {
+    const unsubscribe = audioReader.subscribe(({ state, activeVerse, error }) => {
+      setAudioState(state);
+      setActiveAudioVerse(activeVerse);
+      if (error) {
+        alert(`Audio Reader: ${error}`);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // When active audio verse changes, smoothly scroll it into view
+  useEffect(() => {
+    if (activeAudioVerse && (audioState === 'PLAYING' || audioState === 'PAUSED')) {
+      const el = document.getElementById(`devotion-verse-${activeAudioVerse}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [activeAudioVerse, audioState]);
+
+  // Stop audio when passage or translation changes
+  useEffect(() => {
+    audioReader.stop();
+  }, [selectedPassageIndex, translation]);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      audioReader.stop();
+    };
+  }, []);
 
   useEffect(() => {
     // Pre-populate striking verses from key verse
@@ -148,25 +185,27 @@ export default function DailyDevotion() {
     }
   };
 
-  const handleSpeechToggle = () => {
-    if ('speechSynthesis' in window) {
-      if (isPlayingAudio) {
-        window.speechSynthesis.cancel();
-        setIsPlayingAudio(false);
-      } else {
-        const textToRead = `${activePassage.book} chapter ${activePassage.chapter}. ${activePassage.title}. ` +
-          passageVerses.map(v => `Verse ${v.verse}. ${cleanScriptureText(v.text)}`).join(' ');
-        const utterance = new SpeechSynthesisUtterance(textToRead);
-        utterance.rate = 0.95;
-        utterance.pitch = 1.0;
-        utterance.onend = () => setIsPlayingAudio(false);
-        utterance.onerror = () => setIsPlayingAudio(false);
-        window.speechSynthesis.speak(utterance);
-        setIsPlayingAudio(true);
-      }
-    } else {
+  const handleSpeechPlayPause = () => {
+    if (!audioReader.isSupported) {
       alert("Text-to-speech audio reader is not supported in your browser.");
+      return;
     }
+
+    if (audioState === 'PLAYING') {
+      audioReader.pause();
+    } else if (audioState === 'PAUSED') {
+      audioReader.resume();
+    } else {
+      if (!passageVerses?.length) {
+        alert("No scripture verses available to read.");
+        return;
+      }
+      audioReader.play(activePassage.book, activePassage.chapter, passageVerses, 0);
+    }
+  };
+
+  const handleSpeechStop = () => {
+    audioReader.stop();
   };
 
   const handleSubmitSLAPDevotion = async (e) => {
@@ -327,24 +366,67 @@ export default function DailyDevotion() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Audio Speech Reader */}
-                <button
-                  onClick={handleSpeechToggle}
-                  className="btn-secondary"
-                  style={{
-                    padding: '8px 12px',
-                    fontSize: '12px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    color: isPlayingAudio ? '#f43f5e' : 'var(--accent-gold)',
-                    borderColor: isPlayingAudio ? '#f43f5e' : 'var(--accent-gold)'
-                  }}
-                  title={isPlayingAudio ? "Stop Audio Reader" : "Listen to Scripture"}
-                >
-                  {isPlayingAudio ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                  <span>{isPlayingAudio ? "Stop Reading" : "Audio Reader"}</span>
-                </button>
+                {/* Audio Speech Reader Controls */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={handleSpeechPlayPause}
+                    className={`reader-audio-btn ${audioState === 'PLAYING' ? 'playing' : audioState === 'PAUSED' ? 'paused' : ''}`}
+                    style={{
+                      padding: '7px 12px',
+                      fontSize: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                    title={
+                      audioState === 'PLAYING' ? "Pause Audio Reader" :
+                      audioState === 'PAUSED' ? "Resume Audio Reader" :
+                      "Listen to Scripture"
+                    }
+                  >
+                    {audioState === 'PLAYING' ? (
+                      <>
+                        <Pause size={14} />
+                        <span>Pause</span>
+                      </>
+                    ) : audioState === 'PAUSED' ? (
+                      <>
+                        <Play size={14} />
+                        <span>Resume</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 size={14} />
+                        <span>Audio Reader</span>
+                      </>
+                    )}
+                  </button>
+
+                  {(audioState === 'PLAYING' || audioState === 'PAUSED') && (
+                    <button
+                      type="button"
+                      onClick={handleSpeechStop}
+                      className="reader-audio-btn stop-btn"
+                      style={{
+                        padding: '7px 10px',
+                        fontSize: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                      title="Stop Audio Reader"
+                    >
+                      <Square size={12} fill="currentColor" />
+                      <span>Stop</span>
+                    </button>
+                  )}
+                </div>
 
                 {/* Translation Selector */}
                 <select
@@ -376,7 +458,8 @@ export default function DailyDevotion() {
                 {passageVerses.map(v => (
                   <div
                     key={v.verse}
-                    className="bible-verse-card"
+                    id={`devotion-verse-${v.verse}`}
+                    className={`bible-verse-card ${activeAudioVerse === v.verse ? 'is-audio-active' : ''}`}
                     style={{ padding: '12px 16px', borderRadius: '10px', fontSize: '15px' }}
                     onClick={() => {
                       const ref = `${activePassage.book} ${activePassage.chapter}:${v.verse}`;
