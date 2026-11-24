@@ -394,7 +394,7 @@ function MainLayout() {
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
-          {/* Desktop-only Auth Links */}
+          {/* Desktop-only Auth Navigation Links */}
           <div className="desktop-auth-links">
             {isAuthenticated ? (
               <>
@@ -406,20 +406,24 @@ function MainLayout() {
                     <ShieldCheck size={16} /> Admin
                   </NavLink>
                 )}
-                <button
-                  onClick={logout}
-                  className="logout-btn"
-                  title="Logout"
-                  aria-label="Logout"
-                >
-                  <LogOut size={15} />
-                  <span>Logout</span>
-                </button>
               </>
             ) : (
               <NavLink to="/auth" className="nav-link nav-cta" style={{ padding: '8px 20px' }}>Sign Up</NavLink>
             )}
           </div>
+
+          {/* Logout Button — Visible & accessible across all screen sizes */}
+          {isAuthenticated && (
+            <button
+              onClick={logout}
+              className="logout-btn header-logout-btn"
+              title="Logout"
+              aria-label="Logout"
+            >
+              <LogOut size={15} />
+              <span>Logout</span>
+            </button>
+          )}
 
           {/* Mobile Hamburger Toggle Button */}
           <button
@@ -438,16 +442,16 @@ function MainLayout() {
         onClick={() => setMobileMenuOpen(false)}
       />
       <div className={`drawer-panel ${mobileMenuOpen ? 'open' : ''}`}>
-        <NavLink to="/" end className="nav-link drawer-link">Home</NavLink>
-        <NavLink to="/about" className="nav-link drawer-link">About</NavLink>
-        <NavLink to="/mission" className="nav-link drawer-link">Mission &amp; Vision</NavLink>
-        <NavLink to="/get-involved" className="nav-link drawer-link">Get Involved</NavLink>
-        <NavLink to="/partner" className="nav-link drawer-link">Partner Together</NavLink>
-        <NavLink to="/products" className="nav-link drawer-link">Products</NavLink>
-        <NavLink to="/blog" className="nav-link drawer-link">Blog</NavLink>
-        <NavLink to="/contact" className="nav-link drawer-link">Contact</NavLink>
-        <NavLink to="/declare" className="nav-link drawer-link">iSPEAK &amp; iDECLARE</NavLink>
-        <NavLink to="/singing-bible" className="nav-link drawer-link" style={{ color: 'var(--brand-crimson)', fontWeight: '700' }}>
+        <NavLink to="/" end className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Home</NavLink>
+        <NavLink to="/about" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>About</NavLink>
+        <NavLink to="/mission" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Mission &amp; Vision</NavLink>
+        <NavLink to="/get-involved" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Get Involved</NavLink>
+        <NavLink to="/partner" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Partner Together</NavLink>
+        <NavLink to="/products" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Products</NavLink>
+        <NavLink to="/blog" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Blog</NavLink>
+        <NavLink to="/contact" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Contact</NavLink>
+        <NavLink to="/declare" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>iSPEAK &amp; iDECLARE</NavLink>
+        <NavLink to="/singing-bible" className="nav-link drawer-link" style={{ color: 'var(--brand-crimson)', fontWeight: '700' }} onClick={() => setMobileMenuOpen(false)}>
           <Music size={15} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />🎵 Singing Bible
         </NavLink>
         <NavLink to="/videos" className="nav-link drawer-link" onClick={() => setMobileMenuOpen(false)}>Video Library</NavLink>
@@ -460,13 +464,21 @@ function MainLayout() {
         <div className="drawer-auth-section">
           {isAuthenticated ? (
             <>
-              <NavLink to="/dashboard" className="nav-link" style={{ color: 'var(--brand-crimson)', fontWeight: 'bold', fontSize: '16px', padding: '14px 0', display: 'block' }}>Dashboard</NavLink>
-              <button className="btn-secondary" onClick={() => { logout(); setMobileMenuOpen(false); }} style={{ marginTop: '16px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <LogOut size={16} /> Logout
+              <NavLink to="/dashboard" className="nav-link" onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--brand-crimson)', fontWeight: 'bold', fontSize: '16px', padding: '14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User size={18} /> Dashboard
+              </NavLink>
+              <button
+                className="drawer-logout-btn"
+                onClick={() => { logout(); setMobileMenuOpen(false); }}
+                title="Logout"
+                aria-label="Logout"
+              >
+                <LogOut size={17} />
+                <span>Logout</span>
               </button>
             </>
           ) : (
-            <NavLink to="/auth" className="drawer-cta">
+            <NavLink to="/auth" className="drawer-cta" onClick={() => setMobileMenuOpen(false)}>
               Sign In / Register
             </NavLink>
           )}
