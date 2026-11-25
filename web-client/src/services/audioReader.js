@@ -3,14 +3,43 @@
  * 
  * Provides robust, cross-platform Scripture audio playback via Web Speech API
  * with verse-by-verse sequencing, garbage-collection protection, Chrome keep-alive,
- * natural voice selection, and full Play / Pause / Resume / Stop controls.
+ * natural voice selection, text sanitization, and full Play / Pause / Resume / Stop controls.
  */
+
+/**
+ * Helper to clean and format scripture text for display and speech synthesis.
+ * Strips Hebrew/Greek Strong's concordance numbers, cross references, footnote tags,
+ * bracketed editorial additions, and HTML tags while keeping the sacred text intact.
+ */
+export function cleanScriptureText(rawText) {
+  if (!rawText) return '';
+  return rawText
+    .replace(/<S>[^<]*<\/S>/gi, '')         // Strong's concordance tags & numbers (<S>1234</S>)
+    .replace(/<s\d*>[^<]*<\/s\d*>/gi, '')   // Lowercase Strong's numbers (<s1234>...</s1234>)
+    .replace(/<sup[^>]*>.*?<\/sup>/gi, '')   // Superscript cross-reference symbols
+    .replace(/<ref[^>]*>.*?<\/ref>/gi, '')   // Footnote cross-reference blocks
+    .replace(/<[^>]+>/g, '')                 // Remaining HTML tags (<i>, <b>, <br>, etc.)
+    .replace(/\[\d+\]/g, '')                 // Bracketed footnote indices like [1]
+    .replace(/\{[^}]*\}/g, '')               // Bracketed study notes
+    .replace(/&para;/gi, '')                 // Paragraph symbol entity
+    .replace(/&nbsp;/gi, ' ')                // Non-breaking space
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/©.*$/gi, '')                   // Trailing copyright marks
+    .replace(/\s+/g, ' ')                    // Collapse extra spaces
+    .replace(/\s+([,.:;?!])/g, '$1')         // Remove space before punctuation marks
+    .trim();
+}
 
 class AudioBibleReaderService {
   constructor() {
     this.state = 'IDLE'; // 'IDLE' | 'PLAYING' | 'PAUSED' | 'LOADING' | 'ERROR'
     this.book = '';
     this.chapter = '';
+    this.translation = '';
     this.verses = [];
     this.currentIndex = 0;
     this.activeVerseNumber = null;
@@ -21,6 +50,7 @@ class AudioBibleReaderService {
     this.activeUtterance = null;
     this.voices = [];
     this.selectedVoice = null;
+    this.onChapterComplete = null;
     this.isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
     if (this.isSupported) {
@@ -105,6 +135,7 @@ class AudioBibleReaderService {
       state: this.state,
       book: this.book,
       chapter: this.chapter,
+      translation: this.translation,
       activeVerse: this.activeVerseNumber,
       currentIndex: this.currentIndex,
       totalVerses: this.verses.length,
@@ -128,6 +159,7 @@ class AudioBibleReaderService {
       state: this.state,
       book: this.book,
       chapter: this.chapter,
+      translation: this.translation,
       activeVerse: this.activeVerseNumber,
       currentIndex: this.currentIndex,
       totalVerses: this.verses.length,
@@ -141,13 +173,25 @@ class AudioBibleReaderService {
   }
 
   /**
+   * Check if current audio playback corresponds to specified passage
+   */
+  isCurrentPassage(book, chapter, translation) {
+    if (this.state === 'IDLE') return false;
+    const sameBook = String(this.book).toLowerCase() === String(book).toLowerCase();
+    const sameChapter = String(this.chapter) === String(chapter);
+    const sameTrans = !translation || !this.translation || String(this.translation).toLowerCase() === String(translation).toLowerCase();
+    return sameBook && sameChapter && sameTrans;
+  }
+
+  /**
    * Load and begin audio playback of a Bible chapter
    * @param {string} book - e.g. "Genesis"
    * @param {string|number} chapter - e.g. 1
    * @param {Array<{verse: number, text: string}>} verses - Chapter verses
    * @param {number} [startVerseIndex=0] - Starting verse index
+   * @param {string} [translation=''] - Bible translation code e.g. "KJV"
    */
-  play(book, chapter, verses, startVerseIndex = 0) {
+  play(book, chapter, verses, startVerseIndex = 0, translation = '') {
     if (!this.isSupported) {
       this.state = 'ERROR';
       this._notifyListeners("Text-to-speech audio reader is not supported in this browser.");
@@ -160,13 +204,28 @@ class AudioBibleReaderService {
       return;
     }
 
-    // Cancel any previous speech
+    // Check if the verse text contains copyright protest/ablated text
+    const hasAblatedNotice = verses.some(v => 
+      typeof v.text === 'string' && (
+        v.text.toLowerCase().includes('prohibited me from using') || 
+        v.text.toLowerCase().includes('biblica, inc.')
+      )
+    );
+
+    if (hasAblatedNotice) {
+      this.state = 'ERROR';
+      this._notifyListeners(`The ${translation || 'selected'} translation is restricted by its copyright publisher. Please select another translation.`);
+      return;
+    }
+
+    // Cancel any previous speech immediately
     try {
       window.speechSynthesis.cancel();
     } catch (_) {}
 
     this.book = book;
     this.chapter = chapter;
+    this.translation = translation;
     this.verses = verses;
     this.currentIndex = Math.max(0, Math.min(startVerseIndex, verses.length - 1));
     this.state = 'PLAYING';
@@ -180,22 +239,19 @@ class AudioBibleReaderService {
     }, 50);
   }
 
-  _cleanText(text) {
-    if (!text) return '';
-    return text
-      .replace(/<[^>]*>/g, '') // remove HTML tags
-      .replace(/\[\d+\]/g, '') // remove footnote references [1]
-      .replace(/\{[^}]*\}/g, '') // remove bracketed notes
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
   _speakCurrentVerse() {
     if (this.state !== 'PLAYING') return;
 
     if (this.currentIndex >= this.verses.length) {
       // Completed reading the chapter
+      const completedBook = this.book;
+      const completedChapter = this.chapter;
       this.stop();
+      if (this.onChapterComplete) {
+        try {
+          this.onChapterComplete({ book: completedBook, chapter: completedChapter });
+        } catch (_) {}
+      }
       return;
     }
 
@@ -203,12 +259,21 @@ class AudioBibleReaderService {
     this.activeVerseNumber = currentV.verse;
     this._notifyListeners();
 
-    const cleanedText = this._cleanText(currentV.text);
+    const cleanedText = cleanScriptureText(currentV.text);
+    if (!cleanedText) {
+      // Verse text empty after cleaning, skip to next verse
+      this.currentIndex++;
+      this._speakCurrentVerse();
+      return;
+    }
     
     // Construct readable text
     let spokenText = '';
     if (this.currentIndex === 0) {
-      spokenText = `${this.book} chapter ${this.chapter}. Verse ${currentV.verse}. ${cleanedText}`;
+      const transName = this.translation === 'TLB' ? 'The Living Bible' :
+                        this.translation ? `the ${this.translation} translation` : '';
+      const transAnnouncement = transName ? ` in ${transName}` : '';
+      spokenText = `${this.book} chapter ${this.chapter}${transAnnouncement}. Verse ${currentV.verse}. ${cleanedText}`;
     } else {
       spokenText = `Verse ${currentV.verse}. ${cleanedText}`;
     }
@@ -250,7 +315,7 @@ class AudioBibleReaderService {
         }
         console.warn("SpeechSynthesis error on verse:", currentV.verse, e.error);
         if (this.state === 'PLAYING') {
-          // If a single verse errors, try advancing to next verse
+          // If a single verse errors, advance to next verse
           this.currentIndex++;
           if (this.currentIndex < this.verses.length) {
             setTimeout(() => this._speakCurrentVerse(), 300);

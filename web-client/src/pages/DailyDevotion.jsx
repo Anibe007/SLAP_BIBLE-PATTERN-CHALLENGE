@@ -141,6 +141,9 @@ export default function DailyDevotion() {
 
   useEffect(() => {
     if (!activePassage) return;
+    audioReader.stop();
+    setPassageVerses([]);
+
     if (translation === 'PIDGIN') {
       fetch(`/bible/pcm/${encodeURIComponent(activePassage.book)}.json`)
         .then(r => r.json())
@@ -155,11 +158,25 @@ export default function DailyDevotion() {
         .catch(() => setPassageVerses(parseTextVerses(activePassage.text)));
     } else {
       const bookId = BOOK_ID_MAP[activePassage.book] || 43;
-      const transId = translation === 'AMP' ? 'AMP' : (translation === 'NIV' ? 'NIV2011' : (translation === 'NLT' ? 'NLT' : 'KJV'));
+      const transIdMap = {
+        'KJV': 'KJV',
+        'NKJV': 'NKJV',
+        'AMP': 'AMP',
+        'TLB': 'NLT',
+        'NLT': 'NLT',
+        'ESV': 'ESV'
+      };
+      const transId = transIdMap[translation] || 'KJV';
       fetch(`https://bolls.life/get-text/${transId}/${bookId}/${activePassage.chapter}/`)
         .then(r => r.json())
         .then(data => {
-          if (Array.isArray(data) && data.length > 0) {
+          const isAblated = Array.isArray(data) && data.some(v => 
+            typeof v.text === 'string' && (
+              v.text.toLowerCase().includes('prohibited me from using') || 
+              v.text.toLowerCase().includes('biblica, inc.')
+            )
+          );
+          if (Array.isArray(data) && data.length > 0 && !isAblated) {
             const [startV, endV] = (activePassage.verses || '').split('-').map(Number);
             const filtered = (startV && endV)
               ? data.filter(v => v.verse >= startV && v.verse <= endV)
@@ -197,10 +214,10 @@ export default function DailyDevotion() {
       audioReader.resume();
     } else {
       if (!passageVerses?.length) {
-        alert("No scripture verses available to read.");
+        alert("Scripture verses are loading, please wait a moment.");
         return;
       }
-      audioReader.play(activePassage.book, activePassage.chapter, passageVerses, 0);
+      audioReader.play(activePassage.book, activePassage.chapter, passageVerses, 0, translation);
     }
   };
 
@@ -431,13 +448,18 @@ export default function DailyDevotion() {
                 {/* Translation Selector */}
                 <select
                   value={translation}
-                  onChange={e => setTranslation(e.target.value)}
-                  style={{ width: '80px', padding: '6px 8px', fontSize: '12px' }}
+                  onChange={e => {
+                    audioReader.stop();
+                    setTranslation(e.target.value);
+                  }}
+                  style={{ width: '85px', padding: '6px 8px', fontSize: '12px' }}
                 >
                   <option value="KJV">KJV</option>
-                  <option value="NIV">NIV</option>
+                  <option value="NKJV">NKJV</option>
                   <option value="AMP">AMP</option>
+                  <option value="TLB">TLB (Living)</option>
                   <option value="NLT">NLT</option>
+                  <option value="ESV">ESV</option>
                   <option value="PIDGIN">Pidgin</option>
                 </select>
               </div>

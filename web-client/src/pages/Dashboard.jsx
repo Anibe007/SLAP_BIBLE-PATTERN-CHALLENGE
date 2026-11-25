@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { dbService } from '../services/db';
 import { Flame, CheckCircle, Calendar, Plus, Minus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2, Copy, Check, Bookmark, Volume2, VolumeX, Play, Pause, Square, List, AlignLeft, Type } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
 import { useAuth } from '../context/AuthContext';
-import { audioReader } from '../services/audioReader';
+import { audioReader, cleanScriptureText } from '../services/audioReader';
+
+export { cleanScriptureText };
 
 /* ─── Bible Books Data with chapter counts ─── */
 const BIBLE_BOOKS = [
@@ -47,45 +49,25 @@ const BIBLE_BOOKS = [
 
 /* ─── Translation mapping for bolls.life API & Local Pidgin ─── */
 const API_TRANSLATIONS = {
-  'KJV':    { id: 'KJV',      label: 'KJV (King James Version)' },
-  'NKJV':   { id: 'NKJV',    label: 'NKJV (New King James Version)' },
-  'AMP':    { id: 'AMP',     label: 'AMP (Amplified Bible)' },
-  'AMPC':   { id: 'AMP',     label: 'AMPC (Amplified Bible Classic)' },
-  'NIV':    { id: 'NIV2011', label: 'NIV (New International Version)' },
-  'NLT':    { id: 'NLT',     label: 'NLT (New Living Translation)' },
-  'TLB':    { id: 'NLT',     label: 'TLB (The Living Bible)' },
-  'TPT':    { id: 'NLT',     label: 'TPT (The Passion Translation)' },
-  'NCV':    { id: 'ERV',     label: 'NCV (New Century Version)' },
-  'MSG':    { id: 'MSG',     label: 'MSG (The Message)' },
-  'ESV':    { id: 'ESV',     label: 'ESV (English Standard Version)' },
-  'PIDGIN': { id: 'PIDGIN',  label: 'Pidgin Bible (Original Nigerian Pidgin)' },
-  'PIGEON': { id: 'PIDGIN',  label: 'Pidgin Bible (Original Nigerian Pidgin)', alias: true },
+  'KJV':    { id: 'KJV',   label: 'KJV (King James Version)' },
+  'NKJV':   { id: 'NKJV',  label: 'NKJV (New King James Version)' },
+  'TLB':    { id: 'NLT',   label: 'TLB (The Living Bible)' },
+  'AMP':    { id: 'AMP',   label: 'AMP (Amplified Bible)' },
+  'NLT':    { id: 'NLT',   label: 'NLT (New Living Translation)' },
+  'ESV':    { id: 'ESV',   label: 'ESV (English Standard Version)' },
+  'MSG':    { id: 'MSG',   label: 'MSG (The Message)' },
+  'NASB':   { id: 'NASB',  label: 'NASB (New American Standard Bible)' },
+  'CSB':    { id: 'CSB17', label: 'CSB (Christian Standard Bible)' },
+  'BSB':    { id: 'BSB',   label: 'BSB (Berean Standard Bible)' },
+  'WEB':    { id: 'WEB',   label: 'WEB (World English Bible)' },
+  'ERV':    { id: 'ERV',   label: 'ERV (Easy-to-Read Version)' },
+  'PIDGIN': { id: 'PIDGIN', label: 'Pidgin Bible (Original Nigerian Pidgin)' },
+  'PIGEON': { id: 'PIDGIN', label: 'Pidgin Bible (Original Nigerian Pidgin)', alias: true },
 };
 
 /* ─── Book Name to numeric ID mapping (bolls.life uses 1-66) ─── */
 const BOOK_ID_MAP = {};
 BIBLE_BOOKS.forEach((b, idx) => { BOOK_ID_MAP[b.name] = idx + 1; });
-
-/* ─── Helper to clean and format scripture text ─── */
-export function cleanScriptureText(rawText) {
-  if (!rawText) return '';
-  return rawText
-    .replace(/<S>[^<]*<\/S>/gi, '')
-    .replace(/<s\d+>[^<]*<\/s\d+>/gi, '')
-    .replace(/<sup[^>]*>.*?<\/sup>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&para;/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/©.*$/gi, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\s+([,.:;?!])/g, '$1')
-    .trim();
-}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -155,6 +137,8 @@ export default function Dashboard() {
   /* ─── Hebrew / Greek Word Definitions State ─── */
   const [wordDefinitions, setWordDefinitions] = useState(null);
   const [defLoading, setDefLoading] = useState(false);
+  const activeReqRef = useRef(0);
+  const autoPlayNextRef = useRef(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -173,6 +157,7 @@ export default function Dashboard() {
 
   /* ─── Bible Reader: Fetch scripture text ─── */
   const fetchBibleText = useCallback(async (bk, ch, trans) => {
+    const reqId = ++activeReqRef.current;
     setBibleLoading(true);
     setBibleError('');
     setBibleText(null);
@@ -184,34 +169,79 @@ export default function Dashboard() {
       try {
         // Load original Nigerian Pidgin Bible
         const res = await fetch(`/bible/pcm/${encodeURIComponent(bk)}.json`);
-        if (!res.ok) throw new Error('Pidgin scripture not found for this book.');
+        if (!res.ok) throw new Error(`Pidgin scripture not found for ${bk}.`);
         const bookData = await res.json();
         const chapterVerses = bookData[String(ch)] || [];
         if (!chapterVerses || chapterVerses.length === 0) {
           throw new Error(`Chapter ${ch} not found in Pidgin Bible for ${bk}.`);
         }
-        setBibleText({ verses: chapterVerses, reference: `${bk} ${ch}` });
+        if (reqId === activeReqRef.current) {
+          setBibleText({
+            verses: chapterVerses,
+            book: bk,
+            chapter: Number(ch),
+            translation: transKey,
+            reference: `${bk} ${ch}`
+          });
+        }
       } catch (err) {
-        setBibleError(err.message || 'Failed to load Pidgin scripture.');
+        if (reqId === activeReqRef.current) {
+          setBibleError(err.message || 'Failed to load Pidgin scripture.');
+        }
       } finally {
+        if (reqId === activeReqRef.current) {
+          setBibleLoading(false);
+        }
+      }
+      return;
+    }
+
+    const transConfig = API_TRANSLATIONS[transKey];
+    if (transConfig?.restricted || transKey === 'NIV') {
+      if (reqId === activeReqRef.current) {
+        setBibleError('The NIV translation is currently restricted by its copyright publisher. Please select NKJV, KJV, NLT, AMP, or ESV.');
         setBibleLoading(false);
       }
       return;
     }
 
-    const apiTrans = API_TRANSLATIONS[trans]?.id || 'KJV';
+    const apiTrans = transConfig?.id || 'KJV';
     const bookId = BOOK_ID_MAP[bk] || 43; // default to John
     const url = `https://bolls.life/get-text/${apiTrans}/${bookId}/${ch}/`;
 
     try {
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Scripture not found for this translation.');
+      if (!res.ok) throw new Error(`Scripture not found for ${bk} ${ch} (${transKey}).`);
       const data = await res.json();
-      setBibleText({ verses: data, reference: `${bk} ${ch}` });
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error(`No scripture verses found for ${bk} ${ch}.`);
+      }
+      const isAblated = data.some(v => 
+        typeof v.text === 'string' && (
+          v.text.toLowerCase().includes('prohibited me from using') || 
+          v.text.toLowerCase().includes('biblica, inc.')
+        )
+      );
+      if (isAblated) {
+        throw new Error(`The ${transKey} translation is restricted by its copyright publisher. Please select another translation (NKJV, KJV, NLT, AMP, or ESV).`);
+      }
+      if (reqId === activeReqRef.current) {
+        setBibleText({
+          verses: data,
+          book: bk,
+          chapter: Number(ch),
+          translation: transKey,
+          reference: `${bk} ${ch}`
+        });
+      }
     } catch (err) {
-      setBibleError(err.message || 'Failed to load scripture. Please try another translation.');
+      if (reqId === activeReqRef.current) {
+        setBibleError(err.message || 'Failed to load scripture. Please try another translation.');
+      }
     } finally {
-      setBibleLoading(false);
+      if (reqId === activeReqRef.current) {
+        setBibleLoading(false);
+      }
     }
   }, []);
 
@@ -432,6 +462,9 @@ export default function Dashboard() {
   const getBookData = (bookName) => BIBLE_BOOKS.find(b => b.name === bookName);
   
   const goToPrevChapter = () => {
+    const isCurrentlyPlaying = audioState === 'PLAYING';
+    audioReader.stop();
+    autoPlayNextRef.current = isCurrentlyPlaying;
     if (readerChapter > 1) {
       setReaderChapter(prev => prev - 1);
     } else {
@@ -445,6 +478,9 @@ export default function Dashboard() {
   };
 
   const goToNextChapter = () => {
+    const isCurrentlyPlaying = audioState === 'PLAYING';
+    audioReader.stop();
+    autoPlayNextRef.current = isCurrentlyPlaying;
     const bookData = getBookData(readerBook);
     if (readerChapter < bookData.chapters) {
       setReaderChapter(prev => prev + 1);
@@ -490,6 +526,30 @@ export default function Dashboard() {
     }
   }, [activeAudioVerse, audioState]);
 
+  // Auto-play next chapter when loaded if chapter navigation occurred during playback
+  useEffect(() => {
+    if (bibleText && autoPlayNextRef.current) {
+      if (bibleText.book === readerBook && Number(bibleText.chapter) === Number(readerChapter)) {
+        autoPlayNextRef.current = false;
+        audioReader.play(readerBook, readerChapter, bibleText.verses, 0, readerTranslation);
+      }
+    }
+  }, [bibleText, readerBook, readerChapter, readerTranslation]);
+
+  // Hook continuous playback on chapter completion
+  useEffect(() => {
+    audioReader.onChapterComplete = ({ book, chapter }) => {
+      const bookData = getBookData(book);
+      if (bookData && Number(chapter) < bookData.chapters) {
+        autoPlayNextRef.current = true;
+        setReaderChapter(c => c + 1);
+      }
+    };
+    return () => {
+      audioReader.onChapterComplete = null;
+    };
+  }, [readerBook]);
+
   // Stop audio and clear highlights when switching passage
   useEffect(() => {
     audioReader.stop();
@@ -513,14 +573,37 @@ export default function Dashboard() {
     if (audioState === 'PLAYING') {
       audioReader.pause();
     } else if (audioState === 'PAUSED') {
-      audioReader.resume();
+      if (audioReader.isCurrentPassage(readerBook, readerChapter, readerTranslation)) {
+        audioReader.resume();
+      } else {
+        if (!bibleText?.verses?.length || bibleText.book !== readerBook || Number(bibleText.chapter) !== Number(readerChapter)) {
+          setReaderToast(`⏳ Loading scripture for ${readerBook} ${readerChapter}...`);
+          return;
+        }
+        audioReader.play(readerBook, readerChapter, bibleText.verses, 0, readerTranslation);
+      }
     } else {
+      if (bibleLoading) {
+        setReaderToast(`⏳ Loading ${readerBook} ${readerChapter}... please wait.`);
+        setTimeout(() => setReaderToast(''), 3000);
+        return;
+      }
+      if (bibleError) {
+        setReaderToast(`⚠️ ${bibleError}`);
+        setTimeout(() => setReaderToast(''), 4000);
+        return;
+      }
       if (!bibleText?.verses?.length) {
         setReaderToast("⚠️ No scripture verses available to read.");
         setTimeout(() => setReaderToast(''), 3000);
         return;
       }
-      audioReader.play(readerBook, readerChapter, bibleText.verses, 0);
+      if (bibleText.book !== readerBook || Number(bibleText.chapter) !== Number(readerChapter)) {
+        setReaderToast(`⚠️ Loading verified text for ${readerBook} ${readerChapter}...`);
+        setTimeout(() => setReaderToast(''), 3000);
+        return;
+      }
+      audioReader.play(readerBook, readerChapter, bibleText.verses, 0, readerTranslation);
     }
   };
 
@@ -939,7 +1022,12 @@ export default function Dashboard() {
           <div className="reader-toolbar">
             <div className="form-group book-select">
               <label className="text-label-sm">Book</label>
-              <select value={readerBook} onChange={e => { setReaderBook(e.target.value); setReaderChapter(1); }}>
+              <select value={readerBook} onChange={e => {
+                autoPlayNextRef.current = false;
+                audioReader.stop();
+                setReaderBook(e.target.value);
+                setReaderChapter(1);
+              }}>
                 <optgroup label="Old Testament">
                   {BIBLE_BOOKS.filter(b => b.testament === 'OT').map(b => (
                     <option key={b.name} value={b.name}>{b.name}</option>
@@ -955,7 +1043,11 @@ export default function Dashboard() {
 
             <div className="form-group chapter-select">
               <label className="text-label-sm">Chapter</label>
-              <select value={readerChapter} onChange={e => setReaderChapter(Number(e.target.value))}>
+              <select value={readerChapter} onChange={e => {
+                autoPlayNextRef.current = false;
+                audioReader.stop();
+                setReaderChapter(Number(e.target.value));
+              }}>
                 {bookData && Array.from({ length: bookData.chapters }, (_, i) => i + 1).map(ch => (
                   <option key={ch} value={ch}>{ch}</option>
                 ))}
@@ -964,7 +1056,11 @@ export default function Dashboard() {
 
             <div className="form-group translation-select">
               <label className="text-label-sm">Translation</label>
-              <select value={readerTranslation} onChange={e => setReaderTranslation(e.target.value)}>
+              <select value={readerTranslation} onChange={e => {
+                autoPlayNextRef.current = false;
+                audioReader.stop();
+                setReaderTranslation(e.target.value);
+              }}>
                 {Object.entries(API_TRANSLATIONS).filter(([_, val]) => !val.alias).map(([key, val]) => (
                   <option key={key} value={key}>{val.label}</option>
                 ))}
