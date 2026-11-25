@@ -270,8 +270,16 @@ class AudioBibleReaderService {
     // Construct readable text
     let spokenText = '';
     if (this.currentIndex === 0) {
-      const transName = this.translation === 'TLB' ? 'The Living Bible' :
-                        this.translation ? `the ${this.translation} translation` : '';
+      let transName = '';
+      if (this.translation === 'TLB') transName = 'The Living Bible';
+      else if (this.translation === 'NIV') transName = 'the New International Version';
+      else if (this.translation === 'AMPC') transName = 'the Amplified Bible Classic Edition';
+      else if (this.translation === 'NCV') transName = 'the New Century Version';
+      else if (this.translation === 'MSG') transName = 'The Message';
+      else if (this.translation === 'GNT') transName = 'the Good News Translation';
+      else if (this.translation === 'PIDGIN') transName = 'the Nigerian Pidgin Bible';
+      else if (this.translation) transName = `the ${this.translation} translation`;
+
       const transAnnouncement = transName ? ` in ${transName}` : '';
       spokenText = `${this.book} chapter ${this.chapter}${transAnnouncement}. Verse ${currentV.verse}. ${cleanedText}`;
     } else {

@@ -156,6 +156,25 @@ export default function DailyDevotion() {
           }
         })
         .catch(() => setPassageVerses(parseTextVerses(activePassage.text)));
+    } else if (translation === 'NIV' || translation === 'AMPC' || translation === 'NCV') {
+      const folder = translation.toLowerCase();
+      fetch(`/bible/${folder}/${encodeURIComponent(activePassage.book)}.json`)
+        .then(r => r.json())
+        .then(bookData => {
+          const chVerses = bookData[String(activePassage.chapter)] || [];
+          if (chVerses.length > 0) {
+            const [startV, endV] = (activePassage.verses || '').split('-').map(Number);
+            const filtered = (startV && endV)
+              ? chVerses.filter(v => v.verse >= startV && v.verse <= endV)
+              : chVerses;
+            setPassageVerses(filtered);
+          } else {
+            setPassageVerses(parseTextVerses(activePassage.text));
+          }
+        })
+        .catch(() => setPassageVerses(parseTextVerses(activePassage.text)));
+    } else if (translation === 'TPT') {
+      setPassageVerses(parseTextVerses(activePassage.text));
     } else {
       const bookId = BOOK_ID_MAP[activePassage.book] || 43;
       const transIdMap = {
@@ -164,15 +183,17 @@ export default function DailyDevotion() {
         'AMP': 'AMP',
         'TLB': 'NLT',
         'NLT': 'NLT',
+        'MSG': 'MSG',
+        'GNT': 'GNT',
         'ESV': 'ESV'
       };
       const transId = transIdMap[translation] || 'KJV';
       fetch(`https://bolls.life/get-text/${transId}/${bookId}/${activePassage.chapter}/`)
         .then(r => r.json())
         .then(data => {
-          const isAblated = Array.isArray(data) && data.some(v => 
+          const isAblated = Array.isArray(data) && data.some(v =>
             typeof v.text === 'string' && (
-              v.text.toLowerCase().includes('prohibited me from using') || 
+              v.text.toLowerCase().includes('prohibited me from using') ||
               v.text.toLowerCase().includes('biblica, inc.')
             )
           );
@@ -284,7 +305,7 @@ export default function DailyDevotion() {
 
   return (
     <div className="section-container" style={{ maxWidth: '1180px', margin: '0 auto', padding: '0 24px 60px' }}>
-      
+
       {/* Hero Header */}
       <AnimateOnScroll animation="fadeIn">
         <div style={{
@@ -337,11 +358,11 @@ export default function DailyDevotion() {
 
       {/* Main Grid: Left Scripture Reader | Right SLAP Form */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 'clamp(16px, 3vw, 28px)' }}>
-        
+
         {/* LEFT COLUMN: Scripture Reader & Passage Chooser */}
         <AnimateOnScroll animation="fadeInLeft">
           <div className="glass-card" style={{ padding: '28px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            
+
             {/* Passage Selector Tabs */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>
@@ -401,8 +422,8 @@ export default function DailyDevotion() {
                     }}
                     title={
                       audioState === 'PLAYING' ? "Pause Audio Reader" :
-                      audioState === 'PAUSED' ? "Resume Audio Reader" :
-                      "Listen to Scripture"
+                        audioState === 'PAUSED' ? "Resume Audio Reader" :
+                          "Listen to Scripture"
                     }
                   >
                     {audioState === 'PLAYING' ? (
@@ -452,14 +473,20 @@ export default function DailyDevotion() {
                     audioReader.stop();
                     setTranslation(e.target.value);
                   }}
-                  style={{ width: '85px', padding: '6px 8px', fontSize: '12px' }}
+                  style={{ width: '90px', padding: '6px 8px', fontSize: '12px' }}
                 >
                   <option value="KJV">KJV</option>
                   <option value="NKJV">NKJV</option>
+                  <option value="NIV">NIV</option>
+                  <option value="AMPC">AMPC</option>
                   <option value="AMP">AMP</option>
+                  <option value="NCV">NCV</option>
                   <option value="TLB">TLB (Living)</option>
                   <option value="NLT">NLT</option>
+                  <option value="MSG">MSG</option>
+                  <option value="GNT">GNT</option>
                   <option value="ESV">ESV</option>
+                  <option value="TPT">TPT</option>
                   <option value="PIDGIN">Pidgin</option>
                 </select>
               </div>
@@ -529,7 +556,7 @@ export default function DailyDevotion() {
             </div>
 
             <form onSubmit={handleSubmitSLAPDevotion} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
+
               {/* S: Scripture */}
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="text-label-sm" style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>

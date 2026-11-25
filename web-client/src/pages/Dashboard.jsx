@@ -51,17 +51,22 @@ const BIBLE_BOOKS = [
 const API_TRANSLATIONS = {
   'KJV':    { id: 'KJV',   label: 'KJV (King James Version)' },
   'NKJV':   { id: 'NKJV',  label: 'NKJV (New King James Version)' },
-  'TLB':    { id: 'NLT',   label: 'TLB (The Living Bible)' },
+  'NIV':    { id: 'NIV',   label: 'NIV (New International Version)', local: 'niv' },
+  'AMPC':   { id: 'AMPC',  label: 'AMPC (Amplified Bible, Classic Edition)', local: 'ampc' },
   'AMP':    { id: 'AMP',   label: 'AMP (Amplified Bible)' },
+  'NCV':    { id: 'NCV',   label: 'NCV (New Century Version)', local: 'ncv' },
+  'TPT':    { id: 'TPT',   label: 'TPT (The Passion Translation)', licensed: true },
+  'TLB':    { id: 'NLT',   label: 'TLB (The Living Bible)' },
   'NLT':    { id: 'NLT',   label: 'NLT (New Living Translation)' },
-  'ESV':    { id: 'ESV',   label: 'ESV (English Standard Version)' },
   'MSG':    { id: 'MSG',   label: 'MSG (The Message)' },
+  'GNT':    { id: 'GNT',   label: 'GNT (Good News Translation)' },
+  'ESV':    { id: 'ESV',   label: 'ESV (English Standard Version)' },
   'NASB':   { id: 'NASB',  label: 'NASB (New American Standard Bible)' },
   'CSB':    { id: 'CSB17', label: 'CSB (Christian Standard Bible)' },
   'BSB':    { id: 'BSB',   label: 'BSB (Berean Standard Bible)' },
   'WEB':    { id: 'WEB',   label: 'WEB (World English Bible)' },
   'ERV':    { id: 'ERV',   label: 'ERV (Easy-to-Read Version)' },
-  'PIDGIN': { id: 'PIDGIN', label: 'Pidgin Bible (Original Nigerian Pidgin)' },
+  'PIDGIN': { id: 'PIDGIN', label: 'Pidgin Bible (Original Nigerian Pidgin)', local: 'pcm' },
   'PIGEON': { id: 'PIDGIN', label: 'Pidgin Bible (Original Nigerian Pidgin)', alias: true },
 };
 
@@ -163,17 +168,30 @@ export default function Dashboard() {
     setBibleText(null);
 
     const transKey = trans || 'KJV';
-    const isPidgin = transKey === 'PIDGIN' || transKey === 'PIGEON';
+    const transConfig = API_TRANSLATIONS[transKey] || { id: transKey, label: transKey };
 
-    if (isPidgin) {
+    // 1. TPT Licensing notice
+    if (transConfig.licensed || transKey === 'TPT') {
+      if (reqId === activeReqRef.current) {
+        setBibleError(
+          'The Passion Translation (TPT) is a proprietary copyrighted translation published by BroadStreet Publishing Group, LLC. ' +
+          'Due to publisher licensing requirements, full electronic text requires an authorized partner API license. ' +
+          'Please select another translation (such as NIV, AMPC, NCV, TLB, MSG, or GNT) to read and listen.'
+        );
+        setBibleLoading(false);
+      }
+      return;
+    }
+
+    // 2. High-speed local bundled translations (NIV, AMPC, NCV, PIDGIN)
+    if (transConfig.local) {
       try {
-        // Load original Nigerian Pidgin Bible
-        const res = await fetch(`/bible/pcm/${encodeURIComponent(bk)}.json`);
-        if (!res.ok) throw new Error(`Pidgin scripture not found for ${bk}.`);
+        const res = await fetch(`/bible/${transConfig.local}/${encodeURIComponent(bk)}.json`);
+        if (!res.ok) throw new Error(`${transKey} scripture not found for ${bk}.`);
         const bookData = await res.json();
         const chapterVerses = bookData[String(ch)] || [];
         if (!chapterVerses || chapterVerses.length === 0) {
-          throw new Error(`Chapter ${ch} not found in Pidgin Bible for ${bk}.`);
+          throw new Error(`Chapter ${ch} not found in ${transKey} for ${bk}.`);
         }
         if (reqId === activeReqRef.current) {
           setBibleText({
@@ -186,7 +204,7 @@ export default function Dashboard() {
         }
       } catch (err) {
         if (reqId === activeReqRef.current) {
-          setBibleError(err.message || 'Failed to load Pidgin scripture.');
+          setBibleError(err.message || `Failed to load ${transKey} scripture.`);
         }
       } finally {
         if (reqId === activeReqRef.current) {
@@ -196,16 +214,8 @@ export default function Dashboard() {
       return;
     }
 
-    const transConfig = API_TRANSLATIONS[transKey];
-    if (transConfig?.restricted || transKey === 'NIV') {
-      if (reqId === activeReqRef.current) {
-        setBibleError('The NIV translation is currently restricted by its copyright publisher. Please select NKJV, KJV, NLT, AMP, or ESV.');
-        setBibleLoading(false);
-      }
-      return;
-    }
-
-    const apiTrans = transConfig?.id || 'KJV';
+    // 3. Remote REST API translations (KJV, NKJV, AMP, NLT, MSG, GNT, ESV, etc.)
+    const apiTrans = transConfig.id || 'KJV';
     const bookId = BOOK_ID_MAP[bk] || 43; // default to John
     const url = `https://bolls.life/get-text/${apiTrans}/${bookId}/${ch}/`;
 
@@ -223,7 +233,7 @@ export default function Dashboard() {
         )
       );
       if (isAblated) {
-        throw new Error(`The ${transKey} translation is restricted by its copyright publisher. Please select another translation (NKJV, KJV, NLT, AMP, or ESV).`);
+        throw new Error(`The ${transKey} translation is restricted by its copyright publisher. Please select another translation.`);
       }
       if (reqId === activeReqRef.current) {
         setBibleText({
@@ -256,9 +266,8 @@ export default function Dashboard() {
     setWordDefinitions(null);
     setHasSearched(true);
 
-    const isPidgin = searchTranslation === 'PIDGIN' || searchTranslation === 'PIGEON';
-
-    if (isPidgin) {
+    const searchConfig = API_TRANSLATIONS[searchTranslation] || {};
+    if (searchConfig.local) {
       try {
         const q = searchQuery.trim().toLowerCase();
         const results = [];
@@ -268,7 +277,7 @@ export default function Dashboard() {
 
         for (const bk of uniqueBooks) {
           try {
-            const res = await fetch(`/bible/pcm/${encodeURIComponent(bk)}.json`);
+            const res = await fetch(`/bible/${searchConfig.local}/${encodeURIComponent(bk)}.json`);
             if (res.ok) {
               const bookData = await res.json();
               for (const [chNum, vList] of Object.entries(bookData)) {
@@ -294,7 +303,7 @@ export default function Dashboard() {
         setSearchResults(results);
         fetchWordDefinitions(searchQuery.trim());
       } catch (err) {
-        setSearchError('Search failed in Pidgin Bible.');
+        setSearchError(`Search failed in ${searchTranslation}.`);
       } finally {
         setSearchLoading(false);
       }
