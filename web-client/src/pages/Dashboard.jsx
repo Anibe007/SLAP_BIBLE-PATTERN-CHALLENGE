@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { dbService } from '../services/db';
-import { Flame, CheckCircle, Calendar, Plus, Minus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2, Copy, Check, Bookmark, Volume2, VolumeX, Play, Pause, Square, List, AlignLeft, Type } from 'lucide-react';
+import { Flame, CheckCircle, Calendar, Plus, Minus, BookOpen, AlertCircle, Eye, Sparkles, ChevronLeft, ChevronRight, Loader, Search, ArrowRight, Download, FileText, Printer, X, Share2, Copy, Check, Bookmark, Volume2, VolumeX, Play, Pause, Square, List, AlignLeft, Type, Bell, BellOff } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import CelebrationModal from '../components/CelebrationModal';
 import { useAuth } from '../context/AuthContext';
 import { audioReader, cleanScriptureText } from '../services/audioReader';
+import { emailNotificationService } from '../services/emailNotification';
 
 export { cleanScriptureText };
 
@@ -145,6 +146,11 @@ export default function Dashboard() {
   const activeReqRef = useRef(0);
   const autoPlayNextRef = useRef(false);
 
+  /* ─── Login Email Notification Preference State ─── */
+  const [loginNotifications, setLoginNotifications] = useState(false);
+  const [updatingNotifications, setUpdatingNotifications] = useState(false);
+  const [notificationToast, setNotificationToast] = useState('');
+
   const fetchDashboardData = async () => {
     try {
       const reportList = await dbService.getReports();
@@ -159,6 +165,31 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Fetch participant login notification preference
+  useEffect(() => {
+    if (user?.id) {
+      emailNotificationService.getLoginNotificationsEnabled(user.id).then(enabled => {
+        setLoginNotifications(Boolean(enabled));
+      }).catch(() => {});
+    }
+  }, [user?.id]);
+
+  const handleToggleLoginNotifications = async () => {
+    if (!user?.id || updatingNotifications) return;
+    setUpdatingNotifications(true);
+    const nextState = !loginNotifications;
+    try {
+      await emailNotificationService.setLoginNotificationsEnabled(user.id, nextState);
+      setLoginNotifications(nextState);
+      setNotificationToast(nextState ? '🔔 Routine login alerts enabled' : '🔕 Routine login alerts disabled');
+      setTimeout(() => setNotificationToast(''), 3500);
+    } catch (err) {
+      console.warn('Failed to update notification preference:', err);
+    } finally {
+      setUpdatingNotifications(false);
+    }
+  };
 
   /* ─── Bible Reader: Fetch scripture text ─── */
   const fetchBibleText = useCallback(async (bk, ch, trans) => {
@@ -896,6 +927,44 @@ export default function Dashboard() {
                   fontSize: '12px', fontWeight: '700', color: '#22c55e',
                   background: 'rgba(34,197,94,0.12)', padding: '2px 10px', borderRadius: '20px'
                 }}>● Active Believer</span>
+                {/* Routine Login Notification Preference Toggle */}
+                <button
+                  type="button"
+                  onClick={handleToggleLoginNotifications}
+                  disabled={updatingNotifications}
+                  title={loginNotifications ? "Routine login email alerts are active. Click to disable." : "Routine login email alerts are off. Click to enable."}
+                  aria-label="Toggle routine login email notification preference"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: loginNotifications ? 'var(--brand-crimson)' : 'var(--text-secondary)',
+                    background: loginNotifications ? 'rgba(178,13,48,0.08)' : 'var(--bg-tertiary)',
+                    padding: '2px 10px',
+                    borderRadius: '20px',
+                    border: `1px solid ${loginNotifications ? 'rgba(178,13,48,0.28)' : 'var(--border-color)'}`,
+                    cursor: updatingNotifications ? 'wait' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
+                >
+                  {loginNotifications ? <Bell size={12} /> : <BellOff size={12} />}
+                  <span>Login Emails: {loginNotifications ? 'ON' : 'OFF'}</span>
+                </button>
+                {notificationToast && (
+                  <span style={{
+                    fontSize: '11px',
+                    color: 'var(--brand-crimson)',
+                    fontWeight: '700',
+                    background: 'rgba(178,13,48,0.08)',
+                    padding: '2px 8px',
+                    borderRadius: '12px'
+                  }}>
+                    {notificationToast}
+                  </span>
+                )}
               </div>
             </div>
           </div>

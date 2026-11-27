@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     country TEXT DEFAULT '',
     is_admin BOOLEAN DEFAULT FALSE,
     role TEXT DEFAULT 'user', -- 'user', 'admin', 'super_admin'
+    login_notifications_enabled BOOLEAN DEFAULT FALSE,
+    welcome_email_sent_at TIMESTAMPTZ DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -227,7 +229,10 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
     -- 1. Create Profile Row
-    INSERT INTO public.profiles (id, email, full_name, avatar_url, country, is_admin, role)
+    INSERT INTO public.profiles (
+        id, email, full_name, avatar_url, country, is_admin, role,
+        login_notifications_enabled, welcome_email_sent_at
+    )
     VALUES (
         NEW.id,
         NEW.email,
@@ -235,7 +240,9 @@ BEGIN
         COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
         COALESCE(NEW.raw_user_meta_data->>'country', ''),
         COALESCE((NEW.raw_user_meta_data->>'is_admin')::boolean, FALSE),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'user')
+        COALESCE(NEW.raw_user_meta_data->>'role', 'user'),
+        COALESCE((NEW.raw_user_meta_data->>'login_notifications_enabled')::boolean, FALSE),
+        NULL
     )
     ON CONFLICT (id) DO UPDATE 
     SET 
@@ -260,7 +267,40 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- -------------------------------------------------------------------------
--- 7. SUPABASE STORAGE BUCKETS CONFIGURATION (Avatars, Cards, Media)
+-- 7. EMAIL DELIVERY LOGS (Audit & Duplicate Prevention)
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.email_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    email_type TEXT NOT NULL, -- 'welcome', 'login'
+    status TEXT NOT NULL,     -- 'sent', 'failed', 'skipped'
+    resend_id TEXT,
+    error_message TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_logs_user_id ON public.email_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_logs_email ON public.email_logs(email);
+CREATE INDEX IF NOT EXISTS idx_email_logs_type ON public.email_logs(email_type);
+CREATE INDEX IF NOT EXISTS idx_email_logs_status ON public.email_logs(status);
+CREATE INDEX IF NOT EXISTS idx_email_logs_created_at ON public.email_logs(created_at DESC);
+
+ALTER TABLE public.email_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own email logs" ON public.email_logs;
+CREATE POLICY "Users can view their own email logs"
+ON public.email_logs FOR SELECT
+USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can view and manage all email logs" ON public.email_logs;
+CREATE POLICY "Admins can view and manage all email logs"
+ON public.email_logs FOR ALL
+USING (public.is_admin());
+
+-- -------------------------------------------------------------------------
+-- 8. SUPABASE STORAGE BUCKETS CONFIGURATION (Avatars, Cards, Media)
 -- -------------------------------------------------------------------------
 INSERT INTO storage.buckets (id, name, public)
 VALUES 

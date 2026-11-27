@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured, STORAGE_BUCKETS } from '../supabaseClient.js';
+import { emailNotificationService } from './emailNotification.js';
 
 // --- CATEGORIZED SEED DECLARATIONS ---
 export const DECLARATION_CATEGORIES = [
@@ -555,6 +556,11 @@ export const dbService = {
       window.dispatchEvent(new Event('slap_auth_updated'));
     }
 
+    // Trigger Automated Welcome Email via Supabase Edge Function & Resend (Non-blocking)
+    emailNotificationService.triggerWelcomeEmail(userRecord).catch(err => {
+      console.warn('[SLAP Email] Non-blocking welcome email trigger warning:', err?.message || err);
+    });
+
     return userRecord;
   },
 
@@ -688,6 +694,11 @@ export const dbService = {
       window.dispatchEvent(new Event('slap_auth_updated'));
     }
 
+    // Trigger Automated Welcome Email via Supabase Edge Function & Resend (Non-blocking)
+    emailNotificationService.triggerWelcomeEmail(newAdmin).catch(err => {
+      console.warn('[SLAP Email] Non-blocking welcome email trigger warning:', err?.message || err);
+    });
+
     return newAdmin;
   },
 
@@ -809,6 +820,12 @@ export const dbService = {
       }
       localStorage.setItem('slap_users', JSON.stringify(localUsers));
       localStorage.setItem('slap_current_user', JSON.stringify(unifiedUser));
+
+      // Trigger Routine Login Email Notification (Non-blocking, conditional on user preference)
+      emailNotificationService.triggerLoginNotification(unifiedUser).catch(err => {
+        console.warn('[SLAP Email] Non-blocking login email trigger warning:', err?.message || err);
+      });
+
       return unifiedUser;
     }
 
@@ -856,6 +873,11 @@ export const dbService = {
             console.warn("Background cloud sync on login:", err?.message);
           });
         }
+
+        // Trigger Routine Login Email Notification (Non-blocking, conditional on user preference)
+        emailNotificationService.triggerLoginNotification(matchingLocalUser).catch(err => {
+          console.warn('[SLAP Email] Non-blocking login email trigger warning:', err?.message || err);
+        });
 
         return matchingLocalUser;
       } else {

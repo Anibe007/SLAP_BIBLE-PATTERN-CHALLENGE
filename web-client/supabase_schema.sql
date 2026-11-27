@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     country TEXT DEFAULT '',
     is_admin BOOLEAN DEFAULT FALSE,
     role TEXT DEFAULT 'user', -- 'user', 'admin', 'super_admin'
+    login_notifications_enabled BOOLEAN DEFAULT FALSE,
+    welcome_email_sent_at TIMESTAMPTZ DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -30,27 +32,37 @@ CREATE INDEX IF NOT EXISTS idx_profiles_created_at ON public.profiles(created_at
 -- Enable RLS on profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- Helper function to check if a user is an admin (avoids RLS infinite recursion)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE id = auth.uid() AND (is_admin = TRUE OR role = 'admin')
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Profiles Policies
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
 CREATE POLICY "Public profiles are viewable by everyone" 
 ON public.profiles FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 CREATE POLICY "Users can insert their own profile" 
 ON public.profiles FOR INSERT 
 WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile" 
 ON public.profiles FOR UPDATE 
 USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Admins can manage all profiles" ON public.profiles;
 CREATE POLICY "Admins can manage all profiles" 
 ON public.profiles FOR ALL 
-USING (
-    EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND (is_admin = TRUE OR role = 'admin')
-    )
-);
+USING (public.is_admin());
 
 -- -------------------------------------------------------------------------
 -- 2. SLAP DEVOTIONAL REPORTS TABLE (Daily Bible Pattern Submissions)
@@ -79,30 +91,30 @@ CREATE INDEX IF NOT EXISTS idx_slap_reports_user_date ON public.slap_reports(use
 ALTER TABLE public.slap_reports ENABLE ROW LEVEL SECURITY;
 
 -- Slap Reports Policies
+DROP POLICY IF EXISTS "Users can view their own reports" ON public.slap_reports;
 CREATE POLICY "Users can view their own reports" 
 ON public.slap_reports FOR SELECT 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own reports" ON public.slap_reports;
 CREATE POLICY "Users can insert their own reports" 
 ON public.slap_reports FOR INSERT 
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own reports" ON public.slap_reports;
 CREATE POLICY "Users can update their own reports" 
 ON public.slap_reports FOR UPDATE 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own reports" ON public.slap_reports;
 CREATE POLICY "Users can delete their own reports" 
 ON public.slap_reports FOR DELETE 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view and manage all reports" ON public.slap_reports;
 CREATE POLICY "Admins can view and manage all reports" 
 ON public.slap_reports FOR ALL 
-USING (
-    EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND (is_admin = TRUE OR role = 'admin')
-    )
-);
+USING (public.is_admin());
 
 -- -------------------------------------------------------------------------
 -- 3. USER STREAKS TABLE (Tracks daily streaks & consistency)
@@ -123,14 +135,17 @@ CREATE INDEX IF NOT EXISTS idx_user_streaks_current_streak ON public.user_streak
 ALTER TABLE public.user_streaks ENABLE ROW LEVEL SECURITY;
 
 -- Streaks Policies
+DROP POLICY IF EXISTS "Users can view their own streak" ON public.user_streaks;
 CREATE POLICY "Users can view their own streak" 
 ON public.user_streaks FOR SELECT 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can upsert their own streak" ON public.user_streaks;
 CREATE POLICY "Users can upsert their own streak" 
 ON public.user_streaks FOR ALL 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view all streaks for leaderboard" ON public.user_streaks;
 CREATE POLICY "Admins can view all streaks for leaderboard" 
 ON public.user_streaks FOR SELECT 
 USING (true);
@@ -157,14 +172,17 @@ CREATE INDEX IF NOT EXISTS idx_declarations_created_at ON public.declarations(cr
 ALTER TABLE public.declarations ENABLE ROW LEVEL SECURITY;
 
 -- Declarations Policies
+DROP POLICY IF EXISTS "Public declarations are viewable by all" ON public.declarations;
 CREATE POLICY "Public declarations are viewable by all" 
 ON public.declarations FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can insert declarations" ON public.declarations;
 CREATE POLICY "Authenticated users can insert declarations" 
 ON public.declarations FOR INSERT 
 WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
+DROP POLICY IF EXISTS "Users can delete their own declarations" ON public.declarations;
 CREATE POLICY "Users can delete their own declarations" 
 ON public.declarations FOR DELETE 
 USING (auth.uid() = user_id);
@@ -189,22 +207,20 @@ CREATE INDEX IF NOT EXISTS idx_videos_created_at ON public.videos(created_at DES
 -- Enable RLS on videos
 ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Videos are viewable by everyone" ON public.videos;
 CREATE POLICY "Videos are viewable by everyone" 
 ON public.videos FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users or admins can upload videos" ON public.videos;
 CREATE POLICY "Authenticated users or admins can upload videos" 
 ON public.videos FOR INSERT 
 WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Admins can update or delete videos" ON public.videos;
 CREATE POLICY "Admins can update or delete videos" 
 ON public.videos FOR ALL 
-USING (
-    EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND (is_admin = TRUE OR role = 'admin')
-    )
-);
+USING (public.is_admin());
 
 -- -------------------------------------------------------------------------
 -- 6. AUTOMATED USER PROVISIONING TRIGGER (auth.users -> profiles & streaks)
@@ -213,7 +229,10 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
     -- 1. Create Profile Row
-    INSERT INTO public.profiles (id, email, full_name, avatar_url, country, is_admin, role)
+    INSERT INTO public.profiles (
+        id, email, full_name, avatar_url, country, is_admin, role,
+        login_notifications_enabled, welcome_email_sent_at
+    )
     VALUES (
         NEW.id,
         NEW.email,
@@ -221,7 +240,9 @@ BEGIN
         COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
         COALESCE(NEW.raw_user_meta_data->>'country', ''),
         COALESCE((NEW.raw_user_meta_data->>'is_admin')::boolean, FALSE),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'user')
+        COALESCE(NEW.raw_user_meta_data->>'role', 'user'),
+        COALESCE((NEW.raw_user_meta_data->>'login_notifications_enabled')::boolean, FALSE),
+        NULL
     )
     ON CONFLICT (id) DO UPDATE 
     SET 
@@ -246,9 +267,41 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- -------------------------------------------------------------------------
--- 7. SUPABASE STORAGE BUCKETS CONFIGURATION (Avatars, Cards, Media)
+-- 7. EMAIL DELIVERY LOGS (Audit & Duplicate Prevention)
 -- -------------------------------------------------------------------------
--- Insert storage buckets (if not already existing)
+CREATE TABLE IF NOT EXISTS public.email_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    email_type TEXT NOT NULL, -- 'welcome', 'login'
+    status TEXT NOT NULL,     -- 'sent', 'failed', 'skipped'
+    resend_id TEXT,
+    error_message TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_logs_user_id ON public.email_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_logs_email ON public.email_logs(email);
+CREATE INDEX IF NOT EXISTS idx_email_logs_type ON public.email_logs(email_type);
+CREATE INDEX IF NOT EXISTS idx_email_logs_status ON public.email_logs(status);
+CREATE INDEX IF NOT EXISTS idx_email_logs_created_at ON public.email_logs(created_at DESC);
+
+ALTER TABLE public.email_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own email logs" ON public.email_logs;
+CREATE POLICY "Users can view their own email logs"
+ON public.email_logs FOR SELECT
+USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can view and manage all email logs" ON public.email_logs;
+CREATE POLICY "Admins can view and manage all email logs"
+ON public.email_logs FOR ALL
+USING (public.is_admin());
+
+-- -------------------------------------------------------------------------
+-- 8. SUPABASE STORAGE BUCKETS CONFIGURATION (Avatars, Cards, Media)
+-- -------------------------------------------------------------------------
 INSERT INTO storage.buckets (id, name, public)
 VALUES 
     ('avatars', 'avatars', true),
@@ -257,10 +310,12 @@ VALUES
 ON CONFLICT (id) DO UPDATE SET public = true;
 
 -- Storage Policies for Avatars
+DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
 CREATE POLICY "Avatar images are publicly accessible" 
 ON storage.objects FOR SELECT 
 USING (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Authenticated users can upload avatar images" ON storage.objects;
 CREATE POLICY "Authenticated users can upload avatar images" 
 ON storage.objects FOR INSERT 
 WITH CHECK (
@@ -268,6 +323,7 @@ WITH CHECK (
     AND auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Users can update or delete their own avatars" ON storage.objects;
 CREATE POLICY "Users can update or delete their own avatars" 
 ON storage.objects FOR UPDATE 
 USING (
@@ -276,10 +332,12 @@ USING (
 );
 
 -- Storage Policies for Declaration Cards
+DROP POLICY IF EXISTS "Declaration card images are publicly accessible" ON storage.objects;
 CREATE POLICY "Declaration card images are publicly accessible" 
 ON storage.objects FOR SELECT 
 USING (bucket_id = 'declarations');
 
+DROP POLICY IF EXISTS "Users can upload declaration card renders" ON storage.objects;
 CREATE POLICY "Users can upload declaration card renders" 
 ON storage.objects FOR INSERT 
 WITH CHECK (
@@ -288,10 +346,12 @@ WITH CHECK (
 );
 
 -- Storage Policies for Media Uploads
+DROP POLICY IF EXISTS "Media uploads are publicly accessible" ON storage.objects;
 CREATE POLICY "Media uploads are publicly accessible" 
 ON storage.objects FOR SELECT 
 USING (bucket_id = 'media_uploads');
 
+DROP POLICY IF EXISTS "Authenticated users can upload media" ON storage.objects;
 CREATE POLICY "Authenticated users can upload media" 
 ON storage.objects FOR INSERT 
 WITH CHECK (
