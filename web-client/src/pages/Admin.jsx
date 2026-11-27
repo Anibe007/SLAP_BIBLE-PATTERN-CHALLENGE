@@ -199,7 +199,13 @@ export default function Admin() {
   }, [isAdmin]);
 
   const handleToggleAdminPermission = async (targetUser) => {
-    const isTargetAdmin = targetUser.isAdmin || targetUser.is_admin || targetUser.role === 'admin';
+    const targetEmail = (targetUser?.email || '').toLowerCase().trim();
+    if (targetEmail === 'slapbiblechallenge@gmail.com' || targetEmail === 'admin@slapbible.org') {
+      alert("Action Prohibited: The Lead Administrator's privileges cannot be modified or revoked.");
+      return;
+    }
+
+    const isTargetAdmin = targetUser.isAdmin || targetUser.is_admin || targetUser.role === 'admin' || targetUser.role === 'super_admin';
     const action = isTargetAdmin ? 'Revoke admin access from' : 'Grant admin access to';
     if (!window.confirm(`Are you sure you want to ${action} ${targetUser.fullName || targetUser.user_metadata?.full_name || targetUser.email}?`)) {
       return;
@@ -234,6 +240,12 @@ export default function Admin() {
   };
 
   const handleDeleteParticipant = async (targetUser) => {
+    const targetEmail = (targetUser?.email || '').toLowerCase().trim();
+    if (targetEmail === 'slapbiblechallenge@gmail.com' || targetEmail === 'admin@slapbible.org') {
+      alert("Action Prohibited: The Lead Administrator account cannot be deleted.");
+      return;
+    }
+
     const pName = targetUser.fullName || targetUser.full_name || targetUser.user_metadata?.full_name || targetUser.email;
     if (!window.confirm(`⚠️ ARE YOU SURE you want to delete participant "${pName}" (${targetUser.email})?\n\nThis action will permanently delete their account record, study logs, and streak metrics.`)) {
       return;
@@ -1132,7 +1144,9 @@ export default function Admin() {
                   </tr>
                 ) : (
                   filteredUsers.map((u) => {
-                    const isUserAdmin = u.isAdmin || u.is_admin || u.role === 'admin';
+                    const uEmail = (u.email || '').toLowerCase().trim();
+                    const isLeadAdminUser = uEmail === 'slapbiblechallenge@gmail.com' || uEmail === 'admin@slapbible.org';
+                    const isUserAdmin = isLeadAdminUser || u.isAdmin || u.is_admin || u.role === 'admin' || u.role === 'super_admin';
                     return (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '13px' }}>
                         <td style={{ padding: '14px' }}>
@@ -1163,7 +1177,11 @@ export default function Admin() {
                           </span>
                         </td>
                         <td style={{ padding: '14px' }}>
-                          {isUserAdmin ? (
+                          {isLeadAdminUser ? (
+                            <span className="badge-pill" style={{ background: 'rgba(184, 134, 11, 0.2)', color: '#d97706', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: '800' }}>
+                              <ShieldCheck size={12} /> Lead Admin
+                            </span>
+                          ) : isUserAdmin ? (
                             <span className="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                               <ShieldCheck size={12} /> Administrator
                             </span>
@@ -1175,37 +1193,45 @@ export default function Admin() {
                         </td>
                         <td style={{ padding: '14px', textAlign: 'right' }}>
                           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                            <button
-                              onClick={() => handleToggleAdminPermission(u)}
-                              className="btn-secondary"
-                              style={{
-                                padding: '6px 12px',
-                                fontSize: '12px',
-                                color: isUserAdmin ? '#f43f5e' : 'var(--accent-gold)',
-                                borderColor: isUserAdmin ? '#f43f5e' : 'var(--accent-gold)'
-                              }}
-                              title={isUserAdmin ? 'Revoke admin access' : 'Grant admin access'}
-                            >
-                              {isUserAdmin ? 'Revoke Admin' : 'Grant Admin'}
-                            </button>
+                            {isLeadAdminUser ? (
+                              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', padding: '6px 12px', fontStyle: 'italic', fontWeight: '600' }}>
+                                Protected Lead Admin
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleToggleAdminPermission(u)}
+                                  className="btn-secondary"
+                                  style={{
+                                    padding: '6px 12px',
+                                    fontSize: '12px',
+                                    color: isUserAdmin ? '#f43f5e' : 'var(--accent-gold)',
+                                    borderColor: isUserAdmin ? '#f43f5e' : 'var(--accent-gold)'
+                                  }}
+                                  title={isUserAdmin ? 'Revoke admin access' : 'Grant admin access'}
+                                >
+                                  {isUserAdmin ? 'Revoke Admin' : 'Grant Admin'}
+                                </button>
 
-                            <button
-                              onClick={() => handleDeleteParticipant(u)}
-                              className="btn-secondary"
-                              style={{
-                                padding: '6px 10px',
-                                fontSize: '12px',
-                                color: '#ef4444',
-                                borderColor: '#ef4444',
-                                background: 'rgba(239, 68, 68, 0.1)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                              title={`Delete participant ${u.email}`}
-                            >
-                              <Trash2 size={13} /> Delete
-                            </button>
+                                <button
+                                  onClick={() => handleDeleteParticipant(u)}
+                                  className="btn-secondary"
+                                  style={{
+                                    padding: '6px 10px',
+                                    fontSize: '12px',
+                                    color: '#ef4444',
+                                    borderColor: '#ef4444',
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  title={`Delete participant ${u.email}`}
+                                >
+                                  <Trash2 size={13} /> Delete
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1649,7 +1675,7 @@ export default function Admin() {
                   Current Admin Account
                 </div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
-                  {user?.email || 'admin@slapbible.org'}
+                  {user?.email || 'slapbiblechallenge@gmail.com'}
                 </div>
               </div>
               <div style={{

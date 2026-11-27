@@ -210,50 +210,96 @@ function dataURItoBlob(dataURI) {
   return new Blob([ab], { type: mimeString });
 }
 
-// Master Seeded Administrator Account (Initial seeded password: admin)
+// Official Lead Administrator Account Configuration
+export const LEAD_ADMIN_EMAIL = 'slapbiblechallenge@gmail.com';
+export const LEGACY_ADMIN_EMAIL = 'admin@slapbible.org';
+
 const INITIAL_ADMIN_ACCOUNT = {
-  id: 'admin-seeded-master',
-  email: 'admin@slapbible.org',
+  id: 'admin-lead-master',
+  email: LEAD_ADMIN_EMAIL,
   password: 'admin',
   fullName: 'Lead Administrator',
   user_metadata: {
     full_name: 'Lead Administrator',
     country: 'Nigeria',
-    role: 'admin',
+    role: 'super_admin',
     is_admin: true,
     title: 'Lead Administrator',
     is_default_password: true
   },
   country: 'Nigeria',
-  role: 'admin',
+  role: 'super_admin',
   is_admin: true,
   created_at: new Date().toISOString()
 };
 
-const SLAP_DB_VERSION = 'slap_db_v5_clean';
+const SLAP_DB_VERSION = 'slap_db_v6_lead_admin';
 if (typeof window !== 'undefined' && window.localStorage) {
   const currentVersion = localStorage.getItem('slap_db_version');
 
   if (currentVersion !== SLAP_DB_VERSION) {
-    // Purge any legacy dummy accounts and reset to a clean state:
-    // Only the seeded Admin account exists. Every participant must sign up!
     localStorage.setItem('slap_db_version', SLAP_DB_VERSION);
     if (!localStorage.getItem('slap_admin_password')) {
       localStorage.setItem('slap_admin_password', 'admin');
     }
     const currentAdminPass = localStorage.getItem('slap_admin_password') || 'admin';
-    const seededAdmin = {
-      ...INITIAL_ADMIN_ACCOUNT,
-      password: currentAdminPass,
-      user_metadata: {
-        ...INITIAL_ADMIN_ACCOUNT.user_metadata,
-        is_default_password: currentAdminPass === 'admin'
+
+    // Migrate existing users: elevate or upgrade Lead Admin and eliminate duplicate legacy accounts
+    const existingUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    let leadAdminFound = false;
+    const migratedUsers = [];
+
+    for (const u of existingUsers) {
+      const uEmail = (u.email || '').toLowerCase().trim();
+      if (uEmail === LEAD_ADMIN_EMAIL || uEmail === LEGACY_ADMIN_EMAIL || u.id === 'admin-seeded-master' || u.id === 'admin-lead-master') {
+        if (!leadAdminFound) {
+          leadAdminFound = true;
+          migratedUsers.unshift({
+            ...u,
+            id: 'admin-lead-master',
+            email: LEAD_ADMIN_EMAIL,
+            fullName: 'Lead Administrator',
+            password: currentAdminPass,
+            role: 'super_admin',
+            is_admin: true,
+            user_metadata: {
+              ...(u.user_metadata || {}),
+              full_name: 'Lead Administrator',
+              role: 'super_admin',
+              is_admin: true,
+              title: 'Lead Administrator',
+              is_default_password: currentAdminPass === 'admin'
+            }
+          });
+        }
+      } else {
+        migratedUsers.push(u);
       }
-    };
-    localStorage.setItem('slap_users', JSON.stringify([seededAdmin]));
-    localStorage.setItem('slap_reports', JSON.stringify([]));
-    localStorage.setItem('slap_declarations', JSON.stringify([]));
-    localStorage.setItem('slap_streaks', JSON.stringify({}));
+    }
+
+    if (!leadAdminFound) {
+      migratedUsers.unshift({
+        ...INITIAL_ADMIN_ACCOUNT,
+        password: currentAdminPass,
+        user_metadata: {
+          ...INITIAL_ADMIN_ACCOUNT.user_metadata,
+          is_default_password: currentAdminPass === 'admin'
+        }
+      });
+    }
+
+    localStorage.setItem('slap_users', JSON.stringify(migratedUsers));
+
+    // Update current active session if logged in as admin
+    const curUser = JSON.parse(localStorage.getItem('slap_current_user') || 'null');
+    if (curUser && ((curUser.email || '').toLowerCase().trim() === LEGACY_ADMIN_EMAIL || curUser.id === 'admin-seeded-master')) {
+      curUser.id = 'admin-lead-master';
+      curUser.email = LEAD_ADMIN_EMAIL;
+      curUser.role = 'super_admin';
+      curUser.is_admin = true;
+      curUser.fullName = 'Lead Administrator';
+      localStorage.setItem('slap_current_user', JSON.stringify(curUser));
+    }
   } else {
     // Preserve current clean database
     if (!localStorage.getItem('slap_admin_password')) {
@@ -705,30 +751,35 @@ export const dbService = {
   async signIn(email, password) {
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPassword = (password || '');
-    const isAdminLookup = cleanEmail === 'admin@slapbible.org' || cleanEmail === 'admin';
+    const isLeadAdminLookup = cleanEmail === LEAD_ADMIN_EMAIL || cleanEmail === LEGACY_ADMIN_EMAIL || cleanEmail === 'admin';
 
-    // 1. Seeded Master Administrator Authentication (Initial seeded password: admin)
-    if (isAdminLookup) {
+    // 1. Official Lead Administrator Authentication (slapbiblechallenge@gmail.com)
+    if (isLeadAdminLookup) {
       const storedAdminPassword = (typeof window !== 'undefined' ? localStorage.getItem('slap_admin_password') : null) || 'admin';
 
-      // Match current admin password (default: admin, or updated by the admin)
+      // Match current admin password (default: admin, or updated by the lead admin)
       if (cleanPassword === storedAdminPassword) {
-        const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-        let adminUser = users.find(u => u.email === 'admin@slapbible.org' || u.id === 'admin-seeded-master');
+        let users = JSON.parse(localStorage.getItem('slap_users') || '[]');
+        let adminUser = users.find(u => 
+          (u.email || '').toLowerCase().trim() === LEAD_ADMIN_EMAIL || 
+          (u.email || '').toLowerCase().trim() === LEGACY_ADMIN_EMAIL || 
+          u.id === 'admin-lead-master' || 
+          u.id === 'admin-seeded-master'
+        );
 
         if (!adminUser) {
           adminUser = {
-            id: 'admin-seeded-master',
-            email: 'admin@slapbible.org',
+            id: 'admin-lead-master',
+            email: LEAD_ADMIN_EMAIL,
             password: storedAdminPassword,
             fullName: 'Lead Administrator',
             country: 'Nigeria',
             is_admin: true,
-            role: 'admin',
+            role: 'super_admin',
             user_metadata: {
               full_name: 'Lead Administrator',
               country: 'Nigeria',
-              role: 'admin',
+              role: 'super_admin',
               is_admin: true,
               title: 'Lead Administrator',
               is_default_password: storedAdminPassword === 'admin'
@@ -736,27 +787,86 @@ export const dbService = {
             created_at: new Date().toISOString()
           };
           users.unshift(adminUser);
-          localStorage.setItem('slap_users', JSON.stringify(users));
         } else {
+          adminUser.id = adminUser.id || 'admin-lead-master';
+          adminUser.email = LEAD_ADMIN_EMAIL;
+          adminUser.fullName = 'Lead Administrator';
           adminUser.is_admin = true;
-          adminUser.role = 'admin';
+          adminUser.role = 'super_admin';
           adminUser.password = storedAdminPassword;
           if (!adminUser.user_metadata) adminUser.user_metadata = {};
+          adminUser.user_metadata.full_name = 'Lead Administrator';
           adminUser.user_metadata.is_admin = true;
-          adminUser.user_metadata.role = 'admin';
+          adminUser.user_metadata.role = 'super_admin';
+          adminUser.user_metadata.title = 'Lead Administrator';
           adminUser.user_metadata.is_default_password = storedAdminPassword === 'admin';
         }
 
+        // Clean up duplicate legacy admin accounts
+        users = users.filter(u => {
+          const uE = (u.email || '').toLowerCase().trim();
+          if (uE === LEGACY_ADMIN_EMAIL || u.id === 'admin-seeded-master') return false;
+          if (uE === LEAD_ADMIN_EMAIL && u !== adminUser) return false;
+          return true;
+        });
+        if (!users.includes(adminUser)) users.unshift(adminUser);
+
+        localStorage.setItem('slap_users', JSON.stringify(users));
         localStorage.setItem('slap_current_user', JSON.stringify(adminUser));
 
-        // If Supabase is connected, attempt sync with Supabase Auth
+        // Authenticate & register with Supabase Auth for cloud oversight
         if (isSupabaseConfigured && supabase) {
           try {
-            await supabase.auth.signInWithPassword({
-              email: 'admin@slapbible.org',
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+              email: LEAD_ADMIN_EMAIL,
               password: storedAdminPassword
-            }).catch(() => { });
-          } catch (e) { }
+            });
+
+            if (authData?.user) {
+              adminUser.id = authData.user.id;
+              localStorage.setItem('slap_current_user', JSON.stringify(adminUser));
+
+              // Ensure Supabase profiles table has super_admin role
+              await supabase.from('profiles').upsert({
+                id: authData.user.id,
+                email: LEAD_ADMIN_EMAIL,
+                full_name: 'Lead Administrator',
+                is_admin: true,
+                role: 'super_admin',
+                updated_at: new Date().toISOString()
+              }).catch(() => {});
+            } else if (authError && (authError.message?.toLowerCase().includes('invalid') || authError.status === 400)) {
+              // User doesn't exist yet on Supabase Auth -> provision Lead Admin
+              const { data: signUpData } = await supabase.auth.signUp({
+                email: LEAD_ADMIN_EMAIL,
+                password: storedAdminPassword,
+                options: {
+                  data: {
+                    full_name: 'Lead Administrator',
+                    role: 'super_admin',
+                    is_admin: true,
+                    title: 'Lead Administrator',
+                    country: 'Nigeria'
+                  }
+                }
+              });
+              if (signUpData?.user) {
+                adminUser.id = signUpData.user.id;
+                localStorage.setItem('slap_current_user', JSON.stringify(adminUser));
+
+                await supabase.from('profiles').upsert({
+                  id: signUpData.user.id,
+                  email: LEAD_ADMIN_EMAIL,
+                  full_name: 'Lead Administrator',
+                  is_admin: true,
+                  role: 'super_admin',
+                  updated_at: new Date().toISOString()
+                }).catch(() => {});
+              }
+            }
+          } catch (e) {
+            console.warn("Supabase Lead Admin auth notice:", e?.message);
+          }
         }
 
         return adminUser;
@@ -867,7 +977,7 @@ export const dbService = {
                 is_admin: !!matchingLocalUser.is_admin,
                 role: matchingLocalUser.role || 'user',
                 updated_at: new Date().toISOString()
-              }).catch(() => {});
+              }).catch(() => { });
             }
           }).catch(err => {
             console.warn("Background cloud sync on login:", err?.message);
@@ -906,8 +1016,14 @@ export const dbService = {
 
     // 2. Update admin in slap_users list
     const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-    const adminIdx = users.findIndex(u => u.email === 'admin@slapbible.org' || u.id === 'admin-seeded-master');
+    const adminIdx = users.findIndex(u => 
+      (u.email || '').toLowerCase().trim() === LEAD_ADMIN_EMAIL || 
+      (u.email || '').toLowerCase().trim() === LEGACY_ADMIN_EMAIL || 
+      u.id === 'admin-lead-master' || 
+      u.id === 'admin-seeded-master'
+    );
     if (adminIdx !== -1) {
+      users[adminIdx].email = LEAD_ADMIN_EMAIL;
       users[adminIdx].password = newPassword;
       if (!users[adminIdx].user_metadata) users[adminIdx].user_metadata = {};
       users[adminIdx].user_metadata.is_default_password = false;
@@ -916,7 +1032,8 @@ export const dbService = {
 
     // 3. Update current user session
     const currentUser = JSON.parse(localStorage.getItem('slap_current_user') || 'null');
-    if (currentUser && (currentUser.is_admin || currentUser.email === 'admin@slapbible.org')) {
+    if (currentUser && (currentUser.is_admin || (currentUser.email || '').toLowerCase().trim() === LEAD_ADMIN_EMAIL || (currentUser.email || '').toLowerCase().trim() === LEGACY_ADMIN_EMAIL)) {
+      currentUser.email = LEAD_ADMIN_EMAIL;
       currentUser.password = newPassword;
       if (!currentUser.user_metadata) currentUser.user_metadata = {};
       currentUser.user_metadata.is_default_password = false;
@@ -993,7 +1110,8 @@ export const dbService = {
     }
 
     const currentUser = JSON.parse(localStorage.getItem('slap_current_user') || 'null');
-    const isAdmin = !!(currentUser && (currentUser.is_admin || currentUser.role === 'admin' || currentUser.email === 'admin@slapbible.org'));
+    const curEmail = (currentUser?.email || '').toLowerCase().trim();
+    const isAdmin = !!(currentUser && (currentUser.is_admin || currentUser.role === 'admin' || currentUser.role === 'super_admin' || curEmail === LEAD_ADMIN_EMAIL || curEmail === LEGACY_ADMIN_EMAIL));
     if (isAdmin) {
       localStorage.setItem('slap_admin_password', newPassword);
     }
@@ -1092,7 +1210,8 @@ export const dbService = {
   async signInAdmin(email, password) {
     const user = await this.signIn(email, password);
     const isAdm = await this.isCurrentUserAdmin();
-    if (!isAdm && !user?.is_admin && user?.role !== 'admin' && user?.email !== 'admin@slapbible.org') {
+    const curEmail = (user?.email || '').toLowerCase().trim();
+    if (!isAdm && !user?.is_admin && user?.role !== 'admin' && user?.role !== 'super_admin' && curEmail !== LEAD_ADMIN_EMAIL && curEmail !== LEGACY_ADMIN_EMAIL) {
       await this.signOut();
       throw new Error("Access restricted: This account does not have administrator privileges.");
     }
@@ -1131,9 +1250,10 @@ export const dbService = {
     }
 
     // If local session is active as Admin, preserve admin session immediately
-    if (user && (user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org')) {
+    const curEmail = (user?.email || '').toLowerCase().trim();
+    if (user && (user.is_admin || user.role === 'admin' || user.role === 'super_admin' || curEmail === LEAD_ADMIN_EMAIL || curEmail === LEGACY_ADMIN_EMAIL)) {
       user.is_admin = true;
-      user.role = 'admin';
+      user.role = curEmail === LEAD_ADMIN_EMAIL ? 'super_admin' : (user.role || 'admin');
       return user;
     }
 
@@ -1710,7 +1830,7 @@ export const dbService = {
           current_streak: curStreak,
           longest_streak: longStreak,
           last_activity_date: lastAct,
-          isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
+          isAdmin: !!(u.is_admin || u.role === 'admin' || u.role === 'super_admin' || (u.email || '').toLowerCase().trim() === LEAD_ADMIN_EMAIL || (u.email || '').toLowerCase().trim() === LEGACY_ADMIN_EMAIL)
         };
       });
 
@@ -1748,7 +1868,7 @@ export const dbService = {
           current_streak: userStreak.current_streak || 0,
           longest_streak: userStreak.longest_streak || 0,
           last_activity_date: userStreak.last_activity_date,
-          isAdmin: !!(u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org')
+          isAdmin: !!(u.is_admin || u.role === 'admin' || u.role === 'super_admin' || uEmail === LEAD_ADMIN_EMAIL || uEmail === LEGACY_ADMIN_EMAIL)
         };
       });
 
@@ -1877,7 +1997,20 @@ export const dbService = {
     const isCurAdmin = await this.isCurrentUserAdmin();
     if (!isCurAdmin) throw new Error("Unauthorized: Super-admin permission required to revoke access");
 
+    // Guard: Prevent revoking Lead Admin privileges
+    const localUsers = JSON.parse(localStorage.getItem('slap_users') || '[]');
+    const targetUser = localUsers.find(u => u.id === userId);
+    const targetEmail = (targetUser?.email || '').toLowerCase().trim();
+    if (targetEmail === LEAD_ADMIN_EMAIL || targetEmail === LEGACY_ADMIN_EMAIL) {
+      throw new Error("Action Prohibited: The Lead Administrator's privileges cannot be revoked.");
+    }
+
     if (isSupabaseConfigured) {
+      const { data: targetProfile } = await supabase.from('profiles').select('email').eq('id', userId).maybeSingle();
+      if ((targetProfile?.email || '').toLowerCase().trim() === LEAD_ADMIN_EMAIL) {
+        throw new Error("Action Prohibited: The Lead Administrator's privileges cannot be revoked.");
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ is_admin: false, role: 'user' })
@@ -1885,12 +2018,11 @@ export const dbService = {
       if (error) throw error;
       return true;
     } else {
-      const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
-      const userIndex = users.findIndex(u => u.id === userId);
+      const userIndex = localUsers.findIndex(u => u.id === userId);
       if (userIndex !== -1) {
-        users[userIndex].is_admin = false;
-        users[userIndex].role = 'user';
-        localStorage.setItem('slap_users', JSON.stringify(users));
+        localUsers[userIndex].is_admin = false;
+        localUsers[userIndex].role = 'user';
+        localStorage.setItem('slap_users', JSON.stringify(localUsers));
         return true;
       }
       return false;
@@ -1920,20 +2052,20 @@ export const dbService = {
       const users = JSON.parse(localStorage.getItem('slap_users') || '[]');
       if (!user) {
         // Auto-authenticate as Lead Admin if unauthenticated in demo mode
-        user = users.find(u => u.is_admin || u.role === 'admin' || u.email === 'admin@slapbible.org') || INITIAL_DEMO_USERS[0];
+        user = users.find(u => u.is_admin || u.role === 'admin' || (u.email || '').toLowerCase().trim() === LEAD_ADMIN_EMAIL) || INITIAL_ADMIN_ACCOUNT;
         if (!users.some(u => u.id === user.id)) {
           users.push(user);
         }
       }
 
       user.is_admin = true;
-      user.role = 'admin';
+      user.role = 'super_admin';
       localStorage.setItem('slap_current_user', JSON.stringify(user));
 
       const idx = users.findIndex(u => u.id === user.id);
       if (idx !== -1) {
         users[idx].is_admin = true;
-        users[idx].role = 'admin';
+        users[idx].role = 'super_admin';
         localStorage.setItem('slap_users', JSON.stringify(users));
       }
     }
@@ -1944,19 +2076,24 @@ export const dbService = {
     const user = await this.getCurrentUser();
     if (!user) return false;
 
-    const cachedIsAdmin = !!(user.is_admin || user.role === 'admin'
-      || user.user_metadata?.is_admin || user.user_metadata?.role === 'admin'
-      || user.email === 'admin@slapbible.org');
+    const userEmail = (user.email || '').toLowerCase().trim();
+    if (userEmail === LEAD_ADMIN_EMAIL || userEmail === LEGACY_ADMIN_EMAIL) {
+      return true;
+    }
+
+    const cachedIsAdmin = !!(user.is_admin || user.role === 'admin' || user.role === 'super_admin' || user.role === 'lead_admin'
+      || user.user_metadata?.is_admin || user.user_metadata?.role === 'admin' || user.user_metadata?.role === 'super_admin');
     if (cachedIsAdmin) return true;
 
     if (isSupabaseConfigured && user.id) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin, role')
+        .select('is_admin, role, email')
         .eq('id', user.id)
         .single();
       if (profile) {
-        return !!(profile.is_admin || profile.role === 'admin');
+        const pEmail = (profile.email || '').toLowerCase().trim();
+        return !!(profile.is_admin || profile.role === 'admin' || profile.role === 'super_admin' || pEmail === LEAD_ADMIN_EMAIL);
       }
     }
 
@@ -1986,6 +2123,9 @@ export const dbService = {
     if (!isCurAdmin) throw new Error("Unauthorized: Admin permissions required to remove participants");
 
     const cleanEmail = (userEmail || '').trim().toLowerCase();
+    if (cleanEmail === LEAD_ADMIN_EMAIL || cleanEmail === LEGACY_ADMIN_EMAIL) {
+      throw new Error("Action Prohibited: The Lead Administrator account cannot be deleted.");
+    }
 
     if (isSupabaseConfigured) {
       if (cleanEmail) {

@@ -159,7 +159,7 @@ export default function Contact() {
       {/* Traditional Contact Cards Strip */}
       <div className="grid-3">
         {[
-          { icon: <Mail size={22} style={{ color: 'var(--accent-gold)' }} />, label: 'EMAIL US', title: 'Direct Support', line1: 'support@slapbible.com', line2: 'Response within 24 hours' },
+          { icon: <Mail size={22} style={{ color: 'var(--accent-gold)' }} />, label: 'EMAIL US', title: 'Lead Admin & Support', line1: 'slapbiblechallenge@gmail.com', line2: 'Official Administrative Contact' },
           { icon: <Phone size={22} style={{ color: 'var(--accent-gold)' }} />, label: 'CALL / WHATSAPP', title: 'Ministry Enquiries', line1: '08155180000', line2: '08100900094', line1Bold: true, line2Bold: true },
           { icon: <MapPin size={22} style={{ color: 'var(--accent-gold)' }} />, label: 'VISIT US', title: 'Headquarters', line1: '100 Faith Parkway', line2: 'Austin, TX 78701' },
         ].map((card, i) => (

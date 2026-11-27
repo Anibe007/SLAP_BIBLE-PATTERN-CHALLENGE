@@ -171,7 +171,21 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
-  const isAdmin = !!(user && (user.is_admin || user.role === 'admin' || user.email === 'admin@slapbible.org'));
+  const curEmail = (user?.email || '').toLowerCase().trim();
+  const isAdmin = !!(user && (
+    user.is_admin || 
+    user.role === 'admin' || 
+    user.role === 'super_admin' || 
+    user.role === 'lead_admin' || 
+    curEmail === 'slapbiblechallenge@gmail.com' || 
+    curEmail === 'admin@slapbible.org'
+  ));
+  const isLeadAdmin = !!(user && (
+    curEmail === 'slapbiblechallenge@gmail.com' || 
+    curEmail === 'admin@slapbible.org' || 
+    user.role === 'super_admin' || 
+    user.role === 'lead_admin'
+  ));
 
   return (
     <AuthContext.Provider value={{
@@ -190,7 +204,8 @@ export const AuthProvider = ({ children }) => {
       resetLocalUserPassword,
       changeAdminPassword,
       isAuthenticated: !!user,
-      isAdmin
+      isAdmin,
+      isLeadAdmin
     }}>
       {children}
     </AuthContext.Provider>

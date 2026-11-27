@@ -205,7 +205,7 @@ export default function Auth() {
     try {
       let submitEmail = (email || '').trim();
       if (portalMode === 'admin' && (submitEmail.toLowerCase() === 'admin' || !submitEmail.includes('@'))) {
-        submitEmail = 'admin@slapbible.org';
+        submitEmail = 'slapbiblechallenge@gmail.com';
       }
 
       if (portalMode === 'admin') {
@@ -989,7 +989,7 @@ export default function Auth() {
                       <input
                         type={portalMode === 'admin' ? "text" : "email"}
                         required
-                        placeholder={portalMode === 'admin' ? "admin@slapbible.org (or admin)" : "you@example.com"}
+                        placeholder={portalMode === 'admin' ? "slapbiblechallenge@gmail.com (or admin)" : "you@example.com"}
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         style={{ paddingLeft: '44px' }}

@@ -261,6 +261,9 @@ export function getWelcomeEmailHtml({ name, email, appUrl }: WelcomeEmailParams)
               <p style="margin: 0 0 8px; font-size: 12px; color: #7A6A5E; line-height: 1.5;">
                 You received this one-time welcome email because you registered for the SLAP Bible Challenge with <strong>${safeEmail}</strong>.
               </p>
+              <p style="margin: 0 0 8px; font-size: 11px; color: #7A6A5E; line-height: 1.5;">
+                Official Lead Admin: <a href="mailto:slapbiblechallenge@gmail.com" style="color: #B8860B; text-decoration: underline;">slapbiblechallenge@gmail.com</a>
+              </p>
               <p style="margin: 0; font-size: 11px; color: #A09084;">
                 &copy; ${new Date().getFullYear()} SLAP Bible Pattern Challenge. All rights reserved.
               </p>
@@ -456,6 +459,9 @@ export function getLoginEmailHtml({ name, email, loginTime, appUrl }: LoginEmail
             <td class="mobile-padding" style="background-color: #F7F4EF; border-top: 1px solid #E8DED1; padding: 22px 36px; text-align: center;">
               <p style="margin: 0 0 6px; font-size: 11px; color: #7A6A5E; line-height: 1.5;">
                 If you did not perform this login, please secure your account immediately by changing your password.
+              </p>
+              <p style="margin: 0 0 8px; font-size: 11px; color: #7A6A5E; line-height: 1.5;">
+                Official Lead Admin: <a href="mailto:slapbiblechallenge@gmail.com" style="color: #B8860B; text-decoration: underline;">slapbiblechallenge@gmail.com</a>
               </p>
               <p style="margin: 0; font-size: 11px; color: #A09084;">
                 &copy; ${new Date().getFullYear()} SLAP Bible Pattern Challenge. All rights reserved.

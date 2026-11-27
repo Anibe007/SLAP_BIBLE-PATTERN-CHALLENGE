@@ -174,6 +174,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           from: resendFromEmail,
           to: [recipientEmail],
+          reply_to: 'slapbiblechallenge@gmail.com',
           subject: `Welcome to the SLAP Bible Challenge, ${participantName}! 📖✨`,
           html: htmlContent
         })
@@ -303,6 +304,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           from: resendFromEmail,
           to: [recipientEmail],
+          reply_to: 'slapbiblechallenge@gmail.com',
           subject: `Successful Login Notification — SLAP Bible Challenge`,
           html: htmlContent
         })
